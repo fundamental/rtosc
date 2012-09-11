@@ -1,0 +1,39 @@
+RtOsc - A Bad Idea Brought To Life
+==================================
+
+A realtime safe library for handling OSC messages.
+This library is influenced by liblo and libmapper.
+
+Project Goals
+-------------
+
+* Provide a simple means of handling OSC messages within an application
+* Provide a flexible method of dispatching OSC messages payloads
+* Create a C library with C++ header only wrappers for ease of use
+
+Why?
+----
+
+Well if an application is going to receive nice serialized messages in the OSC format,
+then it would be nice if these messages could be dispatched within a realtime
+thread.
+This is not possible with any observed C OSC implementation, so this is an
+attempt to alleviate this issue without creating an entirely hideous API.
+
+Status
+------
+
+- Self consistent implementation of floating point, integers, blobs, true, false,
+  and Nil.
+- Lots of bugs..
+
+Todo
+----
+
+- Increase test coverage
+- Stop the code from overflowing the buffer
+- Implement rest of OSC message spec
+- Create a standard dispatch table
+- Attempt to make some C++ wrappers
+- Create a truly unruly example by extending the "complex" one
+- Add to the API to make the "simple" example very basic
