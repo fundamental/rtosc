@@ -17,6 +17,11 @@ target_link_libraries(complex-example m rtosc ${FLTK_LIBRARIES} jack)
 
 # Testing code
 enable_testing()
+
 add_executable(simple-messages test/simple-messages.c)
 add_test(simple-messages simple-messages)
 target_link_libraries(simple-messages rtosc)
+
+add_executable(null-messages test/null-messages.c)
+add_test(null-messages null-messages)
+target_link_libraries(null-messages rtosc)

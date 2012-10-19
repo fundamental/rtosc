@@ -61,7 +61,7 @@ unsigned arg_off(const char *msg, unsigned idx)
         return 0;
 
     //Iterate to the right position
-    const unsigned char *args = arg_str(msg);
+    const unsigned char *args = (const unsigned char*) arg_str(msg);
     const unsigned char *arg_pos = args;
 
     while(*++arg_pos);
@@ -99,13 +99,76 @@ size_t sosc(char   *buffer,
     return vsosc(buffer, len, address, arguments, va);
 }
 
+//Calculate the size of the message without writing to a buffer
+size_t vsosc_null(const char *address,
+                  const char *arguments,
+                  va_list     ap)
+{
+    unsigned pos = 0;
+    pos += strlen(address);
+    pos += 4-pos%4;//get 32 bit alignment
+    pos += 1+strlen(arguments);
+    pos += 4-pos%4;
+
+    unsigned toparse = nreserved(arguments);
+
+    //Take care of varargs
+    while(toparse)
+    {
+        char arg = *arguments++;
+        assert(arg);
+        int i;
+        const char *s;
+        switch(arg) {
+            case 'i':
+                (void) va_arg(ap, int32_t);
+                pos += 4;
+                --toparse;
+                break;
+            case 's':
+                s = va_arg(ap, const char*);
+                pos += strlen(s);
+                pos += 4-pos%4;
+                --toparse;
+                break;
+            case 'b':
+                i = va_arg(ap, int32_t);
+                pos += 4 + i;
+                (void) va_arg(ap, const char *);
+                break;
+            case 'f':
+                (void) va_arg(ap, double);
+                pos += 4;
+                --toparse;
+            default:
+                ;
+        }
+    }
+
+    va_end(ap);
+
+    return pos;
+}
+
 size_t vsosc(char   *buffer,
         size_t      len,
         const char *address,
         const char *arguments,
         va_list ap)
 {
+    va_list _ap;
+    va_copy(_ap,ap);
+    const size_t total_len = vsosc_null(address, arguments, _ap);
+
+    if(!buffer)
+        return total_len;
+
     memset(buffer, 0, len);
+
+    //Abort if the message cannot fit
+    if(total_len>len)
+        return 0;
+
     unsigned pos = 0;
     while(*address)
         buffer[pos++] = *address++;
@@ -123,7 +186,7 @@ size_t vsosc(char   *buffer,
 
     unsigned toparse = nreserved(arguments);
     //Take care of varargs
-    while(toparse) 
+    while(toparse)
     {
         char arg = *arguments++;
         assert(arg);
@@ -196,7 +259,7 @@ arg_t argument(const char *msg, unsigned idx)
                 ;
         }
     } else {
-        const unsigned char *arg_pos = msg+arg_off(msg,idx);
+        const unsigned char *arg_pos = (const unsigned char*)msg+arg_off(msg,idx);
         switch(type)
         {
             case 'i':
@@ -210,7 +273,7 @@ arg_t argument(const char *msg, unsigned idx)
                 result.b.len |= (*arg_pos++ << 16);
                 result.b.len |= (*arg_pos++ << 8);
                 result.b.len |= (*arg_pos++);
-                result.b.data = arg_pos;
+                result.b.data = (unsigned char *)arg_pos;
                 break;
             case 'f':
                 result.f = *(float*)arg_pos;
