@@ -15,6 +15,9 @@ add_executable(complex-example example/complex/audio.cpp example/complex/osc.cpp
 target_link_libraries(complex-example m rtosc ${FLTK_LIBRARIES} jack)
 #TODO add complex example (ie klatter (an unplublished project for those reading))
 
+add_executable(simple-cpp-example example/simple/ui.cc example/simple/synth.cc)
+target_link_libraries(simple-cpp-example m rtosc ${FLTK_LIBRARIES} jack)
+
 # Testing code
 enable_testing()
 
@@ -25,3 +28,7 @@ target_link_libraries(simple-messages rtosc)
 add_executable(null-messages test/null-messages.c)
 add_test(null-messages null-messages)
 target_link_libraries(null-messages rtosc)
+
+add_executable(header-test test/headerlib.cpp)
+add_test(header-test header-test)
+target_link_libraries(header-test rtosc -ljack)

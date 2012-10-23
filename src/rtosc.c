@@ -20,7 +20,7 @@ unsigned nargs(const char *msg)
     return strlen(arg_str(msg));
 }
 
-static bool has_reserved(char type)
+static int has_reserved(char type)
 {
     switch(type)
     {
@@ -42,9 +42,8 @@ static bool has_reserved(char type)
 unsigned nreserved(const char *args)
 {
     unsigned res = 0;
-    do {
+    for(;*args;++args)
         res += has_reserved(*args);
-    } while(*++args);
 
     return res;
 }
@@ -135,6 +134,7 @@ size_t vsosc_null(const char *address,
                 i = va_arg(ap, int32_t);
                 pos += 4 + i;
                 (void) va_arg(ap, const char *);
+                --toparse;
                 break;
             case 'f':
                 (void) va_arg(ap, double);
@@ -275,6 +275,9 @@ arg_t argument(const char *msg, unsigned idx)
                 result.b.len |= (*arg_pos++);
                 result.b.data = (unsigned char *)arg_pos;
                 break;
+            case 's':
+                result.s = (char *)arg_pos;
+                break;
             case 'f':
                 result.f = *(float*)arg_pos;
                 break;
@@ -282,4 +285,73 @@ arg_t argument(const char *msg, unsigned idx)
     }
 
     return result;
+}
+
+//Add further error detection
+unsigned char deref(unsigned pos, ring_t *ring)
+{
+    return pos<ring[0].len?ring[0].data[pos]:ring[1].data[pos-ring[0].len];
+}
+
+//Zero means no full message present
+size_t msg_len_ring(ring_t *ring)
+{
+    unsigned pos = 0;
+    while(deref(pos++,ring));
+    --pos;
+    pos += 4-pos%4;//get 32 bit alignment
+    int arguments = pos+1;
+    while(deref(++pos,ring));
+    --pos;
+    pos += 4-pos%4;
+
+    unsigned toparse = 0;
+    {
+        int arg = arguments-1;
+        while(deref(++arg,ring))
+            toparse += has_reserved(deref(arg,ring));
+    }
+
+    //Take care of varargs
+    while(toparse)
+    {
+        char arg = deref(arguments++,ring);
+        assert(arg);
+        int i;
+        switch(arg) {
+            case 'i':
+                pos += 4;
+                --toparse;
+                break;
+            case 's':
+                while(deref(++pos,ring));
+                pos += 4-pos%4;
+                --toparse;
+                break;
+            case 'b':
+                i = 0;
+                i |= (deref(pos++,ring) << 24);
+                i |= (deref(pos++,ring) << 16);
+                i |= (deref(pos++,ring) << 8);
+                i |= (deref(pos++,ring));
+                pos += i;
+                pos += 4-pos%4;
+                --toparse;
+                break;
+            case 'f':
+                pos += 4;
+                --toparse;
+            default:
+                ;
+        }
+    }
+
+
+    return pos;
+}
+
+size_t msg_len(const char *msg)
+{
+    ring_t ring[2] = {{msg,-1},{NULL,0}};
+    return msg_len_ring(ring);
 }
