@@ -1,32 +1,30 @@
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <err.h>
 #include <jack/jack.h>
 #include <jack/midiport.h>
-#include "osc.h"
 
 extern float Fs;
-extern float freq;
-extern bool  gate;
-float sample(void);
+extern float &freq;
+extern bool  &gate;
+void process_output(float *f, unsigned nframes);
 int current_note = 0;
 
 void dsp_dispatch(const char *msg);
-//void dsp_dispatch(const char *msg)
-//{
-//    dispatch_t *itr = dispatch_table;
-//    while(itr->label && strcmp(msg, itr->label))
-//        ++itr;
-//    if(itr->label)
-//        itr->fn(msg, itr->data);
-//}
 
 
 //JACK stuff
 jack_port_t   *port, *iport;
 jack_client_t *client;
 int process(unsigned nframes, void *args);
+void audio_cleanup(void)
+{
+    puts("Exiting jack...");
+    jack_deactivate(client);
+    jack_client_close(client);
+}
 void audio_init(void)
 {
     client = jack_client_open("rtosc-demo2", JackNullOption, NULL, NULL);
@@ -47,14 +45,12 @@ void audio_init(void)
 
     if(jack_activate(client))
         errx(1, "jack_activate() failure");
+
+    atexit(audio_cleanup);
 }
 
-void stop_synth(void)
-{
-    jack_client_close(client);
-}
-
-int process(unsigned nframes, void *args)
+void process_control(unsigned char control[3]);
+int process(unsigned nframes, void *)
 {
     Fs = jack_get_sample_rate(client);
 
@@ -74,19 +70,14 @@ int process(unsigned nframes, void *args)
                     current_note = gate =0;
                 break;
             case 0xB0: //Controller
-                printf("Control %d %d\n", ev.buffer[1], ev.buffer[2]);
+                process_control(ev.buffer+1);
                 break;
         }
     }
-    
-    //Handle OSC Queue
-    while(const char *msg = dsp_read())
-        dsp_dispatch(msg);
 
     //Get all samples
     float *smps = (float*) jack_port_get_buffer(port, nframes);
-    for(int i=0; i<nframes; ++i)
-        smps[i] = sample();
+    process_output(smps, nframes);
 
     return 0;
 }

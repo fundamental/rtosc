@@ -24,7 +24,7 @@ int main()
             "Incorrect message contents", __LINE__);
 
     //printf("%d\n", msg_len(buffer));
-    check(msg_len(buffer) == 16,
+    check(msg_len(buffer) == 20,
             "Incorrect detected message length", __LINE__);
 
     //Verify that it can be read properly
@@ -47,6 +47,14 @@ int main()
     check(!memcmp(buffer,"/tes""ting""\0\0\0\0"",is\0""\0\0\0\x17""this"" str""ing", 32),
             "Invalid OSC message", __LINE__);
 
+    //Verify that a string argument can be retreived
+    sosc(buffer, 256, "/register", "iis", 2, 13, "/amp-env/av");
+    const char *pos = argument(buffer,2).s;
+    while(*pos) putchar(*pos++);
+    printf("%p %p %c(%d)\n", buffer, argument(buffer,2).s, *(argument(buffer,2).s), *(argument(buffer,2).s));
+    check(!strcmp(argument(buffer,2).s,"/amp-env/av"),
+            "Bad string object", __LINE__);
+
     //Verify that buffer overflows will not occur
     check(sosc(buffer, 32, "/testing", "is", 23, "this string") == 32,
             "Incorrect message length", __LINE__);
@@ -59,6 +67,14 @@ int main()
 
     check(!*buffer,
             "Buffer was not cleared on possible overflow", __LINE__);
+
+    //check simple float retrevial
+    check(sosc(buffer, 32, "oscil/freq", "f", 13523.34) != 0,
+            "Bad message", __LINE__);
+
+    check(argument(buffer,0).f+0.1>13523.34 &&
+            argument(buffer,0).f-0.1<13523.34,
+            "Incorrect floating point value", __LINE__);
 
     return 0;
 }

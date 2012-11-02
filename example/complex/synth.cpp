@@ -1,22 +1,48 @@
-#include "../../include/rtosc.h"
+#include <rtosc.h>
+#include <thread-link.h>
 #include <string.h>
+#include <cmath>
+#include "synth.h"
 
-float Fs   = 0.0f;
-float freq = 0.0f;
-bool  gate = false;
+float Fs = 0.0f;
 
-struct Adsr
+ThreadLink<1024,1024> bToU;
+ThreadLink<1024,1024> uToB;
+
+//Defines a port callback for something that can be set and looked up
+template<class T>
+std::function<void(msg_t,T*)> param(float T::*p)
 {
-    float time;
-    float relval;
-    bool  pgate;
-    float length[4];
-    float value[4];
+    return [p](msg_t m, T*t)
+    {
+        //printf("param of %s\n", m);
+        if(nargs(m)==0) {
+            bToU.write(uToB.peak(), "f", (t->*p));
+            //printf("just wrote a '%s' %f\n", uToB.peak(), t->*p);
+        } else if(nargs(m)==1 && type(m,0)=='f') {
+            (t->*p)=argument(m,0).f;
+            //printf("just set a '%s' %f\n", uToB.peak(), t->*p);
+        }
+        //printf("%f\n", t->*p);
+    };
+}
 
-    float operator()(bool gate);
-};
+Ports<7,Adsr> _adsrPorts{{{
+    Port<Adsr>("av:f:", 3, "1:-1.0:1.0", param<Adsr>(&Adsr::av)),
+    Port<Adsr>("dv:f:", 3, "1:-1.0:1.0", param<Adsr>(&Adsr::dv)),
+    Port<Adsr>("sv:f:", 3, "1:-1.0:1.0", param<Adsr>(&Adsr::sv)),
+    Port<Adsr>("rv:f:", 3, "1:-1.0:1.0", param<Adsr>(&Adsr::rv)),
+    Port<Adsr>("at:f:", 3, "10^:0.001:10.0", param<Adsr>(&Adsr::at)),
+    Port<Adsr>("dt:f:", 3, "10^:0.001:10.0", param<Adsr>(&Adsr::dt)),
+    Port<Adsr>("rt:f:", 3, "10^:0.001:10.0", param<Adsr>(&Adsr::rt))
+}}};
 
-static Adsr amp_env, frq_env;
+_Ports &Adsr::ports = _adsrPorts;
+void Adsr::dispatch(msg_t m)
+{
+    _adsrPorts.dispatch(m,this);
+}
+
 
 //sawtooth generator
 float oscil(float freq)
@@ -29,7 +55,7 @@ float oscil(float freq)
     return phase;
 }
 
-float sample(void)
+inline float Synth::sample(void)
 {
     return oscil(freq*(1+frq_env(gate))/2.0f)*(1+amp_env(gate))/2.0f;
 }
@@ -52,56 +78,128 @@ float Adsr::operator()(bool gate)
 
     float reltime = time;
     if(gate) {
-        if(length[0] > reltime) //Attack
-            return interp(value[0], value[1], reltime/length[0]);
-        reltime -= length[0];
-        if(length[1] > reltime) //Decay
-            return interp(value[1], value[2], reltime/length[1]);
-        return value[2];        //Sustain
+        if(at > reltime) //Attack
+            return interp(av, dv, reltime/at);
+        reltime -= at;
+        if(dt > reltime) //Decay
+            return interp(dv, sv, reltime/dt);
+        return sv;        //Sustain
     }
-    if(length[3] > reltime)     //Release
-        return interp(relval, value[3], reltime/length[3]);
+    if(rt > reltime)     //Release
+        return interp(relval, rv, reltime/rt);
 
-    return value[3];
+    return rv;
+}
+
+const char *snip(const char *m)
+{
+    while(*m && *m!='/')++m;
+    return *m?m+1:m;
+}
+
+template<class T, class TT>
+std::function<void(msg_t,T*)> recur(TT T::*p)
+{
+    return [p](msg_t m, T*t){(t->*p).dispatch(snip(m));};
+}
+
+MidiTable<64,64> midi;
+
+unsigned char rouge = 255;
+
+Synth s;
+void process_control(unsigned char control[3]);
+Ports<7,Synth> _synthPorts{{{
+    Port<Synth>("amp-env/",4,&_adsrPorts, recur<Synth,Adsr>(&Synth::amp_env)),
+    Port<Synth>("frq-env/",4,&_adsrPorts, recur<Synth,Adsr>(&Synth::frq_env)),
+    Port<Synth>("freq:f:",3,"10^:0.001:10.0", param<Synth>(&Synth::freq)),
+    Port<Synth>("gate:T",3,"", [](msg_t,Synth*s){s->gate=true;}),
+    Port<Synth>("gate:F",3,"", [](msg_t,Synth*s){s->gate=false;}),
+    Port<Synth>("register:iis",0,"",[](msg_t m,Synth*){
+            //printf("registering element...\n");
+            //printf("%d %d\n",argument(m,0).i,argument(m,1).i);
+            const char *pos = argument(m,2).s;
+            while(*pos) putchar(*pos++);
+            //printf("%p %p %c(%d)\n", m, argument(m,2).s, *(argument(m,2).s), *(argument(m,2).s));
+            //printf("%p\n", argument(m,2).s);
+            midi.addElm(argument(m,0).i,argument(m,1).i,argument(m,2).s,
+                Synth::ports.meta_data(argument(m,2).s+1));
+            //printf("adding element %d %d\n",argument(m,0).i,argument(m,1).i);
+            //printf("---------path: %s %s\n",argument(m,2).s, Synth::ports.meta_data(argument(m,2).s+1));
+            //unsigned char ctl[3] = {2,13,107};
+            //process_control(ctl);
+            //printf("synth.amp-env.av=%f\n", s.amp_env.av);
+            }),
+    Port<Synth>("learn:s", 0, "",[](msg_t m, Synth*){
+            if(rouge != 255)
+                midi.addElm(0,rouge,argument(m,0).s,Synth::ports.meta_data(argument(m,0).s+1));
+            rouge = 255;
+            })
+
+}}};
+
+_Ports &Synth::ports = _synthPorts;
+_Ports *root_ports = &_synthPorts;
+
+void Synth::dispatch(msg_t m)
+{
+    _synthPorts.dispatch(m,this);
 }
 
 
-struct Dispatch
-{
-    const char *path;
-    float *data;
-    float min, max;
-    const char *fn;
-};
+float &freq = s.freq;
+bool  &gate = s.gate;
 
-//Dispatch information
-Dispatch d_table[] = 
-{
-    {"/amp/env/av", amp_env.value,   -1.0,1.0,"1"},
-    {"/amp/env/dv", amp_env.value+1, -1.0,1.0,"1"},
-    {"/amp/env/sv", amp_env.value+2, -1.0,1.0,"1"},
-    {"/amp/env/rv", amp_env.value+3, -1.0,1.0,"1"},
-    {"/amp/env/at", amp_env.length,   0.001,10.0,"10^"},
-    {"/amp/env/dt", amp_env.length+1, 0.001,10.0,"10^"},
-    {"/amp/env/rt", amp_env.length+3, 0.001,10.0,"10^"},
-    {"/frq/env/av", frq_env.value,   -1.0,1.0,"1"},
-    {"/frq/env/dv", frq_env.value+1, -1.0,1.0,"1"},
-    {"/frq/env/sv", frq_env.value+2, -1.0,1.0,"1"},
-    {"/frq/env/rv", frq_env.value+3, -1.0,1.0,"1"},
-    {"/frq/env/at", frq_env.length,   0.001,10.0,"10^"},
-    {"/frq/env/dt", frq_env.length+1, 0.001,10.0,"10^"},
-    {"/frq/env/rt", frq_env.length+3, 0.001,10.0,"10^"},
-    {"/freq",       &freq,            10, 1000, "10^"},
-    {0}
-};
 
-void dsp_dispatch(const char *msg)
+float translate(unsigned char val, const char *conversion)
 {
-    Dispatch *itr = d_table;
-    while(itr->path && strcmp(msg, itr->path))
-        ++itr;
-    if(itr->path)
-        *itr->data = argument(msg, 0).f;
-    if(!strcmp(msg,"/gate"))
-        gate = argument(msg,0).T;
+    int type = 0;
+    if(conversion[0]=='1' && conversion[1]==':')
+        type = 1; //linear
+    else if(conversion[0]=='1' && conversion[1]=='0' && conversion[2]=='^')
+        type = 2; //exponential
+
+    while(*conversion++!=':');
+    float min = atof(conversion);
+    while(*conversion++!=':');
+    float max = atof(conversion);
+
+    //Allow for middle value to be set
+    float x = val!=64.0 ? val/127.0 : 0.5;
+
+    if(type == 1)
+        return x*(max-min)+min;
+    else if(type == 2) {
+        const float b = log(min)/log(10);
+        const float a = log(max)/log(10)-b;
+        return powf(10.0f, a*x+b);
+    }
+
+    return 0;
+}
+
+void process_control(unsigned char control[3])
+{
+    //puts("process_control...");
+    //printf("%d, %d\n",control[0],control[1]);
+    //puts("process_control working...");
+
+    const MidiAddr<64> *addr = midi.get(0,control[0]);
+    if(addr) {
+        char buffer[1024];
+        sosc(buffer,1024,addr->path,"f",translate(control[1],addr->conversion));
+        s.dispatch(buffer+1);
+        bToU.raw_write(buffer);
+    } else
+        rouge = control[0];
+}
+
+void process_output(float *smps, unsigned nframes)
+{
+    //printf("%f\n", s.amp_env.at);
+    while(uToB.hasNext())
+        s.dispatch(uToB.read()+1);
+
+    for(unsigned i=0; i<nframes; ++i)
+        smps[i] = s.sample();
 }

@@ -54,6 +54,7 @@ char type(const char *msg, unsigned pos)
     return arg_str(msg)[pos];
 }
 
+//TODO make aligment issues a bit less messy here
 unsigned arg_off(const char *msg, unsigned idx)
 {
     if(!has_reserved(arg_str(msg)[idx]))
@@ -70,8 +71,10 @@ unsigned arg_off(const char *msg, unsigned idx)
     while(idx--) {
         switch(*args++)
         {
-            case 'i':
             case 'f':
+                arg_pos += 4;
+                break;
+            case 'i':
                 arg_pos += 4;
                 break;
             case 's':
@@ -140,6 +143,7 @@ size_t vsosc_null(const char *address,
                 (void) va_arg(ap, double);
                 pos += 4;
                 --toparse;
+                break;
             default:
                 ;
         }
@@ -233,7 +237,6 @@ size_t vsosc(char   *buffer,
             default:
                 ;
         }
-        //float
     }
 
     va_end(ap);
@@ -243,6 +246,9 @@ size_t vsosc(char   *buffer,
 
 arg_t argument(const char *msg, unsigned idx)
 {
+    //hack to allow reading of arguments from truncated message
+    msg-=(msg-(const char *)0)%4;
+
     arg_t result = {0};
     char type = arg_str(msg)[idx];
     //trivial case
@@ -298,11 +304,10 @@ size_t msg_len_ring(ring_t *ring)
 {
     unsigned pos = 0;
     while(deref(pos++,ring));
-    --pos;
+    pos--;
     pos += 4-pos%4;//get 32 bit alignment
     int arguments = pos+1;
     while(deref(++pos,ring));
-    --pos;
     pos += 4-pos%4;
 
     unsigned toparse = 0;
@@ -352,6 +357,6 @@ size_t msg_len_ring(ring_t *ring)
 
 size_t msg_len(const char *msg)
 {
-    ring_t ring[2] = {{msg,-1},{NULL,0}};
+    ring_t ring[2] = {{(char*)msg,-1},{NULL,0}};
     return msg_len_ring(ring);
 }

@@ -10,6 +10,8 @@ Project Goals
 * Provide a simple means of handling OSC messages within an application
 * Provide a flexible method of dispatching OSC messages payloads
 * Create a C library with C++ header only wrappers for ease of use
+* Allow legacy code to have readable RT safe messaging added on
+* Keep networking outside of project scope
 
 Why?
 ----
@@ -23,17 +25,15 @@ attempt to alleviate this issue without creating an entirely hideous API.
 Status
 ------
 
-- Self consistent implementation of floating point, integers, blobs, true, false,
-  and Nil.
+- Self consistent implementation of floating point, strings, integers, blobs,
+  true, false, and Nil.
+- Working basic C++ based dispatch system
 - Lots of bugs..
 
 Todo
 ----
 
 - Increase test coverage
-- Stop the code from overflowing the buffer
 - Implement rest of OSC message spec
-- Create a standard dispatch table
-- Attempt to make some C++ wrappers
 - Create a truly unruly example by extending the "complex" one
 - Add to the API to make the "simple" example very basic

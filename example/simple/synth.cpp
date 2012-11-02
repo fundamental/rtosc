@@ -8,9 +8,6 @@
 
 #define OFF (0)
 
-//Position of oscillator in cycle [0.0-1.0]
-static float position = 0.0f;
-
 //Shape of oscillator
 //0 - sinusoidal
 //1 - sawtooth
@@ -57,7 +54,6 @@ setter(T,bool);
 
 void plot_data_cb(const char *msg, void*)
 {
-    arg_t a = argument(msg, 0);
     const int samples = argument(msg, 0).i;
 
     //Construct blob piecewise
@@ -162,7 +158,7 @@ void stop_synth(void)
 }
 
 float phase = 0.0f;
-int process(unsigned nframes, void *args)
+int process(unsigned nframes, void *)
 {
     dsp_ev();
     float *smps = (float*) jack_port_get_buffer(jport, nframes);
