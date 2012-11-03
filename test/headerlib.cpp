@@ -11,25 +11,25 @@ Ports<3,void*> ports{{{
     Port<void*>("echo:ss",     "", [](msg_t,void*) {})
 }}};
 
-ThreadLink<2048,100> link;
+ThreadLink<2048,100> tlink;
 
 int main()
 {
     for(int j=0; j<100; ++j) {
         for(int i=0; i<100; ++i){
-            link.write("badvalue",  "");
-            link.write("setstring", "s", "testing");
-            link.write("setint",    "i", 123);
-            link.write("setint",    "s", "dog");
-            link.write("echo",      "ss", "hello", "rtosc");
+            tlink.write("badvalue",  "");
+            tlink.write("setstring", "s", "testing");
+            tlink.write("setint",    "i", 123);
+            tlink.write("setint",    "s", "dog");
+            tlink.write("echo",      "ss", "hello", "rtosc");
         }
 
-        while(link.hasNext())
-            ports.dispatch(link.read(),NULL);
+        while(tlink.hasNext())
+            ports.dispatch(tlink.read(),NULL);
     }
-    link.write("echo", "ss", "hello", "rtosc");
+    tlink.write("echo", "ss", "hello", "rtosc");
 
-    std::cout << OSC_Message(link.read()) << std::endl;
+    std::cout << OSC_Message(tlink.read()) << std::endl;
 
     return !(resultB==123 && resultA=="testing");
 }
