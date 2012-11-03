@@ -1,0 +1,252 @@
+RT OSC User Manual
+==================
+Mark McCurry
+
+RT OSC a library for simply using Open Sound Control messages in a realtime
+context.
+
+The C Layer
+-----------
+
+For basic use of OSC messages, there is very little reason to complicate things
+more than needed.
+As such each message is simply stored in a buffer and assumed to be contiguous
+and stored properly.
+All manipulations of the OSC packets can be done with fixed sized buffers in a
+real time environment.
+
+The simplest and most useful function is _sosc()_, which allows for the
+generation of simple messages directly.
+
+[source,C]
+---------------------------------------------------------------
+char buffer[64];
+int len = sosc(buffer, sizeof(buffer), "hello", "s", "world");
+---------------------------------------------------------------
+
+In this example _len_ now contains the length of the message and _buffer_
+contains a well formed OSC message (or at minimum one that is self consistent
+within this library).
+To see the message, we can print the buffer and the zeroth argument:
+
+[source,C]
+-------------------------------------------------
+printf("%s %s!\n", buffer, argument(buffer,0).s);
+//hello world!
+-------------------------------------------------
+
+As the OSC message consists of null delimited path, argument string, and
+arguments, the path can be found at the start of the buffer and the argument can
+be fetched to get the fields.
+
+While this is a fairly simple interface, which may appear restrictive, this
+library's goal is to permit the simple use of basic RT OSC messages, nothing too
+much more, so for more complex construction of messages, I recommend liblo.
+This is not to say that all that all features are currently implemented.
+
+The C++ Layer
+-------------
+
+Once you have an OSC message, that is nice, but not terribly useful.
+As the primary motivation for this project is to ease the use of OSC for RT
+audio, this layer provides several key features:
+
+- A Thread Link, which makes transmitting messages over jack ringbuffers simple.
+- An implementation of Ports for dispatching OSC messages to their destinations.
+- A trivial midi lookup table for use with the Ports implementation
+- A non-realtime simple pretty printer for viewing messages
+
+None of these classes are coupled with each other, so any combination of them
+can be used without an issue.
+As this library is based upon the concept of using fixed sized buffers to avoid
+memory allocation, and no size universally works, these classes are templates
+with respect to their size.
+
+ThreadLink
+~~~~~~~~~~
+
+For simple usage, calls to _write()_ replace any calls to _sosc()_.
+One thread is intended to call _write()_ when messages are sent and the other is
+expected to periodically _read()_ all of the messages.
+
+[source,cpp]
+-----------------------------------------
+ThreadLink<1024,128> link;
+link.write("hello", "s", "world");
+cout << OSC_Message(link.read()) << endl;
+//<hello:s:world>
+-----------------------------------------
+
+Ports
+~~~~~
+
+Defining all of the possible ways a message can be sent to various parts of an
+audio application is next to impossible, so the implementation of Ports result
+in a description of OSC methods handled by various patterns.
+With trivial programs, one might want to establish one table of ports to
+describe all of the possible connections, but this is not feasible for moderately
+sized to large sized applications.
+As such each set of ports defines one layer of a tree of ports statically.
+As all of the data presented via the _Port interface can be statically
+specified, this means that any sort of interface to these ports can look at the
+data without needing to perform any cross thread operations.
+
+The _Port_ class defines one port which works on a OSC message and value.
+Possibly the simplest Port type is the unused void* pointer.
+
+[source,cpp]
+------------------------------------------------------------------------------
+Port<void> port("a_port:f", "", [](const char*, void*){puts("port called")});
+------------------------------------------------------------------------------
+
+The verbose way to read this is that this defines a port named "a_port" which
+accepts messages of type "f" with metadata of "" and a function that acts on the
+message and a void pointer.
+The concise way is to state that port maps float messages to "a_port" to the
+given function.
+
+The justification for the templates and use of std::function rather than just
+void* and function pointers comes in when dealing with classes.
+Let's look at how this can be used with classes:
+
+[source,cpp]
+----------------------------------------------------------------
+class Foobar
+{
+    float a,b,c,d;
+}
+
+Ports<4,Foobar> ports{{{
+    Port<Foobar>("a:f", "",
+        [](const char *m, Foobar *f){f->a = argument(m,0).f;}),
+    Port<Foobar>("b:f", "",
+        [](const char *m, Foobar *f){f->b = argument(m,0).f;}),
+    Port<Foobar>("c:f", "",
+        [](const char *m, Foobar *f){f->c = argument(m,0).f;}),
+    Port<Foobar>("d:f", "",
+        [](const char *m, Foobar *f){f->d = argument(m,0).f;})
+}}}
+----------------------------------------------------------------
+
+NOTE: The triple braces are required to use the correct C++11 calls
+
+This is however quite verbose mainly due to the associated setter functions.
+As this field is a std::function and not just a simple function pointer it is
+possible to abstract this with a generated function (or a macro, though
+generated functions lead to more interesting possibilities).
+
+
+[source,cpp]
+----------------------------------------------------------------
+class Foobar
+{
+    float a,b,c,d;
+};
+
+template<class T>
+function<void(const char*,T*)> parameter(float T::*p)
+{
+    return [p](const char *, T*t){(t->*p) = argument(m,0).f};
+}
+
+Ports<4,Foobar> ports{{{
+    Port<Foobar>("a:f", "", parameter(&Foobar::a)),
+    Port<Foobar>("b:f", "", parameter(&Foobar::b)), 
+    Port<Foobar>("c:f", "", parameter(&Foobar::c)),
+    Port<Foobar>("d:f", "", parameter(&Foobar::d))
+}}}
+----------------------------------------------------------------
+
+There, that is a concise representation of those parameters.
+It does however make use of a little used C++ feature, pointers to member data.
+This can be further complicated by adding multiple layers to the process of
+dispatching an event.
+
+[source,cpp]
+----------------------------------------------------------------
+typedef const char *msg_t;
+
+template<class T>
+function<void(const char*,T*)> param(float T::*p)
+{
+    return [p](const char *, T*t){(t->*p) = argument(m,0).f};
+}
+
+msg_t snip(msg_t m)
+{
+    while(*m && *m!='/')++m;
+    return *m?m+1:m;
+}
+
+template<class T, class TT>
+std::function<void(msg_t,T*)> recur(TT T::*p)
+{
+    return [p](msg_t m, T*t){(t->*p).dispatch(snip(m));};
+}
+
+class Barfoo
+{
+    float e;
+    void dispatch(msg_t m);
+};
+
+class Foobar
+{
+    float a,b,c,d;
+    Barfoo baz;
+    void dispatch(msg_t m) 
+};
+
+Ports<1,Barfoo> barPorts{{{
+    Port<Barfoo>("e:f", "", param(&Barfoo::e))
+}}};
+
+Ports<5,Foobar> fooPorts{{{
+    Port<Foobar>("a:f",  "",        param(&Foobar::a)),
+    Port<Foobar>("b:f",  "",        param(&Foobar::b)),
+    Port<Foobar>("c:f",  "",        param(&Foobar::c)),
+    Port<Foobar>("d:f",  "",        param(&Foobar::d)),
+    Port<Foobar>("baz/", &barPorts, recur(&Foobar::baz))
+}}};
+
+void Barfoo::dispatch(msg_t m)
+{
+    barPorts.dispatch(m, this);
+}
+
+void Foobar::dispatch(msg_t m)
+{
+    fooPorts.dispatch(m, this);
+}
+----------------------------------------------------------------
+
+Now a recursive dispatching hierarchy has been formed with only a few more
+lines.
+While this may appear somewhat complicated, all it does is define another
+function that handles any object that can dispatch messages.
+The _snip()_ in this context trims off the earlier part of the OSC message,
+which (assuming alignment is known) causes no issues whatsoever when decoding it.
+Depending upon the topology of the system being described, this can simplify
+things immensely.
+
+Lastly, it should be noted that &barPorts is stored in the port table, rather
+than the standard metadata.
+This permits traversal of the tree of ports with this constant hierarchy.
+Speaking of the metadata, it should be noted that it is empty in all of the
+above examples, but it is a great space to provide information on the parameters
+themselves in some ad-hoc manner.
+It is a great place to put parameter scaling/range information, which is used by
+the _MidiTable_ in one example and it can contain other properties of the ports,
+such as descriptions, units, visibility, and so forth.
+
+For more detail on the exact methods you should see the doxygen output, or for
+the moment the source itself (it doesn't bite much).
+
+//TODO port path parsing
+
+Midi
+~~~~
+
+The midi class just provides simple mapping of midi controls to Ports.
+All this does at the moment is provide a path and conversion string for
+registered ports.
