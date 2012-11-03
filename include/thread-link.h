@@ -110,14 +110,13 @@ class _Ports;
 class _Port
 {
     public:
-        _Port(const char*_n, int _t, const char *_m)
-            :name(_n),traits(_t),midi(_m){}
-        _Port(const char*_n, int _t, _Ports *_p)
-            :name(_n),traits(_t),ports(_p){}
+        _Port(const char*_n, const char *_m)
+            :name(_n),metadata(_m){}
+        _Port(const char*_n, _Ports *_p)
+            :name(_n),ports(_p){}
         const char *name;
-        int traits;
         union {
-            const char *midi;
+            const char *metadata;
             _Ports *ports;
         };
 };
@@ -125,14 +124,14 @@ class _Port
 template<class T>
 class Port:public _Port {
     public:
-        Port(const char*_n, int _t, const char* _m, std::function<void(msg_t, T*)> _f)
-            :_Port(_n,_t,_m), cb(_f)
+        Port(const char*_n, const char* _m, std::function<void(msg_t, T*)> _f)
+            :_Port(_n,_m), cb(_f)
         {};
-        Port(const char*_n, int _t, _Ports *_p, std::function<void(msg_t, T*)> _f)
-            :_Port(_n,_t,_p), cb(_f)
+        Port(const char*_n, _Ports *_p, std::function<void(msg_t, T*)> _f)
+            :_Port(_n,_p), cb(_f)
         {};
         Port(const Port<T> &port)
-            :_Port(port.name,port.traits,port.ports),cb(port.cb){}
+            :_Port(port.name,port.ports),cb(port.cb){}
         std::function<void(msg_t, T*)> cb;
 };
 
@@ -205,7 +204,7 @@ class Ports : public _Ports
                     return port.ports->meta_data(path+1);
                 }
                 if(*p == ':') {
-                    return port.midi;
+                    return port.metadata;
                 }
             }
             puts("failed to get meta-data...");
@@ -295,7 +294,7 @@ struct OSC_Message
 };
 
 
-std::ostream &operator<<(std::ostream &o, const OSC_Message &msg)
+static std::ostream &operator<<(std::ostream &o, const OSC_Message &msg)
 {
     const char *args = arg_str(msg.message);
     o << '<' << msg.message << ':' << args << ':';

@@ -91,7 +91,7 @@ struct Fl_Knob : public Fl_Dial
         getline(path_ss,path, ':');
         uToB.write(path.c_str(),"");
 
-        std::stringstream scale_ss(port->midi);
+        std::stringstream scale_ss(port->metadata);
         getline(scale_ss,fn, ':');
         char delim;
         scale_ss >> min >> delim >> max;
@@ -250,7 +250,7 @@ void traverse_tree(const _Ports *p, std::string prefix="/")
 {
     for(unsigned i=0; i<p->nports(); ++i) {
         const _Port &port = p->port(i);
-        if(port.traits&0x04)
+        if(index(port.name,'/'))
             traverse_tree(port.ports, prefix+port.name);
         else
             printf("%s\n", (prefix+port.name).c_str());

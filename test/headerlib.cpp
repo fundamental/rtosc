@@ -6,9 +6,9 @@
 std::string resultA;
 int resultB = 0;
 Ports<3,void*> ports{{{
-    Port<void*>("setstring:s", 0, "", [](msg_t msg,void*) {resultA = argument(msg,0).s;}),
-    Port<void*>("setint:i",    0, "", [](msg_t msg,void*) {resultB = argument(msg,0).i;}),
-    Port<void*>("echo:ss",     0, "", [](msg_t msg,void*) {})
+    Port<void*>("setstring:s", "", [](msg_t msg,void*) {resultA = argument(msg,0).s;}),
+    Port<void*>("setint:i",    "", [](msg_t msg,void*) {resultB = argument(msg,0).i;}),
+    Port<void*>("echo:ss",     "", [](msg_t,void*) {})
 }}};
 
 ThreadLink<2048,100> link;

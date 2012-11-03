@@ -28,13 +28,13 @@ std::function<void(msg_t,T*)> param(float T::*p)
 }
 
 Ports<7,Adsr> _adsrPorts{{{
-    Port<Adsr>("av:f:", 3, "1:-1.0:1.0", param<Adsr>(&Adsr::av)),
-    Port<Adsr>("dv:f:", 3, "1:-1.0:1.0", param<Adsr>(&Adsr::dv)),
-    Port<Adsr>("sv:f:", 3, "1:-1.0:1.0", param<Adsr>(&Adsr::sv)),
-    Port<Adsr>("rv:f:", 3, "1:-1.0:1.0", param<Adsr>(&Adsr::rv)),
-    Port<Adsr>("at:f:", 3, "10^:0.001:10.0", param<Adsr>(&Adsr::at)),
-    Port<Adsr>("dt:f:", 3, "10^:0.001:10.0", param<Adsr>(&Adsr::dt)),
-    Port<Adsr>("rt:f:", 3, "10^:0.001:10.0", param<Adsr>(&Adsr::rt))
+    Port<Adsr>("av:f:", "1:-1.0:1.0", param(&Adsr::av)),
+    Port<Adsr>("dv:f:", "1:-1.0:1.0", param<Adsr>(&Adsr::dv)),
+    Port<Adsr>("sv:f:", "1:-1.0:1.0", param<Adsr>(&Adsr::sv)),
+    Port<Adsr>("rv:f:", "1:-1.0:1.0", param<Adsr>(&Adsr::rv)),
+    Port<Adsr>("at:f:", "10^:0.001:10.0", param<Adsr>(&Adsr::at)),
+    Port<Adsr>("dt:f:", "10^:0.001:10.0", param<Adsr>(&Adsr::dt)),
+    Port<Adsr>("rt:f:", "10^:0.001:10.0", param<Adsr>(&Adsr::rt))
 }}};
 
 _Ports &Adsr::ports = _adsrPorts;
@@ -110,12 +110,12 @@ unsigned char rouge = 255;
 Synth s;
 void process_control(unsigned char control[3]);
 Ports<7,Synth> _synthPorts{{{
-    Port<Synth>("amp-env/",4,&_adsrPorts, recur<Synth,Adsr>(&Synth::amp_env)),
-    Port<Synth>("frq-env/",4,&_adsrPorts, recur<Synth,Adsr>(&Synth::frq_env)),
-    Port<Synth>("freq:f:",3,"10^:0.001:10.0", param<Synth>(&Synth::freq)),
-    Port<Synth>("gate:T",3,"", [](msg_t,Synth*s){s->gate=true;}),
-    Port<Synth>("gate:F",3,"", [](msg_t,Synth*s){s->gate=false;}),
-    Port<Synth>("register:iis",0,"",[](msg_t m,Synth*){
+    Port<Synth>("amp-env/",&_adsrPorts, recur<Synth,Adsr>(&Synth::amp_env)),
+    Port<Synth>("frq-env/",&_adsrPorts, recur<Synth,Adsr>(&Synth::frq_env)),
+    Port<Synth>("freq:f:","10^:0.001:10.0", param<Synth>(&Synth::freq)),
+    Port<Synth>("gate:T","", [](msg_t,Synth*s){s->gate=true;}),
+    Port<Synth>("gate:F","", [](msg_t,Synth*s){s->gate=false;}),
+    Port<Synth>("register:iis","",[](msg_t m,Synth*){
             //printf("registering element...\n");
             //printf("%d %d\n",argument(m,0).i,argument(m,1).i);
             const char *pos = argument(m,2).s;
@@ -130,7 +130,7 @@ Ports<7,Synth> _synthPorts{{{
             //process_control(ctl);
             //printf("synth.amp-env.av=%f\n", s.amp_env.av);
             }),
-    Port<Synth>("learn:s", 0, "",[](msg_t m, Synth*){
+    Port<Synth>("learn:s", "",[](msg_t m, Synth*){
             if(rouge != 255)
                 midi.addElm(0,rouge,argument(m,0).s,Synth::ports.meta_data(argument(m,0).s+1));
             rouge = 255;
