@@ -31,3 +31,15 @@ target_link_libraries(null-messages rtosc gcov)
 add_executable(header-test test/headerlib.cpp)
 add_test(header-test header-test)
 target_link_libraries(header-test rtosc -ljack gcov)
+
+# Documentation
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+    set(CMAKE_DOXYGEN_INPUT_LIST ${CMAKE_SOURCE_DIR}/include/)
+    SET(DOXYGEN_OUTPUT_DIR html)
+    CONFIGURE_FILE(Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+    SET(HTML_TARGET “html” )
+    ADD_CUSTOM_TARGET(${HTML_TARGET} ALL
+        ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+endif()

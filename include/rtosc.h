@@ -1,4 +1,4 @@
-
+/** @file */
 #ifndef RTOSC_H
 #define RTOSC_H
 #include <stdarg.h>
@@ -26,6 +26,8 @@ typedef union {
  * Write OSC message to fixed length buffer
  *
  * On error, buffer will be zeroed.
+ * When buffer is NULL, the function returns the size of the buffer required to
+ * store the message
  *
  * @param buffer    Memory to write to
  * @param len       Length of buffer
@@ -59,6 +61,10 @@ unsigned nargs(const char *msg);
  */
 char type(const char *msg, unsigned i);
 
+/**
+ * Returns an argument by value via the arg_t union
+ * Blob data may be safely written to
+ */
 arg_t argument(const char *msg, unsigned i);
 
 //Finds the offset of a given argument or 0 for invalid requests
