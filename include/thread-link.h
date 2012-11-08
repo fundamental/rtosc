@@ -43,7 +43,8 @@ class ThreadLink
         {
             va_list va;
             va_start(va,args);
-            const size_t len = vsosc(write_buffer,MAX_MSG,dest,args,va);
+            const size_t len =
+                rtosc_vmessage(write_buffer,MAX_MSG,dest,args,va);
             if(jack_ringbuffer_write_space(ring) >= len)
                 jack_ringbuffer_write(ring,write_buffer,len);
         }
@@ -53,7 +54,7 @@ class ThreadLink
          */
         void raw_write(const char *msg)
         {
-            const size_t len = msg_len(msg);
+            const size_t len = rtosc_message_length(msg);
             if(jack_ringbuffer_write_space(ring) >= len)
                 jack_ringbuffer_write(ring,msg,len);
         }
@@ -72,7 +73,8 @@ class ThreadLink
         msg_t read(void) {
             ring_t r[2];
             jack_ringbuffer_get_read_vector(ring,(jack_ringbuffer_data_t*)r);
-            const size_t len = msg_len_ring(r);
+            const size_t len =
+                rtosc_message_ring_length(r);
             assert(jack_ringbuffer_read_space(ring) >= len);
             assert(len <= MAX_MSG);
             jack_ringbuffer_read(ring, read_buffer, len);
@@ -175,7 +177,7 @@ class Ports : public _Ports
         {
             for(Port<T> &port: ports) {
                 const char *p = match(port.name,m);
-                if(*p == '/' || (*p == ':' && arg_match(p+1,arg_str(m))))
+                if(*p == '/' || (*p == ':' && arg_match(p+1,rtosc_argument_string(m))))
                     port.cb(m,t);
             }
         }
@@ -296,14 +298,14 @@ struct OSC_Message
 
 static std::ostream &operator<<(std::ostream &o, const OSC_Message &msg)
 {
-    const char *args = arg_str(msg.message);
+    const char *args = rtosc_argument_string(msg.message);
     o << '<' << msg.message << ':' << args << ':';
 
-    int _args = nargs(msg.message);
+    int _args = rtosc_narguments(msg.message);
 
     for(int i=0; i<_args; ++i) {
-        arg_t arg = argument(msg.message,i);
-        switch(type(msg.message,i))
+        arg_t arg = rtosc_argument(msg.message,i);
+        switch(rtosc_type(msg.message,i))
         {
             case 'T':
             case 'F':

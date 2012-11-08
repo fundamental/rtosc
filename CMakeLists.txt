@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(RTOSC)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(CMAKE_C_FLAGS "-std=c99 -Wall -Wextra -fprofile-arcs -ftest-coverage")
-set(CMAKE_CXX_FLAGS "-std=c++0x -Wall -Wextra -fprofile-arcs -ftest-coverage")
+set(CMAKE_C_FLAGS "-O2 -std=c99 -Wall -Wextra -fprofile-arcs -ftest-coverage")
+set(CMAKE_CXX_FLAGS "-O2 -std=c++0x -Wall -Wextra -fprofile-arcs -ftest-coverage")
 set(CMAKE_SHARED_LINKER_FLAGS "-fprofile-arcs -ftest-coverage")
 set(CMAKE_EXE_LINKER_FLAGS "-fprofile-arcs -ftest-coverage")
 add_library(rtosc SHARED src/rtosc.c)
@@ -32,9 +32,15 @@ add_executable(header-test test/headerlib.cpp)
 add_test(header-test header-test)
 target_link_libraries(header-test rtosc -ljack gcov)
 
+add_executable(bundles test/bundles.c)
+add_test(bundles bundles)
+target_link_libraries(bundles rtosc gcov)
+
 # Documentation
 find_package(Doxygen)
-if(DOXYGEN_FOUND)
+SET(Documentation FALSE CACHE BOOL "Enable building documentation")
+
+if(DOXYGEN_FOUND AND Documentation)
     set(CMAKE_DOXYGEN_INPUT_LIST ${CMAKE_SOURCE_DIR}/include/)
     SET(DOXYGEN_OUTPUT_DIR html)
     CONFIGURE_FILE(Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)

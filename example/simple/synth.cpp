@@ -37,7 +37,7 @@ static char dsp_osc_buf[2048];
 extern char gui_osc_buf[];
 void gui_message(const char *msg);
 #define message(path, type, ...) do { \
-    if(sosc(dsp_osc_buf, 2048, path, ...)) \
+    if(rtosc_message(dsp_osc_buf, 2048, path, ...)) \
         gui_message(dsp_osc_buf); \
     else \
         warnx("Message to %s is too long...", path);\
@@ -45,7 +45,7 @@ void gui_message(const char *msg);
 
 //Setter functions
 #define setter(type_ch, type) void type_ch##setter(const char *osc_msg, void *param) { \
-    *((type*)param) = argument(osc_msg, 0).type_ch; \
+    *((type*)param) = rtosc_argument(osc_msg, 0).type_ch; \
 }
 setter(i,int);
 setter(f,float);
@@ -54,13 +54,13 @@ setter(T,bool);
 
 void plot_data_cb(const char *msg, void*)
 {
-    const int samples = argument(msg, 0).i;
+    const int samples = rtosc_argument(msg, 0).i;
 
     //Construct blob piecewise
-    if(sosc(dsp_osc_buf, 2048, "/ui/plot", "b", samples, NULL)) {
+    if(rtosc_message(dsp_osc_buf, 2048, "/ui/plot", "b", samples, NULL)) {
 
         //Fill reserved space
-        float *data = (float*) (dsp_osc_buf+arg_off(dsp_osc_buf, 0)+4);
+        float *data = (float*) rtosc_argument(dsp_osc_buf,0).b.data;
         for(int i=0; i < samples; ++i)
             data[i] = get_sample((float)i/samples);
 

@@ -10,7 +10,7 @@
 char gui_osc_buf[2048];
 void dsp_message(const char *msg);
 #define message(path, type, ...) do { \
-    if(sosc(gui_osc_buf, 2048, path, type, ##__VA_ARGS__)) \
+    if(rtosc_message(gui_osc_buf, 2048, path, type, ##__VA_ARGS__)) \
         dsp_message(gui_osc_buf); \
     else \
         warnx("Message to %s is too long...", path);\
@@ -38,8 +38,8 @@ static void gate_cb(Fl_Widget *w, void*)
 Fl_Chart *chart;
 void gui_dispatch(const char *msg)
 {
-    const int    elms = argument(msg,0).b.len;
-    const float *data = (const float*) argument(msg,0).b.data;
+    const int    elms = rtosc_argument(msg,0).b.len;
+    const float *data = (const float*) rtosc_argument(msg,0).b.data;
     chart->clear();
     for(int i=0; i<elms; ++i)
         chart->add(data[i]);

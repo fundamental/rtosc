@@ -343,7 +343,7 @@ int main()
         while(bToU.hasNext()) {
             const char *msg = bToU.read();
             //Only floats to known GUI controls are currently received
-            gui_map[msg]->setVal(argument(msg,0).f);
+            gui_map[msg]->setVal(rtosc_argument(msg,0).f);
         }
         Fl::wait(0.01f);
     }

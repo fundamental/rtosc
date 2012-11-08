@@ -16,11 +16,11 @@ std::function<void(msg_t,T*)> param(float T::*p)
     return [p](msg_t m, T*t)
     {
         //printf("param of %s\n", m);
-        if(nargs(m)==0) {
+        if(rtosc_narguments(m)==0) {
             bToU.write(uToB.peak(), "f", (t->*p));
             //printf("just wrote a '%s' %f\n", uToB.peak(), t->*p);
-        } else if(nargs(m)==1 && type(m,0)=='f') {
-            (t->*p)=argument(m,0).f;
+        } else if(rtosc_narguments(m)==1 && rtosc_type(m,0)=='f') {
+            (t->*p)=rtosc_argument(m,0).f;
             //printf("just set a '%s' %f\n", uToB.peak(), t->*p);
         }
         //printf("%f\n", t->*p);
@@ -118,12 +118,12 @@ Ports<7,Synth> _synthPorts{{{
     Port<Synth>("register:iis","",[](msg_t m,Synth*){
             //printf("registering element...\n");
             //printf("%d %d\n",argument(m,0).i,argument(m,1).i);
-            const char *pos = argument(m,2).s;
+            const char *pos = rtosc_argument(m,2).s;
             while(*pos) putchar(*pos++);
             //printf("%p %p %c(%d)\n", m, argument(m,2).s, *(argument(m,2).s), *(argument(m,2).s));
             //printf("%p\n", argument(m,2).s);
-            midi.addElm(argument(m,0).i,argument(m,1).i,argument(m,2).s,
-                Synth::ports.meta_data(argument(m,2).s+1));
+            midi.addElm(rtosc_argument(m,0).i,rtosc_argument(m,1).i,rtosc_argument(m,2).s,
+                Synth::ports.meta_data(rtosc_argument(m,2).s+1));
             //printf("adding element %d %d\n",argument(m,0).i,argument(m,1).i);
             //printf("---------path: %s %s\n",argument(m,2).s, Synth::ports.meta_data(argument(m,2).s+1));
             //unsigned char ctl[3] = {2,13,107};
@@ -132,7 +132,7 @@ Ports<7,Synth> _synthPorts{{{
             }),
     Port<Synth>("learn:s", "",[](msg_t m, Synth*){
             if(rouge != 255)
-                midi.addElm(0,rouge,argument(m,0).s,Synth::ports.meta_data(argument(m,0).s+1));
+                midi.addElm(0,rouge,rtosc_argument(m,0).s,Synth::ports.meta_data(rtosc_argument(m,0).s+1));
             rouge = 255;
             })
 
@@ -187,7 +187,8 @@ void process_control(unsigned char control[3])
     const MidiAddr<64> *addr = midi.get(0,control[0]);
     if(addr) {
         char buffer[1024];
-        sosc(buffer,1024,addr->path,"f",translate(control[1],addr->conversion));
+        rtosc_message(buffer,1024,addr->path,"f",
+                translate(control[1],addr->conversion));
         s.dispatch(buffer+1);
         bToU.raw_write(buffer);
     } else

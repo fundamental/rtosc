@@ -14,7 +14,7 @@ void check(int b, const char *msg)
 int main()
 {
     //Verify that given a null buffer, it does not segfault
-    check(sosc(0,0,"/page/poge","TIF") == 20,
+    check(rtosc_message(0,0,"/page/poge","TIF") == 20,
             "Invalid message length");
     return 0;
 }

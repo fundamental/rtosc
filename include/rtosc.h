@@ -36,16 +36,16 @@ typedef union {
  * @param ...       OSC arguments to pass forward
  * @returns length of resulting message or zero if bounds exceeded
  */
-size_t sosc(char   *buffer,
+size_t rtosc_message(char   *buffer,
         size_t      len,
         const char *address,
         const char *arguments,
         ...);
 
 /**
- * See sosc()
+ * See rtosc_message()
  */
-size_t vsosc(char   *buffer,
+size_t rtosc_vmessage(char   *buffer,
         size_t      len,
         const char *address,
         const char *arguments,
@@ -54,26 +54,23 @@ size_t vsosc(char   *buffer,
 /**
  * Returns the number of arguments found in a given message
  */
-unsigned nargs(const char *msg);
+unsigned rtosc_narguments(const char *msg);
 
 /**
  * Returns the type of the ith argument in msg
  */
-char type(const char *msg, unsigned i);
+char rtosc_type(const char *msg, unsigned i);
 
 /**
  * Returns an argument by value via the arg_t union
  * Blob data may be safely written to
  */
-arg_t argument(const char *msg, unsigned i);
-
-//Finds the offset of a given argument or 0 for invalid requests
-unsigned arg_off(const char *msg, unsigned i);
+arg_t rtosc_argument(const char *msg, unsigned i);
 
 /**
  * Returns the size of a message given a chunk of memory.
  */
-size_t msg_len(const char *msg);
+size_t rtosc_message_length(const char *msg);
 
 typedef struct {
     char *data;
@@ -86,12 +83,36 @@ typedef struct {
  * @param ring The addresses and lengths of the split buffer, in a compatible
  *             format to jack's ringbuffer
  */
-size_t msg_len_ring(ring_t *ring);
+size_t rtosc_message_ring_length(ring_t *ring);
 
 /**
  * Returns the argument string of a given message
  */
-const char *arg_str(const char *msg);
+const char *rtosc_argument_string(const char *msg);
+
+/**
+ * Generate a bundle from sub-messages
+ */
+size_t rtosc_bundle(char *buffer, size_t len, uint64_t tt, int elms, ...);
+//TODO
+
+/**
+ * Find the elements in a bundle
+ */
+size_t rtosc_bundle_elements(const char *buffer);
+
+/**
+ * Fetch a message within the bundle
+ */
+const char *rtosc_bundle_fetch(const char *buffer, unsigned elm);
+
+/**
+ * True if message is a bundle
+ */
+int rtosc_bundle_p(const char *msg);
+
+//TODO TODO
+uint64_t rtosc_bundle_timetag(const char *msg);
 
 #ifdef __cplusplus
 };
