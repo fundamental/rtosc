@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -300,9 +301,36 @@ static unsigned char deref(unsigned pos, ring_t *ring)
     return pos<ring[0].len?ring[0].data[pos]:ring[1].data[pos-ring[0].len];
 }
 
+static size_t bundle_ring_length(ring_t *ring)
+{
+    unsigned pos = 8+8;//goto first length field
+    uint32_t advance = 0;
+    do {
+        advance = deref(pos+0, ring) << (8*0) |
+                  deref(pos+1, ring) << (8*1) |
+                  deref(pos+2, ring) << (8*2) |
+                  deref(pos+3, ring) << (8*3);
+        pos += 4+advance;
+    } while(advance);
+
+    return pos;
+}
+
 //Zero means no full message present
 size_t rtosc_message_ring_length(ring_t *ring)
 {
+    //Check if the message is a bundle
+    if(deref(0,ring) == '#' &&
+            deref(1,ring) == 'b' &&
+            deref(2,ring) == 'u' &&
+            deref(3,ring) == 'n' &&
+            deref(4,ring) == 'd' &&
+            deref(5,ring) == 'l' &&
+            deref(6,ring) == 'e' &&
+            deref(7,ring) == '\0')
+        return bundle_ring_length(ring);
+
+    //Proceed for normal messages
     unsigned pos = 0;
     while(deref(pos++,ring));
     pos--;
@@ -368,6 +396,8 @@ size_t rtosc_bundle(char *buffer, size_t len, uint64_t tt, int elms, ...)
     memset(buffer, 0, len);
     strcpy(buffer, "#bundle");
     buffer += 8;
+    (*(uint64_t*)buffer) = tt;
+    buffer +=8;
     va_list va;
     va_start(va, elms);
     for(int i=0; i<elms; ++i) {
@@ -384,7 +414,7 @@ size_t rtosc_bundle(char *buffer, size_t len, uint64_t tt, int elms, ...)
 
 size_t rtosc_bundle_elements(const char *buffer)
 {
-    const int *lengths = (const int*) (buffer+8);
+    const uint32_t *lengths = (const uint32_t*) (buffer+16);
     size_t elms = 0;
     while(*lengths) ++elms, lengths+=*lengths/4+1;
     return elms;
@@ -392,7 +422,7 @@ size_t rtosc_bundle_elements(const char *buffer)
 
 const char *rtosc_bundle_fetch(const char *buffer, unsigned elm)
 {
-    const int *lengths = (const int*) (buffer+8);
+    const uint32_t *lengths = (const uint32_t*) (buffer+16);
     size_t elm_pos = 0;
     while(elm_pos!=elm && *lengths) ++elm_pos, lengths+=*lengths/4+1;
 
@@ -404,3 +434,7 @@ int rtosc_bundle_p(const char *msg)
     return !strcmp(msg,"#bundle");
 }
 
+uint64_t rtosc_bundle_timetag(const char *msg)
+{
+    return *(uint64_t*)(msg+8);
+}
