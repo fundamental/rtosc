@@ -275,6 +275,44 @@ const _Ports *subtree_lookup(const _Ports *p, std::string s)
     return p;
 }
 
+
+void tree_callback(Fl_Widget*w,void*)
+{
+    Fl_Tree *t=(Fl_Tree*)w;
+    int reason = t->callback_reason();
+
+    char pathname[1024];
+    t->item_pathname(pathname, sizeof(pathname), t->callback_item());
+
+
+    if(reason==1) {
+        char *colon = index(pathname, ':');
+        if(colon) {
+            *colon = 0;
+            uToB.write("/learn", "s", pathname);
+        }
+    }
+
+    if(reason==3) //Populate fields
+    {
+        const _Ports *p=subtree_lookup(root_ports,pathname+1);
+        if(auto *i = t->find_item((std::string(pathname)+"/"+"nil").c_str()))
+            t->remove(i);
+        for(unsigned i=0; i<p->nports(); ++i) {
+            bool subnodes = index(p->port(i).name,'/');
+            string path = std::string(pathname)+"/"+p->port(i).name;
+            if(subnodes) {
+                t->add(path.c_str());
+                t->add((path+"nil").c_str());
+                t->close(path.c_str());
+            } else if(index(p->port(i).metadata,'v')) {
+                t->add(path.c_str());
+            }
+        }
+
+    }
+}
+
 void audio_init(void);
 int main()
 {
@@ -302,35 +340,7 @@ int main()
     tree->add("nil");
     tree->add("/nil/nil");
     tree->close(tree->first());
-    tree->callback([](Fl_Widget*w,void*){
-            Fl_Tree *t=(Fl_Tree*)w;
-            int reason = t->callback_reason();
-            printf("%d\n", reason);
-            char pathname[1024];
-            t->item_pathname(pathname, sizeof(pathname), t->callback_item());
-            printf("%s\n", pathname);
-            if(reason==1) {
-                char *colon = index(pathname, ':');
-                if(colon) {
-                    *colon = 0;
-                    puts(pathname);
-                    uToB.write("/learn", "s", pathname);
-                }
-            }
-
-            if(reason==3) //Populate fields
-            {
-                const _Ports *p=subtree_lookup(root_ports,pathname+1);
-                if(auto *i = t->find_item((std::string(pathname)+"/"+"nil").c_str()))
-                    t->remove(i);
-                for(unsigned i=0; i<p->nports(); ++i) {
-                    if(index(p->port(i).name,'/'))
-                        t->add((std::string(pathname)+"/"+p->port(i).name+"/"+"nil").c_str());
-                    t->close(t->add((std::string(pathname)+"/"+p->port(i).name).c_str()));
-                }
-
-            }
-            },NULL);
+    tree->callback(tree_callback, NULL);
     midi_win->show();
     //Traverse possible ports
     //puts("<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
@@ -338,7 +348,7 @@ int main()
     //puts(">>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
 
-    while(win->visible())
+    while(win->shown())
     {
         while(bToU.hasNext()) {
             const char *msg = bToU.read();
