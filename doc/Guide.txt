@@ -15,14 +15,14 @@ and stored properly.
 All manipulations of the OSC packets can be done with fixed sized buffers in a
 real time environment.
 
-The simplest and most useful function is _sosc()_, which allows for the
-generation of simple messages directly.
+The simplest and most useful function is _rtosc_message()_, which allows for the
+generation of OSC messages.
 
 [source,C]
----------------------------------------------------------------
+-----------------------------------------------------------------------
 char buffer[64];
-int len = sosc(buffer, sizeof(buffer), "hello", "s", "world");
----------------------------------------------------------------
+int len = rtosc_message(buffer, sizeof(buffer), "hello", "s", "world");
+-----------------------------------------------------------------------
 
 In this example _len_ now contains the length of the message and _buffer_
 contains a well formed OSC message (or at minimum one that is self consistent
@@ -30,14 +30,29 @@ within this library).
 To see the message, we can print the buffer and the zeroth argument:
 
 [source,C]
--------------------------------------------------
-printf("%s %s!\n", buffer, argument(buffer,0).s);
+-------------------------------------------------------
+printf("%s %s!\n", buffer, rtosc_argument(buffer,0).s);
 //hello world!
--------------------------------------------------
+-------------------------------------------------------
 
 As the OSC message consists of null delimited path, argument string, and
 arguments, the path can be found at the start of the buffer and the argument can
 be fetched to get the fields.
+
+Other properties of this message can be found with library calls on the message
+buffer.
+
+[source,C]
+-------------------------------
+rtosc_narguments(buffer);
+//1
+rtosc_argument_string(buffer);
+//"s"
+rtosc_type(buffer, 0);
+//'s'
+rtosc_message_length(buffer);
+//same as len from above
+-------------------------------
 
 While this is a fairly simple interface, which may appear restrictive, this
 library's goal is to permit the simple use of basic RT OSC messages, nothing too
