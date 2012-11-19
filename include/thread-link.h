@@ -49,6 +49,14 @@ class ThreadLink
                 jack_ringbuffer_write(ring,write_buffer,len);
         }
 
+        void writeArray(const char *dest, const char *args, const arg_t *aargs)
+        {
+            const size_t len =
+                rtosc_amessage(write_buffer, MAX_MSG, dest, args, aargs);
+            if(jack_ringbuffer_write_space(ring) >= len)
+                jack_ringbuffer_write(ring,write_buffer,len);
+        }
+
         /**
          * Directly write message to ringbuffer
          */

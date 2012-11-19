@@ -63,6 +63,15 @@ size_t rtosc_vmessage(char   *buffer,
         va_list va);
 
 /**
+ * @see rtosc_message()
+ */
+size_t rtosc_amessage(char        *buffer,
+                      size_t       len,
+                      const char  *address,
+                      const char  *arguments,
+                      const arg_t *args);
+
+/**
  * Returns the number of arguments found in a given message
  *
  * @param msg well formed OSC message

@@ -104,9 +104,9 @@ size_t rtosc_message(char   *buffer,
 }
 
 //Calculate the size of the message without writing to a buffer
-static size_t vsosc_null(const char *address,
-                         const char *arguments,
-                         va_list     ap)
+static size_t vsosc_null(const char  *address,
+                         const char  *arguments,
+                         const arg_t *args)
 {
     unsigned pos = 0;
     pos += strlen(address);
@@ -115,6 +115,7 @@ static size_t vsosc_null(const char *address,
     pos += 4-pos%4;
 
     unsigned toparse = nreserved(arguments);
+    unsigned arg_pos = 0;
 
     //Take care of varargs
     while(toparse)
@@ -125,24 +126,23 @@ static size_t vsosc_null(const char *address,
         const char *s;
         switch(arg) {
             case 'i':
-                (void) va_arg(ap, int32_t);
+                ++arg_pos;
                 pos += 4;
                 --toparse;
                 break;
             case 's':
-                s = va_arg(ap, const char*);
+                s = args[arg_pos++].s;
                 pos += strlen(s);
                 pos += 4-pos%4;
                 --toparse;
                 break;
             case 'b':
-                i = va_arg(ap, int32_t);
+                i = args[arg_pos++].b.len;
                 pos += 4 + i;
-                (void) va_arg(ap, const char *);
                 --toparse;
                 break;
             case 'f':
-                (void) va_arg(ap, double);
+                arg_pos++;
                 pos += 4;
                 --toparse;
                 break;
@@ -151,20 +151,54 @@ static size_t vsosc_null(const char *address,
         }
     }
 
-    va_end(ap);
-
     return pos;
 }
-
 size_t rtosc_vmessage(char   *buffer,
                       size_t      len,
                       const char *address,
                       const char *arguments,
                       va_list ap)
 {
-    va_list _ap;
-    va_copy(_ap,ap);
-    const size_t total_len = vsosc_null(address, arguments, _ap);
+    const unsigned nargs = nreserved(arguments);
+    if(!nargs)
+        return rtosc_amessage(buffer,len,address,arguments,NULL);
+
+    arg_t args[nargs];
+
+    unsigned arg_pos = 0;
+    const char *arg_str = arguments;
+    while(arg_pos < nargs)
+    {
+        switch(*arg_str++) {
+            case 'i':
+                args[arg_pos++].i = va_arg(ap, int);
+                break;
+            case 's':
+                args[arg_pos++].s = va_arg(ap, const char *);
+                break;
+            case 'b':
+                args[arg_pos].b.len = va_arg(ap, int);
+                args[arg_pos].b.data = va_arg(ap, unsigned char *);
+                arg_pos++;
+                break;
+            case 'f':
+                args[arg_pos++].f = va_arg(ap, double);
+                break;
+            default:
+                ;
+        }
+    }
+
+    return rtosc_amessage(buffer,len,address,arguments,args);
+}
+
+size_t rtosc_amessage(char        *buffer,
+                      size_t       len,
+                      const char  *address,
+                      const char  *arguments,
+                      const arg_t *args)
+{
+    const size_t total_len = vsosc_null(address, arguments, args);
 
     if(!buffer)
         return total_len;
@@ -184,14 +218,14 @@ size_t rtosc_vmessage(char   *buffer,
 
     buffer[pos++] = ',';
 
-    const char *args = arguments;
-    while(*args)
-        buffer[pos++] = *args++;
+    const char *arg_str = arguments;
+    while(*arg_str)
+        buffer[pos++] = *arg_str++;
 
     pos += 4-pos%4;
 
     unsigned toparse = nreserved(arguments);
-    //Take care of varargs
+    unsigned arg_pos = 0;
     while(toparse)
     {
         char arg = *arguments++;
@@ -199,9 +233,11 @@ size_t rtosc_vmessage(char   *buffer,
         float f;
         int32_t i;
         const char *s;
+        const unsigned char *u;
+        blob_t b;
         switch(arg) {
             case 'i':
-                i = va_arg(ap, int32_t);
+                i = args[arg_pos++].i;
                 buffer[pos++] = ((i>>24) & 0xff);
                 buffer[pos++] = ((i>>16) & 0xff);
                 buffer[pos++] = ((i>>8) & 0xff);
@@ -209,22 +245,23 @@ size_t rtosc_vmessage(char   *buffer,
                 --toparse;
                 break;
             case 's':
-                s = va_arg(ap, const char*);
+                s = args[arg_pos++].s;
                 while(*s)
                     buffer[pos++] = *s++;
                 pos += 4-pos%4;
                 --toparse;
                 break;
             case 'b':
-                i = va_arg(ap, int32_t);
+                b = args[arg_pos++].b;
+                i = b.len;
                 buffer[pos++] = ((i>>24) & 0xff);
                 buffer[pos++] = ((i>>16) & 0xff);
                 buffer[pos++] = ((i>>8) & 0xff);
                 buffer[pos++] = (i & 0xff);
-                s = va_arg(ap, const char *);
-                if(s) {
+                u = b.data;
+                if(u) {
                     while(i--)
-                        buffer[pos++] = *s++;
+                        buffer[pos++] = *u++;
                 }
                 else
                     pos += i;
@@ -232,7 +269,7 @@ size_t rtosc_vmessage(char   *buffer,
                 --toparse;
                 break;
             case 'f':
-                f = va_arg(ap, double);
+                f = args[arg_pos++].f;
                 *(float*)(buffer + pos) = f;
                 pos += 4;
                 --toparse;
@@ -240,8 +277,6 @@ size_t rtosc_vmessage(char   *buffer,
                 ;
         }
     }
-
-    va_end(ap);
 
     return pos;
 }
