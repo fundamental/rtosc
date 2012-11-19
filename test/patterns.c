@@ -1,0 +1,123 @@
+#include <stdlib.h>
+#include <rtosc.h>
+#include <stdbool.h>
+#include <stdio.h>
+
+int match(const char *pattern, const char *msg)
+{
+    const char *_msg = msg;
+    bool path_flag      = false;
+
+normal:; //Match character by character or hop to speical cases
+
+    //Check for special characters
+    if(*pattern == ':') {
+        ++pattern;
+        goto args;
+    }
+
+    if(*pattern == '#') {
+        ++pattern;
+        goto number;
+    }
+
+    if(*pattern == '/' && *msg == '/')
+        path_flag  = 1;
+
+    //Verify they are still the same and return if both are fully parsed
+    if((*pattern == *msg)) {
+        if(*msg)
+            ++pattern, ++msg;
+        else
+            return (path_flag<<1)|1;
+        goto normal;
+    } else
+        return false;
+
+number:; //Match the number
+
+    char *tmp = NULL;
+
+    //Read in both numeric values
+    unsigned max = strtol(pattern, &tmp, 10);
+    if(pattern == tmp)
+        return false;
+    else
+        pattern = tmp;
+
+    unsigned val = strtol(msg, &tmp, 10);
+    if(msg == tmp)
+        return false;
+    else
+        msg = tmp;
+
+    //Match iff msg number is strictly less than pattern
+    if(val < max)
+        goto normal;
+    else
+        return false;
+
+args:; //Match the arg string or fail
+
+    const char *arg_str = rtosc_argument_string(_msg);
+
+    bool arg_match = *pattern || *pattern == *arg_str;
+    while(*pattern) {
+        arg_match &= (*pattern++==*arg_str++);
+        if(*pattern==':') {
+            if(arg_match)
+                return true;
+            else {
+                ++pattern;
+                goto args; //retry
+            }
+        }
+    }
+
+    if(arg_match)
+        return (path_flag<<1)|1;
+    return false;
+}
+
+const char paths[8][32] = {
+    "/",
+    "#24:",
+    "#20:ff",
+    "path",
+    "path#234/:ff",
+    "path#1asdf",
+    "foobar#123/:ff:",
+    "blam/"
+};
+
+int error = 0;
+
+#define work(col, val, name, ...) rtosc_message(buffer, 256, name, __VA_ARGS__); \
+    for(int i=0; i<8; ++i) {\
+        int matches = match(paths[i], buffer); \
+        if(((col == i) && (matches != val))) {\
+            printf("Failure to match '%s' to '%s'\n", name, paths[i]);\
+            error = 1; \
+        } else if((col != i) && matches) { \
+            printf("False positive match on '%s' to '%s'\n", name, paths[i]); \
+            error = 1; \
+        } \
+    }
+
+int main()
+{
+    char buffer[256];
+    work(0,3,"/",          "");
+    work(1,1,"19",         "");
+    work(2,1,"14",         "ff", 1.0,2.0);
+    work(3,1,"path",       "");
+    work(4,3,"path123/",   "ff", 1.0, 2.0);
+    work(5,1,"path0asdf",  "");
+    work(6,3,"foobar23/",  "");
+    work(6,0,"foobar123/", "");
+    work(6,3,"foobar122/", "");
+    work(7,3,"blam/",      "");
+    work(7,0,"blam",       "");
+
+    return error;
+}

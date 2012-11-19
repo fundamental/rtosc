@@ -36,6 +36,10 @@ add_executable(bundles test/bundles.c)
 add_test(bundles bundles)
 target_link_libraries(bundles rtosc gcov)
 
+add_executable(patterns test/patterns.c)
+add_test(patterns patterns)
+target_link_libraries(patterns rtosc gcov)
+
 # Documentation
 find_package(Doxygen)
 SET(Documentation FALSE CACHE BOOL "Enable building documentation")
