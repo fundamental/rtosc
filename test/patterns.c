@@ -2,6 +2,7 @@
 #include <rtosc.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <ctype.h>
 
 int match(const char *pattern, const char *msg)
 {
@@ -21,8 +22,16 @@ normal:; //Match character by character or hop to speical cases
         goto number;
     }
 
-    if(*pattern == '/' && *msg == '/')
+    if(*pattern == '/' && *msg == '/') {
         path_flag  = 1;
+        ++pattern;
+        if(*pattern == ':') {
+            ++pattern;
+            goto args;
+        }
+        else
+            return 3;
+    }
 
     //Verify they are still the same and return if both are fully parsed
     if((*pattern == *msg)) {
@@ -36,25 +45,23 @@ normal:; //Match character by character or hop to speical cases
 
 number:; //Match the number
 
-    char *tmp = NULL;
+    //Verify both hold digits
+    if(!isdigit(*pattern) || !isdigit(*msg))
+        return false;
 
     //Read in both numeric values
-    unsigned max = strtol(pattern, &tmp, 10);
-    if(pattern == tmp)
-        return false;
-    else
-        pattern = tmp;
-
-    unsigned val = strtol(msg, &tmp, 10);
-    if(msg == tmp)
-        return false;
-    else
-        msg = tmp;
+    const unsigned max = atoi(pattern);
+    const unsigned val = atoi(msg);
 
     //Match iff msg number is strictly less than pattern
-    if(val < max)
+    if(val < max) {
+
+        //Advance pointers
+        while(isdigit(*pattern))++pattern;
+        while(isdigit(*msg))++msg;
+
         goto normal;
-    else
+    } else
         return false;
 
 args:; //Match the arg string or fail
@@ -63,15 +70,15 @@ args:; //Match the arg string or fail
 
     bool arg_match = *pattern || *pattern == *arg_str;
     while(*pattern) {
-        arg_match &= (*pattern++==*arg_str++);
         if(*pattern==':') {
-            if(arg_match)
-                return true;
+            if(arg_match && !*arg_str)
+                return (path_flag<<1)|1;
             else {
                 ++pattern;
                 goto args; //retry
             }
         }
+        arg_match &= (*pattern++==*arg_str++);
     }
 
     if(arg_match)
@@ -79,14 +86,14 @@ args:; //Match the arg string or fail
     return false;
 }
 
-const char paths[8][32] = {
+const char paths[9][32] = {
     "/",
     "#24:",
     "#20:ff",
     "path",
     "path#234/:ff",
     "path#1asdf",
-    "foobar#123/:ff:",
+    "foobar#123/::ff",
     "blam/"
 };
 
@@ -117,6 +124,7 @@ int main()
     work(6,0,"foobar123/", "");
     work(6,3,"foobar122/", "");
     work(7,3,"blam/",      "");
+    work(7,3,"blam/blam",  "");
     work(7,0,"blam",       "");
 
     return error;

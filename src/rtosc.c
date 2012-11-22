@@ -33,6 +33,7 @@ static int has_reserved(char type)
             return 1;
         case 'T':
         case 'F':
+        case 'N':
         case 'I':
             return 0;
     }

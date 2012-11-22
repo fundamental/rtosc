@@ -39,6 +39,90 @@
 
 typedef const char *msg_t;
 
+inline int match(const char *pattern, const char *msg)
+{
+    const char *_msg = msg;
+    bool path_flag      = false;
+
+    unsigned val, max;
+
+normal:; //Match character by character or hop to speical cases
+
+    //Check for special characters
+    if(*pattern == ':') {
+        ++pattern;
+        goto args;
+    }
+
+    if(*pattern == '#') {
+        ++pattern;
+        goto number;
+    }
+
+    if(*pattern == '/' && *msg == '/') {
+        path_flag  = 1;
+        ++pattern;
+        if(*pattern == ':') {
+            ++pattern;
+            goto args;
+        }
+        else
+            return 3;
+    }
+
+    //Verify they are still the same and return if both are fully parsed
+    if((*pattern == *msg)) {
+        if(*msg)
+            ++pattern, ++msg;
+        else
+            return (path_flag<<1)|1;
+        goto normal;
+    } else
+        return false;
+
+number:; //Match the number
+
+    //Verify both hold digits
+    if(!isdigit(*pattern) || !isdigit(*msg))
+        return false;
+
+    //Read in both numeric values
+    max = atoi(pattern);
+    val = atoi(msg);
+
+    //Match iff msg number is strictly less than pattern
+    if(val < max) {
+
+        //Advance pointers
+        while(isdigit(*pattern))++pattern;
+        while(isdigit(*msg))++msg;
+
+        goto normal;
+    } else
+        return false;
+
+args:; //Match the arg string or fail
+
+    const char *arg_str = rtosc_argument_string(_msg);
+
+    bool arg_match = *pattern || *pattern == *arg_str;
+    while(*pattern) {
+        if(*pattern==':') {
+            if(arg_match && !*arg_str)
+                return (path_flag<<1)|1;
+            else {
+                ++pattern;
+                goto args; //retry
+            }
+        }
+        arg_match &= (*pattern++==*arg_str++);
+    }
+
+    if(arg_match)
+        return (path_flag<<1)|1;
+    return false;
+}
+
 /**
  * ThreadLink - A simple wrapper around jack's ringbuffers desinged to make
  * sending messages via rt-osc trivial.
@@ -179,6 +263,8 @@ class _Ports
         //This only applies to leaf nodes
         virtual const _Port *operator[](const char *) const=0;
         virtual const char *meta_data(const char *path) const=0;
+        virtual const _Port *apropos(const char*path) const = 0;
+        virtual void dispatchCast(msg_t m, void *v) = 0;
 };
 
 template<int len, class T>
@@ -208,10 +294,14 @@ class Ports : public _Ports
         void dispatch(msg_t m, T*t)
         {
             for(Port<T> &port: ports) {
-                const char *p = match(port.name,m);
-                if(*p == '/' || (*p == ':' && arg_match(p+1,rtosc_argument_string(m))))
+                if(match(port.name,m))
                     port.cb(m,t);
             }
+        }
+
+        void dispatchCast(msg_t m, void *v)
+        {
+            dispatch(m, (T*)v);
         }
 
         const _Port *operator[](const char *name) const
@@ -228,10 +318,31 @@ class Ports : public _Ports
             return NULL;
         }
 
+        msg_t snip(msg_t m) const
+        {
+            while(*m && *m != '/') ++m;
+            return m+1;
+        }
+
+        //Generate the deepest working match
+        const _Port *apropos(const char *path) const
+        {
+            for(const Port<T> &port: ports)
+                if(index(port.name,'/') && match(port.name,path))
+                    return port.ports->apropos(this->snip(path));
+
+            //This is the lowest level, now find the best port
+            for(const Port<T> &port: ports)
+                if(strstr(port.name, path)==port.name)
+                    return &port;
+
+            return NULL;
+        }
+
         const char *meta_data(const char *path) const
         {
             for(const Port<T> &port: ports) {
-                const char *p = match(port.name,path);
+                const char *p = mmatch(port.name,path);
                 if(*p == '/') {
                     ++path;
                     while(*++path!='/');
@@ -248,7 +359,7 @@ class Ports : public _Ports
         /**
          * Match partial path
          */
-        inline const char *match(const char *pattern, const char *path) const
+        inline const char *mmatch(const char *pattern, const char *path) const
         {
             for(;*pattern&&*path&&*path!=':'&&*path!='/'&&*path==*pattern;++path,++pattern);
             return pattern;

@@ -159,9 +159,9 @@ float translate(unsigned char val, const char *conversion)
     else if(conversion[0]=='1' && conversion[1]=='0' && conversion[2]=='^')
         type = 2; //exponential
 
-    while(*conversion++!=',');
+    while(*conversion && *conversion!=',') *conversion++;
     float min = atof(conversion);
-    while(*conversion++!=',');
+    while(*conversion && *conversion!=',') *conversion++;
     float max = atof(conversion);
 
     //Allow for middle value to be set
