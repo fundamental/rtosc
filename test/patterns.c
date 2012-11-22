@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include <rtosc.h>
+#include <rtosc/rtosc.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <ctype.h>

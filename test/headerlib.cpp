@@ -1,5 +1,5 @@
-#include <rtosc.h>
-#include <thread-link.h>
+#include <rtosc/rtosc.h>
+#include <rtosc/thread-link.h>
 #include <string>
 #include <iostream>
 

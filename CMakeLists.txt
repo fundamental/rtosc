@@ -53,3 +53,10 @@ if(DOXYGEN_FOUND AND Documentation)
         ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
         DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
 endif()
+
+
+#Installation
+install(FILES include/rtosc/rtosc.h include/rtosc/thread-link.h
+    DESTINATION include/rtosc)
+install(TARGETS rtosc
+    DESTINATION lib)

@@ -7,7 +7,7 @@
 #include <FL/Fl_Hor_Slider.H>
 #include <FL/Fl_Tree.H>
 #include <FL/fl_draw.H>
-#include <thread-link.h>
+#include <rtosc/thread-link.h>
 
 #include <string>
 #include <cstring>

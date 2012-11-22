@@ -5,7 +5,7 @@
 #include <FL/Fl_Hor_Nice_Slider.H>
 #include <FL/Fl_Toggle_Button.H>
 #include <err.h>
-#include <rtosc.h>
+#include <rtosc/rtosc.h>
 
 char gui_osc_buf[2048];
 void dsp_message(const char *msg);

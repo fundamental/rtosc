@@ -4,7 +4,7 @@
 #include <err.h>
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>
-#include <rtosc.h>
+#include <rtosc/rtosc.h>
 
 #define OFF (0)
 

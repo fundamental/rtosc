@@ -1,6 +1,6 @@
 #ifndef SYNTH_H
 #define SYNTH_H
-#include <thread-link.h>
+#include <rtosc/thread-link.h>
 
 struct Adsr
 {

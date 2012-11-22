@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <rtosc.h>
+#include <rtosc/rtosc.h>
 
 char buffer_a[256];
 char buffer_b[256];

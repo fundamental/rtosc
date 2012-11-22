@@ -35,7 +35,7 @@
 #include <cstring>
 #include <assert.h>
 #include <stdio.h>
-#include <rtosc.h>
+#include <rtosc/rtosc.h>
 
 typedef const char *msg_t;
 
