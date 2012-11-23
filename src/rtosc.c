@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#include <rtosc.h>
+#include <rtosc/rtosc.h>
 
 typedef unsigned char uchar;
 

@@ -9,36 +9,44 @@ add_library(rtosc SHARED src/rtosc.c)
 
 # Example Code
 find_package(FLTK)
-add_executable(simple-example example/simple/ui.cpp example/simple/synth.cpp)
-target_link_libraries(simple-example m rtosc ${FLTK_LIBRARIES} jack)
+execute_process(COMMAND pkg-config jack --exists
+    RESULT_VARIABLE JACK_MISSING)
+set(JACK_FOUND NOT JACK_MISSING)
 
-add_executable(complex-example example/complex/audio.cpp
-    example/complex/synth.cpp example/complex/window.cpp)
-target_link_libraries(complex-example m rtosc ${FLTK_LIBRARIES} jack)
-#TODO add complex example (ie klatter (an unplublished project for those reading))
+if(FLTK_FOUND)
+    execute_process(COMMAND fltk-config --api-version
+        OUTPUT_VARIABLE FLTK_VERSION
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif(FLTK_FOUND)
+
+if(JACK_FOUND AND FLTK_FOUND AND (FLTK_VERSION STREQUAL "1.3"))
+    add_executable(simple-example example/simple/ui.cpp example/simple/synth.cpp)
+    target_link_libraries(simple-example m rtosc ${FLTK_LIBRARIES} jack)
+
+    add_executable(complex-example example/complex/audio.cpp
+        example/complex/synth.cpp example/complex/window.cpp)
+    target_link_libraries(complex-example m rtosc ${FLTK_LIBRARIES} jack)
+    #TODO add complex example (ie klatter (an unplublished project for those reading))
+endif()
 
 # Testing code
 enable_testing()
+macro(maketest fname)
+    add_executable(${fname} test/${fname}.c)
+    add_test(${fname} ${fname})
+    target_link_libraries(${fname} rtosc gcov)
+endmacro(maketest)
 
-add_executable(simple-messages test/simple-messages.c)
-add_test(simple-messages simple-messages)
-target_link_libraries(simple-messages rtosc gcov)
+maketest(simple-messages)
+maketest(null-messages)
+maketest(bundles)
+maketest(patterns)
 
-add_executable(null-messages test/null-messages.c)
-add_test(null-messages null-messages)
-target_link_libraries(null-messages rtosc gcov)
-
-add_executable(header-test test/headerlib.cpp)
-add_test(header-test header-test)
-target_link_libraries(header-test rtosc -ljack gcov)
-
-add_executable(bundles test/bundles.c)
-add_test(bundles bundles)
-target_link_libraries(bundles rtosc gcov)
-
-add_executable(patterns test/patterns.c)
-add_test(patterns patterns)
-target_link_libraries(patterns rtosc gcov)
+if(JACK_FOUND)
+    add_executable(headerlib test/headerlib.cpp)
+    add_test(headerlib headerlib)
+    target_link_libraries(headerlib rtosc jack gcov)
+endif()
 
 # Documentation
 find_package(Doxygen)
@@ -60,3 +68,21 @@ install(FILES include/rtosc/rtosc.h include/rtosc/thread-link.h
     DESTINATION include/rtosc)
 install(TARGETS rtosc
     DESTINATION lib)
+
+
+#Describe overall configuration
+if(JACK_FOUND)
+    message("-- Found JACK...")
+else()
+    message("-- Did NOT find JACK...")
+endif()
+
+if(FLTK_FOUND)
+    if(FLTK_VERSION STREQUAL "1.3")
+        message("-- Found FLTK 1.3...")
+    else()
+        message("-- Found unexpected FLTK version...")
+    endif()
+else()
+    message("-- Did NOT find fltk...")
+endif()
