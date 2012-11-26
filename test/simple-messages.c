@@ -76,5 +76,14 @@ int main()
             rtosc_argument(buffer,0).f-0.1<13523.34,
             "Incorrect floating point value", __LINE__);
 
+    //Check simple character retrevial
+    check(rtosc_message(buffer, 256, "/test", "cccc", 0xde,0xad,0xbe,0xef) != 0,
+            "Bad message", __LINE__);
+
+    check(rtosc_argument(buffer, 0).i == 0xde,
+            "Bad argument", __LINE__);
+    check(rtosc_argument(buffer, 3).i == 0xef,
+            "Bad argument", __LINE__);
+
     return 0;
 }

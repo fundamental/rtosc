@@ -30,6 +30,7 @@ static int has_reserved(char type)
         case 's':
         case 'b':
         case 'f':
+        case 'c':
             return 1;
         case 'T':
         case 'F':
@@ -75,8 +76,7 @@ static unsigned arg_off(const char *msg, unsigned idx)
         switch(*args++)
         {
             case 'f':
-                arg_pos += 4;
-                break;
+            case 'c':
             case 'i':
                 arg_pos += 4;
                 break;
@@ -126,6 +126,8 @@ static size_t vsosc_null(const char  *address,
         int i;
         const char *s;
         switch(arg) {
+            case 'c':
+            case 'f':
             case 'i':
                 ++arg_pos;
                 pos += 4;
@@ -140,11 +142,6 @@ static size_t vsosc_null(const char  *address,
             case 'b':
                 i = args[arg_pos++].b.len;
                 pos += 4 + i;
-                --toparse;
-                break;
-            case 'f':
-                arg_pos++;
-                pos += 4;
                 --toparse;
                 break;
             default:
@@ -171,6 +168,7 @@ size_t rtosc_vmessage(char   *buffer,
     while(arg_pos < nargs)
     {
         switch(*arg_str++) {
+            case 'c':
             case 'i':
                 args[arg_pos++].i = va_arg(ap, int);
                 break;
@@ -237,6 +235,7 @@ size_t rtosc_amessage(char        *buffer,
         const unsigned char *u;
         blob_t b;
         switch(arg) {
+            case 'c':
             case 'i':
                 i = args[arg_pos++].i;
                 buffer[pos++] = ((i>>24) & 0xff);
@@ -306,6 +305,7 @@ arg_t rtosc_argument(const char *msg, unsigned idx)
         const unsigned char *arg_pos = (const unsigned char*)msg+arg_off(msg,idx);
         switch(type)
         {
+            case 'c':
             case 'i':
                 result.i |= (*arg_pos++ << 24);
                 result.i |= (*arg_pos++ << 16);
@@ -389,6 +389,8 @@ size_t rtosc_message_ring_length(ring_t *ring)
         assert(arg);
         int i;
         switch(arg) {
+            case 'c':
+            case 'f':
             case 'i':
                 pos += 4;
                 --toparse;
@@ -408,9 +410,6 @@ size_t rtosc_message_ring_length(ring_t *ring)
                 pos += 4-pos%4;
                 --toparse;
                 break;
-            case 'f':
-                pos += 4;
-                --toparse;
             default:
                 ;
         }
