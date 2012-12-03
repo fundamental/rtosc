@@ -37,6 +37,7 @@ macro(maketest fname)
     target_link_libraries(${fname} rtosc gcov)
 endmacro(maketest)
 
+maketest(osc-spec)
 maketest(simple-messages)
 maketest(null-messages)
 maketest(bundles)

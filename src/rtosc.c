@@ -229,12 +229,12 @@ size_t rtosc_amessage(char        *buffer,
     {
         char arg = *arguments++;
         assert(arg);
-        float f;
         int32_t i;
         const char *s;
         const unsigned char *u;
         blob_t b;
         switch(arg) {
+            case 'f':
             case 'c':
             case 'i':
                 i = args[arg_pos++].i;
@@ -268,11 +268,6 @@ size_t rtosc_amessage(char        *buffer,
                 pos += 4-pos%4;
                 --toparse;
                 break;
-            case 'f':
-                f = args[arg_pos++].f;
-                *(float*)(buffer + pos) = f;
-                pos += 4;
-                --toparse;
             default:
                 ;
         }
@@ -305,6 +300,7 @@ arg_t rtosc_argument(const char *msg, unsigned idx)
         const unsigned char *arg_pos = (const unsigned char*)msg+arg_off(msg,idx);
         switch(type)
         {
+            case 'f':
             case 'c':
             case 'i':
                 result.i |= (*arg_pos++ << 24);
@@ -321,9 +317,6 @@ arg_t rtosc_argument(const char *msg, unsigned idx)
                 break;
             case 's':
                 result.s = (char *)arg_pos;
-                break;
-            case 'f':
-                result.f = *(float*)arg_pos;
                 break;
         }
     }

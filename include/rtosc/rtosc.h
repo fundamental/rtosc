@@ -41,7 +41,7 @@ typedef struct {
 typedef union {
     int32_t i;
     char T;
-    double f;
+    float f;
     const char *s;
     blob_t b;
 } arg_t;
