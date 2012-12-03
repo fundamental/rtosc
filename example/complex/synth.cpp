@@ -28,13 +28,13 @@ std::function<void(msg_t,T*)> param(float T::*p)
 }
 
 Ports<7,Adsr> _adsrPorts{{{
-    Port<Adsr>("av:f:", "1,-1.0,1.0:v:", param(&Adsr::av)),
-    Port<Adsr>("dv:f:", "1,-1.0,1.0:v:", param<Adsr>(&Adsr::dv)),
-    Port<Adsr>("sv:f:", "1,-1.0,1.0:v:", param<Adsr>(&Adsr::sv)),
-    Port<Adsr>("rv:f:", "1,-1.0,1.0:v:", param<Adsr>(&Adsr::rv)),
-    Port<Adsr>("at:f:", "10^,0.001,10.0:v:", param<Adsr>(&Adsr::at)),
-    Port<Adsr>("dt:f:", "10^,0.001,10.0:v:", param<Adsr>(&Adsr::dt)),
-    Port<Adsr>("rt:f:", "10^,0.001,10.0:v:", param<Adsr>(&Adsr::rt))
+    Port<Adsr>("av:f:", "lin,-1.0,1.0:v:", param(&Adsr::av)),
+    Port<Adsr>("dv:f:", "lin,-1.0,1.0:v:", param<Adsr>(&Adsr::dv)),
+    Port<Adsr>("sv:f:", "lin,-1.0,1.0:v:", param<Adsr>(&Adsr::sv)),
+    Port<Adsr>("rv:f:", "lin,-1.0,1.0:v:", param<Adsr>(&Adsr::rv)),
+    Port<Adsr>("at:f:", "log,0.001,10.0:v:", param<Adsr>(&Adsr::at)),
+    Port<Adsr>("dt:f:", "log,0.001,10.0:v:", param<Adsr>(&Adsr::dt)),
+    Port<Adsr>("rt:f:", "log,0.001,10.0:v:", param<Adsr>(&Adsr::rt))
 }}};
 
 _Ports &Adsr::ports = _adsrPorts;
@@ -112,7 +112,7 @@ void process_control(unsigned char control[3]);
 Ports<7,Synth> _synthPorts{{{
     Port<Synth>("amp-env/",&_adsrPorts, recur<Synth,Adsr>(&Synth::amp_env)),
     Port<Synth>("frq-env/",&_adsrPorts, recur<Synth,Adsr>(&Synth::frq_env)),
-    Port<Synth>("freq:f:","10^,0.001,10.0:v:", param<Synth>(&Synth::freq)),
+    Port<Synth>("freq:f:","log,1,1e3:v:", param<Synth>(&Synth::freq)),
     Port<Synth>("gate:T","::", [](msg_t,Synth*s){s->gate=true;}),
     Port<Synth>("gate:F","::", [](msg_t,Synth*s){s->gate=false;}),
     Port<Synth>("register:iis","::",[](msg_t m,Synth*){
@@ -151,31 +151,35 @@ float &freq = s.freq;
 bool  &gate = s.gate;
 
 
-float translate(unsigned char val, const char *conversion)
+static float translate(unsigned char val, const char *meta)
 {
-    int type = 0;
-    if(conversion[0]=='1' && conversion[1]==':')
-        type = 1; //linear
-    else if(conversion[0]=='1' && conversion[1]=='0' && conversion[2]=='^')
-        type = 2; //exponential
-
-    while(*conversion && *conversion!=',') *conversion++;
-    float min = atof(conversion);
-    while(*conversion && *conversion!=',') *conversion++;
-    float max = atof(conversion);
-
     //Allow for middle value to be set
     float x = val!=64.0 ? val/127.0 : 0.5;
 
-    if(type == 1)
+    //Gather type
+    char shape[4] = {0};
+    unsigned pos  = 0;
+    while(*meta && *meta != ',' && pos < 3)
+        shape[pos++] = *meta++;
+
+
+    //Gather args
+    while(*meta && *meta!=',') meta++; meta++;
+    float min = atof(meta);
+    while(*meta && *meta!=',') meta++; meta++;
+    float max = atof(meta);
+
+
+    //Translate
+    if(!strcmp("lin",shape))
         return x*(max-min)+min;
-    else if(type == 2) {
-        const float b = log(min)/log(10);
-        const float a = log(max)/log(10)-b;
-        return powf(10.0f, a*x+b);
+    else if(!strcmp("log", shape)) {
+        const float b = log(min);
+        const float a = log(max)-b;
+        return expf(a*x+b);
     }
 
-    return 0;
+    return 0.0f;
 }
 
 void process_control(unsigned char control[3])

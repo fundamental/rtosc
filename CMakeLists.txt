@@ -24,7 +24,9 @@ if(JACK_FOUND AND FLTK_FOUND AND (FLTK_VERSION STREQUAL "1.3"))
     target_link_libraries(simple-example m rtosc ${FLTK_LIBRARIES} jack)
 
     add_executable(complex-example example/complex/audio.cpp
-        example/complex/synth.cpp example/complex/window.cpp)
+        example/complex/synth.cpp example/complex/window.cpp
+        example/complex/Fl_Osc_Dial.cpp example/complex/Fl_Osc_Slider.cpp
+        example/complex/Fl_Osc_Button.cpp)
     target_link_libraries(complex-example m rtosc ${FLTK_LIBRARIES} jack)
     #TODO add complex example (ie klatter (an unplublished project for those reading))
 endif()
