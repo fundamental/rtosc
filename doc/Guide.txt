@@ -69,10 +69,7 @@ audio, this layer provides several key features:
 - A Thread Link, which makes transmitting messages over jack ringbuffers simple.
 - An implementation of Ports for dispatching OSC messages to their destinations.
 - A trivial midi lookup table for use with the Ports implementation
-- A non-realtime simple pretty printer for viewing messages
 
-None of these classes are coupled with each other, so any combination of them
-can be used without an issue.
 As this library is based upon the concept of using fixed sized buffers to avoid
 memory allocation, and no size universally works, these classes are templates
 with respect to their size.
@@ -88,8 +85,8 @@ expected to periodically _read()_ all of the messages.
 -----------------------------------------
 ThreadLink<1024,128> link;
 link.write("hello", "s", "world");
-cout << OSC_Message(link.read()) << endl;
-//<hello:s:world>
+link.hasNext(); //true
+link.read(); //yields the hello:s:world message
 -----------------------------------------
 
 Ports

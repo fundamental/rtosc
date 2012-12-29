@@ -1,7 +1,10 @@
 #include <rtosc/rtosc.h>
 #include <rtosc/thread-link.h>
+#include <rtosc/ports.h>
 #include <string>
 #include <iostream>
+
+using namespace rtosc;
 
 std::string resultA;
 int resultB = 0;
@@ -28,8 +31,6 @@ int main()
             ports.dispatch(tlink.read(),NULL);
     }
     tlink.write("echo", "ss", "hello", "rtosc");
-
-    std::cout << OSC_Message(tlink.read()) << std::endl;
 
     return !(resultB==123 && resultA=="testing");
 }

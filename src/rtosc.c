@@ -7,8 +7,6 @@
 
 #include <rtosc/rtosc.h>
 
-typedef unsigned char uchar;
-
 const char *rtosc_argument_string(const char *msg)
 {
     assert(msg && *msg);
@@ -65,12 +63,12 @@ static unsigned arg_off(const char *msg, unsigned idx)
         return 0;
 
     //Iterate to the right position
-    const uchar *args = (const uchar*) rtosc_argument_string(msg);
-    const uchar *arg_pos = args;
+    const uint8_t *args = (const uint8_t*) rtosc_argument_string(msg);
+    const uint8_t *arg_pos = args;
 
     while(*++arg_pos);
     //Alignment
-    arg_pos += 4-(arg_pos-(uchar*)msg)%4;
+    arg_pos += 4-(arg_pos-(uint8_t*)msg)%4;
 
     while(idx--) {
         switch(*args++)
@@ -82,7 +80,7 @@ static unsigned arg_off(const char *msg, unsigned idx)
                 break;
             case 's':
                 while(*++arg_pos);
-                arg_pos += 4-(arg_pos-(uchar*)msg)%4;
+                arg_pos += 4-(arg_pos-(uint8_t*)msg)%4;
                 break;
             case 'T':
             case 'F':
@@ -90,7 +88,7 @@ static unsigned arg_off(const char *msg, unsigned idx)
                 ;
         }
     }
-    return arg_pos-(uchar*)msg;
+    return arg_pos-(uint8_t*)msg;
 }
 
 size_t rtosc_message(char   *buffer,
@@ -324,10 +322,10 @@ arg_t rtosc_argument(const char *msg, unsigned idx)
     return result;
 }
 
-//TODO Add further error detection
 static unsigned char deref(unsigned pos, ring_t *ring)
 {
-    return pos<ring[0].len?ring[0].data[pos]:ring[1].data[pos-ring[0].len];
+    return pos<ring[0].len ? ring[0].data[pos] :
+        ((pos-ring[0].len)<ring[1].len ? ring[1].data[pos-ring[0].len] : 0x00);
 }
 
 static size_t bundle_ring_length(ring_t *ring)

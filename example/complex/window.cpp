@@ -22,6 +22,7 @@
 
 using std::string;
 using std::map;
+using namespace rtosc;
 
 extern ThreadLink<1024,1024> bToU;
 extern ThreadLink<1024,1024> uToB;
@@ -74,20 +75,9 @@ T min(const T &a, const T &b)
     return b>a?a:b;
 }
 
-template<typename A, typename B>
-B string_cast(const A &a)
-{
-    std::stringstream s;
-    s.precision(3);
-    B b;
-    s << a;
-    s >> b;
-    return b;
-}
-
 struct Fl_Center_Knob : public Fl_Osc_Dial
 {
-    Fl_Center_Knob(int x, int y, int w, int h, const _Port *port)
+    Fl_Center_Knob(int x, int y, int w, int h, const mPort *port)
         :Fl_Osc_Dial(x,y,w,h,port->name,port->metadata)
     {
     };
@@ -103,7 +93,7 @@ struct Fl_Center_Knob : public Fl_Osc_Dial
 template<typename T>
 struct Fl_Square : public Fl_Osc_Group
 {
-    Fl_Square<T>(int x, int y, int w, int h, int _pad, const _Port *port)
+    Fl_Square<T>(int x, int y, int w, int h, int _pad, const mPort *port)
         :Fl_Osc_Group(x,y,w,h,NULL), pad(_pad)
     {
         const int l = min(max(w-2*pad,0),max(h-2*pad,0));
@@ -155,24 +145,24 @@ struct ADSR_Pane : public Fl_Osc_Group
                 if(ports[i][j][0])
                     new Fl_Square<Fl_Center_Knob>(x+(j+1)*W,y+20+i*H,W,H,15,
                             Adsr::ports[ports[i][j]]);
+
         end();
         resizable(new Fl_Box(x+W,y+20,4*W,2*H));
     }
 };
 
 
-void traverse_tree(const _Ports *p, std::string prefix="/")
+void traverse_tree(const mPorts *p)
 {
-    for(unsigned i=0; i<p->nports(); ++i) {
-        const _Port &port = p->port(i);
-        if(index(port.name,'/'))
-            traverse_tree(port.ports, prefix+port.name);
-        else
-            printf("%s\n", (prefix+port.name).c_str());
-    }
+    char buffer[1024];
+    memset(buffer, 0, sizeof(buffer));
+
+    walk_ports(p, buffer, sizeof(buffer),
+            [](const mPort *, const char *name) {
+                printf("%s\n", name);});
 }
 
-extern _Ports *root_ports;
+extern mPorts *root_ports;
 
 float translate(float x, const char *meta);
 
@@ -220,9 +210,9 @@ int main()
     tree->osc           = &OSC_API;
     midi_win->show();
     //Traverse possible ports
-    //puts("<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
-    //traverse_tree(root_ports,"/");
-    //puts(">>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+    puts("<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
+    traverse_tree(root_ports);
+    puts(">>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
 
     while(win->shown())

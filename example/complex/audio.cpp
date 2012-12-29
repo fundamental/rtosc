@@ -19,6 +19,7 @@ void dsp_dispatch(const char *msg);
 jack_port_t   *port, *iport;
 jack_client_t *client;
 int process(unsigned nframes, void *args);
+void synth_init(void);
 void audio_cleanup(void)
 {
     puts("Exiting jack...");
@@ -27,6 +28,7 @@ void audio_cleanup(void)
 }
 void audio_init(void)
 {
+    synth_init();
     client = jack_client_open("rtosc-demo2", JackNullOption, NULL, NULL);
     if(!client)
         errx(1, "jack_client_open() failure");
@@ -70,7 +72,7 @@ int process(unsigned nframes, void *)
                     current_note = gate =0;
                 break;
             case 0xB0: //Controller
-                process_control(ev.buffer+1);
+                process_control(ev.buffer);
                 break;
         }
     }

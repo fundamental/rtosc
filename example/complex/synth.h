@@ -1,6 +1,5 @@
 #ifndef SYNTH_H
 #define SYNTH_H
-#include <rtosc/thread-link.h>
 
 struct Adsr
 {
@@ -14,8 +13,8 @@ struct Adsr
 
     float operator()(bool gate);
 
-    void dispatch(msg_t m);
-    static _Ports &ports;
+    void dispatch(const char *m);
+    static class rtosc::mPorts &ports;
 };
 
 struct Synth {
@@ -25,7 +24,7 @@ struct Synth {
 
     float sample(void);
 
-    void dispatch(msg_t m);
-    static _Ports &ports;
+    void dispatch(const char *m);
+    static class rtosc::mPorts &ports;
 };
 #endif

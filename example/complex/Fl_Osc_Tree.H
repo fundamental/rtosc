@@ -1,5 +1,5 @@
 #pragma once
-#include <rtosc/thread-link.h>
+#include <rtosc/ports.h>
 #include "Fl_Osc_Interface.H"
 #include <FL/Fl_Tree.H>
 
@@ -18,6 +18,7 @@ class Fl_Osc_Tree:Fl_Tree
 
         static void cb(Fl_Widget *w, void*)
         {
+            using namespace rtosc;
             Fl_Osc_Tree *t=(Fl_Osc_Tree*)w;
             int reason = t->callback_reason();
 
@@ -35,7 +36,7 @@ class Fl_Osc_Tree:Fl_Tree
 
             if(reason==3) //Populate fields
             {
-                const _Ports *p=Fl_Osc_Tree::subtree_lookup(t->root_ports,pathname+1);
+                const mPorts *p=Fl_Osc_Tree::subtree_lookup(t->root_ports,pathname+1);
                 if(auto *i = t->find_item((std::string(pathname)+"/"+"nil").c_str()))
                     t->remove(i);
                 for(unsigned i=0; i<p->nports(); ++i) {
@@ -53,13 +54,14 @@ class Fl_Osc_Tree:Fl_Tree
             }
         }
 
-        static const _Ports *subtree_lookup(const _Ports *p, std::string s)
+        static const rtosc::mPorts *subtree_lookup(const rtosc::mPorts *p, std::string s)
         {
+            using namespace rtosc;
             if(s=="")
                 return p;
 
             for(unsigned i = 0; i < p->nports(); ++i) {
-                const _Port &port = p->port(i);
+                const mPort &port = p->port(i);
                 const char *name  = port.name;
                 if(index(name,'/') && s.substr(0,(index(name,'/')-name)+1) == std::string(name).substr(0,strlen(name)-1)){
                     return subtree_lookup(port.ports, s.substr(index(name,'/')-name));
@@ -70,6 +72,6 @@ class Fl_Osc_Tree:Fl_Tree
             return p;
         }
 
-        _Ports *root_ports;
+        rtosc::mPorts *root_ports;
         Fl_Osc_Interface *osc;
 };

@@ -1,5 +1,5 @@
-RtOsc - A Bad Idea Brought To Life
-==================================
+RtOsc - Realtime safe OSC Messaging
+===================================
 
 A realtime safe library for handling OSC messages.
 This library is influenced by liblo and libmapper.
@@ -25,15 +25,14 @@ attempt to alleviate this issue without creating an entirely hideous API.
 Status
 ------
 
-- Self consistent implementation of floating point, strings, integers, blobs,
-  true, false, and Nil.
-- Working basic C++ based dispatch system
-- Lots of bugs..
+- OSC 1.0 spec consistent implementation of floating point, strings, integers,
+  blobs, true, false, and Nil.
+- Somewhat non-conformant bundle implementation
+- Working C++ based dispatch system
 
 Todo
 ----
 
-- Increase test coverage
+- Increase test coverage over C++ layer
 - Implement rest of OSC message spec
-- Create a truly unruly example by extending the "complex" one
-- Add to the API to make the "simple" example very basic
+- Formally specify C++ port strings

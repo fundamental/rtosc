@@ -19,6 +19,7 @@ if(FLTK_FOUND)
         OUTPUT_STRIP_TRAILING_WHITESPACE)
 endif(FLTK_FOUND)
 
+
 if(JACK_FOUND AND FLTK_FOUND AND (FLTK_VERSION STREQUAL "1.3"))
     add_executable(simple-example example/simple/ui.cpp example/simple/synth.cpp)
     target_link_libraries(simple-example m rtosc ${FLTK_LIBRARIES} jack)
@@ -30,6 +31,18 @@ if(JACK_FOUND AND FLTK_FOUND AND (FLTK_VERSION STREQUAL "1.3"))
     target_link_libraries(complex-example m rtosc ${FLTK_LIBRARIES} jack)
     #TODO add complex example (ie klatter (an unplublished project for those reading))
 endif()
+
+add_executable(modular-example
+    example/modular/Echo.cpp
+    example/modular/EffectMgr.cpp
+    example/modular/LFO.cpp
+    example/modular/main.cpp
+    example/modular/Oscil.cpp
+    example/modular/Synth.cpp
+    example/modular/util.cpp
+    )
+target_link_libraries(modular-example m rtosc)
+
 
 # Testing code
 enable_testing()
@@ -49,6 +62,10 @@ if(JACK_FOUND)
     add_executable(headerlib test/headerlib.cpp)
     add_test(headerlib headerlib)
     target_link_libraries(headerlib rtosc jack gcov)
+
+    add_executable(test-walker test/test-walker.cpp)
+    add_test(test-walker test-walker)
+    target_link_libraries(test-walker rtosc jack gcov)
 endif()
 
 # Documentation
@@ -67,7 +84,10 @@ endif()
 
 
 #Installation
-install(FILES include/rtosc/rtosc.h include/rtosc/thread-link.h
+install(FILES include/rtosc/rtosc.h 
+    include/rtosc/thread-link.h
+    include/rtosc/ports.h
+    include/rtosc/miditable.h
     DESTINATION include/rtosc)
 install(TARGETS rtosc
     DESTINATION lib)

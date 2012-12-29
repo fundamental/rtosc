@@ -1,8 +1,12 @@
 #include <rtosc/rtosc.h>
 #include <rtosc/thread-link.h>
+#include <rtosc/ports.h>
+#include <rtosc/miditable.h>
 #include <string.h>
 #include <cmath>
 #include "synth.h"
+
+using namespace rtosc;
 
 float Fs = 0.0f;
 
@@ -37,7 +41,7 @@ Ports<7,Adsr> _adsrPorts{{{
     Port<Adsr>("rt:f:", "log,0.001,10.0:v:", param<Adsr>(&Adsr::rt))
 }}};
 
-_Ports &Adsr::ports = _adsrPorts;
+mPorts &Adsr::ports = _adsrPorts;
 void Adsr::dispatch(msg_t m)
 {
     _adsrPorts.dispatch(m,this);
@@ -103,9 +107,8 @@ std::function<void(msg_t,T*)> recur(TT T::*p)
     return [p](msg_t m, T*t){(t->*p).dispatch(snip(m));};
 }
 
-MidiTable<64,64> midi;
 
-unsigned char rouge = 255;
+MidiTable<64,64> midi(Synth::ports);
 
 Synth s;
 void process_control(unsigned char control[3]);
@@ -122,8 +125,7 @@ Ports<7,Synth> _synthPorts{{{
             while(*pos) putchar(*pos++);
             //printf("%p %p %c(%d)\n", m, argument(m,2).s, *(argument(m,2).s), *(argument(m,2).s));
             //printf("%p\n", argument(m,2).s);
-            midi.addElm(rtosc_argument(m,0).i,rtosc_argument(m,1).i,rtosc_argument(m,2).s,
-                Synth::ports.meta_data(rtosc_argument(m,2).s+1));
+            midi.addElm(rtosc_argument(m,0).i,rtosc_argument(m,1).i,rtosc_argument(m,2).s);
             //printf("adding element %d %d\n",argument(m,0).i,argument(m,1).i);
             //printf("---------path: %s %s\n",argument(m,2).s, Synth::ports.meta_data(argument(m,2).s+1));
             //unsigned char ctl[3] = {2,13,107};
@@ -131,15 +133,14 @@ Ports<7,Synth> _synthPorts{{{
             //printf("synth.amp-env.av=%f\n", s.amp_env.av);
             }),
     Port<Synth>("learn:s", "::",[](msg_t m, Synth*){
-            if(rouge != 255)
-                midi.addElm(0,rouge,rtosc_argument(m,0).s,Synth::ports.meta_data(rtosc_argument(m,0).s+1));
-            rouge = 255;
+            midi.learn(rtosc_argument(m,0).s);
             })
 
 }}};
 
-_Ports &Synth::ports = _synthPorts;
-_Ports *root_ports = &_synthPorts;
+
+mPorts &Synth::ports = _synthPorts;
+mPorts *root_ports = &_synthPorts;
 
 void Synth::dispatch(msg_t m)
 {
@@ -150,58 +151,34 @@ void Synth::dispatch(msg_t m)
 float &freq = s.freq;
 bool  &gate = s.gate;
 
-
-static float translate(unsigned char val, const char *meta)
+void event_cb(msg_t m)
 {
-    //Allow for middle value to be set
-    float x = val!=64.0 ? val/127.0 : 0.5;
-
-    //Gather type
-    char shape[4] = {0};
-    unsigned pos  = 0;
-    while(*meta && *meta != ',' && pos < 3)
-        shape[pos++] = *meta++;
-
-
-    //Gather args
-    while(*meta && *meta!=',') meta++; meta++;
-    float min = atof(meta);
-    while(*meta && *meta!=',') meta++; meta++;
-    float max = atof(meta);
-
-
-    //Translate
-    if(!strcmp("lin",shape))
-        return x*(max-min)+min;
-    else if(!strcmp("log", shape)) {
-        const float b = log(min);
-        const float a = log(max)-b;
-        return expf(a*x+b);
-    }
-
-    return 0.0f;
+    s.dispatch(m+1);
+    bToU.raw_write(m);
+    puts("event-cb");
+    if(rtosc_type(m,0) == 'f')
+        printf("%s -> %f\n", m, rtosc_argument(m,0).f);
+    if(rtosc_type(m,0) == 'i')
+        printf("%s -> %d\n", m, rtosc_argument(m,0).i);
 }
 
-void process_control(unsigned char control[3])
+#include <err.h>
+void synth_init(void)
 {
-    //puts("process_control...");
-    //printf("%d, %d\n",control[0],control[1]);
-    //puts("process_control working...");
+    printf("%p\n", _adsrPorts["dv"]->metadata);
+    printf("'%d'\n", _adsrPorts["dv"]->metadata[0]);
+    if(strlen(_adsrPorts["dv"]->metadata)<3)
+        errx(1,"bad metadata");
+    midi.event_cb = event_cb;
+}
 
-    const MidiAddr<64> *addr = midi.get(0,control[0]);
-    if(addr) {
-        char buffer[1024];
-        rtosc_message(buffer,1024,addr->path,"f",
-                translate(control[1],addr->conversion));
-        s.dispatch(buffer+1);
-        bToU.raw_write(buffer);
-    } else
-        rouge = control[0];
+void process_control(unsigned char ctl[3])
+{
+    midi.process(ctl[0]&0x0F, ctl[1], ctl[2]);
 }
 
 void process_output(float *smps, unsigned nframes)
 {
-    //printf("%f\n", s.amp_env.at);
     while(uToB.hasNext())
         s.dispatch(uToB.read()+1);
 
