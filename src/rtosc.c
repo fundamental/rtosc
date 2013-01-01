@@ -337,10 +337,11 @@ static size_t bundle_ring_length(ring_t *ring)
                   deref(pos+1, ring) << (8*1) |
                   deref(pos+2, ring) << (8*2) |
                   deref(pos+3, ring) << (8*3);
-        pos += 4+advance;
+        if(advance)
+            pos += 4+advance;
     } while(advance);
 
-    return pos;
+    return pos <= (ring[0].len+ring[1].len) ? pos : 0;
 }
 
 //Zero means no full message present
@@ -407,12 +408,12 @@ size_t rtosc_message_ring_length(ring_t *ring)
     }
 
 
-    return pos;
+    return pos <= (ring[0].len+ring[1].len) ? pos : 0;
 }
 
-size_t rtosc_message_length(const char *msg)
+size_t rtosc_message_length(const char *msg, size_t len)
 {
-    ring_t ring[2] = {{(char*)msg,-1},{NULL,0}};
+    ring_t ring[2] = {{(char*)msg,len},{NULL,0}};
     return rtosc_message_ring_length(ring);
 }
 
@@ -428,23 +429,33 @@ size_t rtosc_bundle(char *buffer, size_t len, uint64_t tt, int elms, ...)
     va_start(va, elms);
     for(int i=0; i<elms; ++i) {
         const char   *msg  = va_arg(va, const char*);
-        size_t        size = rtosc_message_length(msg);
+        //It is assumed that any passed message/bundle is valid
+        size_t        size = rtosc_message_length(msg, -1);
         *(uint32_t*)buffer = size;
         buffer += 4;
         memcpy(buffer, msg, size);
         buffer+=size;
     }
 
-    return 4+buffer-_buffer;
+    return buffer-_buffer;
 }
 
-size_t rtosc_bundle_elements(const char *buffer)
+#define POS ((size_t)(((const char *)lengths) - buffer))
+size_t rtosc_bundle_elements(const char *buffer, size_t len)
 {
     const uint32_t *lengths = (const uint32_t*) (buffer+16);
     size_t elms = 0;
-    while(*lengths) ++elms, lengths+=*lengths/4+1;
+    //TODO
+    while(POS < len && *lengths) {
+        lengths += *lengths/4+1;
+
+        if(POS > len)
+            break;
+        ++elms;
+    }
     return elms;
 }
+#undef POS
 
 const char *rtosc_bundle_fetch(const char *buffer, unsigned elm)
 {

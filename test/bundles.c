@@ -25,26 +25,26 @@ int main()
             "False positive bundle_p()", __LINE__);
     check(!rtosc_bundle_p(buffer_b),
             "False positive bundle_p()", __LINE__);
-    check(rtosc_bundle(buffer_c, 256, 0, 2, buffer_a, buffer_b) == 88,
+    check(rtosc_bundle(buffer_c, 256, 0, 2, buffer_a, buffer_b) == 84,
             "bad bundle", __LINE__);
-    check(rtosc_message_length(buffer_c) == 88,
+    check(rtosc_message_length(buffer_c, 256) == 84,
             "bad message length", __LINE__);
 
     check(rtosc_bundle_p(buffer_c),
             "Bad bundle detection", __LINE__);
-    check(rtosc_bundle_elements(buffer_c)==2,
+    check(rtosc_bundle_elements(buffer_c, 256)==2,
             "Bad bundle_elements length", __LINE__);
     check(!strcmp("/flying-monkey", rtosc_bundle_fetch(buffer_c, 0)),
             "Bad bundle_fetch", __LINE__);
     check(!strcmp("/foobar-message", rtosc_bundle_fetch(buffer_c, 1)),
             "Bad bundle_fetch", __LINE__);
 
-    //Check minimum bundle size #bundle + time tag + ending null
-    check(rtosc_bundle(buffer_c, 256, 1, 0) == (8+8+4),
+    //Check minimum bundle size #bundle + time tag
+    check(rtosc_bundle(buffer_c, 256, 1, 0) == (8+8),
             "Bad minimum bundle length", __LINE__);
 
     //check message length support
-    check(rtosc_message_length(buffer_c) == (8+8+4),
+    check(rtosc_message_length(buffer_c, 256) == (8+8),
             "Bad message length", __LINE__);
 
     //Verify that timetag can be fetched

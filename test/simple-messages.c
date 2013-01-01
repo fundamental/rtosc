@@ -23,7 +23,7 @@ int main()
     check(!memcmp(buffer, "/pag""e/po""ge\0\0"",TIF""\0\0\0", 20),
             "Incorrect message contents", __LINE__);
 
-    check(rtosc_message_length(buffer) == 20,
+    check(rtosc_message_length(buffer, 256) == 20,
             "Incorrect detected message length", __LINE__);
 
     //Verify that it can be read properly
@@ -59,7 +59,7 @@ int main()
     check(rtosc_message(buffer, 32, "/testing", "is", 23, "this string") == 32,
             "Incorrect message length", __LINE__);
 
-    check(rtosc_message_length(buffer) == 32,
+    check(rtosc_message_length(buffer, 256) == 32,
             "Invalid detected message length", __LINE__);
 
     check(rtosc_message(buffer, 31, "/testing", "is", 23, "this string") == 0,

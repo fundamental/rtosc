@@ -57,6 +57,7 @@ maketest(simple-messages)
 maketest(null-messages)
 maketest(bundles)
 maketest(patterns)
+maketest(nested-bundles)
 
 if(JACK_FOUND)
     add_executable(headerlib test/headerlib.cpp)

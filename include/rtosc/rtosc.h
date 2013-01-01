@@ -120,9 +120,10 @@ arg_t rtosc_argument(const char *msg, unsigned i);
 
 /**
  * @param msg OSC message
+ * @param len Message length upper bound
  * @returns the size of a message given a chunk of memory.
  */
-size_t rtosc_message_length(const char *msg);
+size_t rtosc_message_length(const char *msg, size_t len);
 
 typedef struct {
     char *data;
@@ -160,9 +161,10 @@ size_t rtosc_bundle(char *buffer, size_t len, uint64_t tt, int elms, ...);
  * Find the elements in a bundle
  *
  * @param msg OSC bundle
+ * @param len Upper bound on the length of the bundle
  * @returns The number of messages contained within the bundle
  */
-size_t rtosc_bundle_elements(const char *msg);
+size_t rtosc_bundle_elements(const char *msg, size_t len);
 
 /**
  * Fetch a message within the bundle

@@ -82,7 +82,7 @@ class ThreadLink
          */
         void raw_write(const char *msg)
         {
-            const size_t len = rtosc_message_length(msg);
+            const size_t len = rtosc_message_length(msg, -1);//assumed valid
             if(jack_ringbuffer_write_space(ring) >= len)
                 jack_ringbuffer_write(ring,msg,len);
         }
