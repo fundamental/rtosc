@@ -12,9 +12,7 @@ struct Adsr
     float av,dv,sv,rv;;
 
     float operator()(bool gate);
-
-    void dispatch(const char *m);
-    static class rtosc::mPorts &ports;
+    static struct rtosc::Ports ports;
 };
 
 struct Synth {
@@ -23,8 +21,6 @@ struct Synth {
     bool  gate;
 
     float sample(void);
-
-    void dispatch(const char *m);
-    static class rtosc::mPorts &ports;
+    static struct rtosc::Ports ports;
 };
 #endif

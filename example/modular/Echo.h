@@ -3,6 +3,5 @@
 struct Echo : public Effect
 {
     float time;//sec
-    void dispatch(const char *m);
-    static class rtosc::mPorts *ports;
+    static rtosc::Ports ports;
 };

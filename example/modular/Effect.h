@@ -1,5 +1,5 @@
 #pragma once
-namespace rtosc{class mPorts;}
+namespace rtosc{struct Ports;}
 
 struct Effect
 {

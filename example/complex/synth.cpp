@@ -5,6 +5,7 @@
 #include <string.h>
 #include <cmath>
 #include "synth.h"
+#include "util.h"
 
 using namespace rtosc;
 
@@ -13,40 +14,15 @@ float Fs = 0.0f;
 ThreadLink<1024,1024> bToU;
 ThreadLink<1024,1024> uToB;
 
-//Defines a port callback for something that can be set and looked up
-template<class T>
-std::function<void(msg_t,T*)> param(float T::*p)
-{
-    return [p](msg_t m, T*t)
-    {
-        //printf("param of %s\n", m);
-        if(rtosc_narguments(m)==0) {
-            bToU.write(uToB.peak(), "f", (t->*p));
-            //printf("just wrote a '%s' %f\n", uToB.peak(), t->*p);
-        } else if(rtosc_narguments(m)==1 && rtosc_type(m,0)=='f') {
-            (t->*p)=rtosc_argument(m,0).f;
-            //printf("just set a '%s' %f\n", uToB.peak(), t->*p);
-        }
-        //printf("%f\n", t->*p);
-    };
-}
-
-Ports<7,Adsr> _adsrPorts{{{
-    Port<Adsr>("av:f:", "lin,-1.0,1.0:v:", param(&Adsr::av)),
-    Port<Adsr>("dv:f:", "lin,-1.0,1.0:v:", param<Adsr>(&Adsr::dv)),
-    Port<Adsr>("sv:f:", "lin,-1.0,1.0:v:", param<Adsr>(&Adsr::sv)),
-    Port<Adsr>("rv:f:", "lin,-1.0,1.0:v:", param<Adsr>(&Adsr::rv)),
-    Port<Adsr>("at:f:", "log,0.001,10.0:v:", param<Adsr>(&Adsr::at)),
-    Port<Adsr>("dt:f:", "log,0.001,10.0:v:", param<Adsr>(&Adsr::dt)),
-    Port<Adsr>("rt:f:", "log,0.001,10.0:v:", param<Adsr>(&Adsr::rt))
-}}};
-
-mPorts &Adsr::ports = _adsrPorts;
-void Adsr::dispatch(msg_t m)
-{
-    _adsrPorts.dispatch(m,this);
-}
-
+Ports Adsr::ports = {
+    PARAM(Adsr, av, av, lin, -1.0, 1.0, "attack  value"),
+    PARAM(Adsr, dv, dv, lin, -1.0, 1.0, "decay   value"),
+    PARAM(Adsr, sv, sv, lin, -1.0, 1.0, "sustain value"),
+    PARAM(Adsr, rv, rv, lin, -1.0, 1.0, "release value"),
+    PARAM(Adsr, at, at, log,  1e-3, 10, "attack  time"),
+    PARAM(Adsr, dt, dt, log,  1e-3, 10, "decay   time"),
+    PARAM(Adsr, rt, rt, log,  1e-3, 10, "release time")
+};
 
 //sawtooth generator
 float oscil(float freq)
@@ -95,30 +71,17 @@ float Adsr::operator()(bool gate)
     return rv;
 }
 
-const char *snip(const char *m)
-{
-    while(*m && *m!='/')++m;
-    return *m?m+1:m;
-}
-
-template<class T, class TT>
-std::function<void(msg_t,T*)> recur(TT T::*p)
-{
-    return [p](msg_t m, T*t){(t->*p).dispatch(snip(m));};
-}
-
-
 MidiTable<64,64> midi(Synth::ports);
 
 Synth s;
 void process_control(unsigned char control[3]);
-Ports<7,Synth> _synthPorts{{{
-    Port<Synth>("amp-env/",&_adsrPorts, recur<Synth,Adsr>(&Synth::amp_env)),
-    Port<Synth>("frq-env/",&_adsrPorts, recur<Synth,Adsr>(&Synth::frq_env)),
-    Port<Synth>("freq:f:","log,1,1e3:v:", param<Synth>(&Synth::freq)),
-    Port<Synth>("gate:T","::", [](msg_t,Synth*s){s->gate=true;}),
-    Port<Synth>("gate:F","::", [](msg_t,Synth*s){s->gate=false;}),
-    Port<Synth>("register:iis","::",[](msg_t m,Synth*){
+rtosc::Ports Synth::ports = {
+    RECUR(Synth, Adsr, amp-env, amp_env, "amplitude envelope"),
+    RECUR(Synth, Adsr, frq-env, frq_env, "frequency envelope"),
+    PARAM(Synth, freq, freq,    log, 1, 1e3, "note frequency"),
+    {"gate:T","::", 0, [](msg_t,void*v){((Synth*)v)->gate=true;}},
+    {"gate:F","::", 0, [](msg_t,void*v){((Synth*)v)->gate=false;}},
+    {"register:iis","::", 0, [](msg_t m,void*){
             //printf("registering element...\n");
             //printf("%d %d\n",argument(m,0).i,argument(m,1).i);
             const char *pos = rtosc_argument(m,2).s;
@@ -131,21 +94,14 @@ Ports<7,Synth> _synthPorts{{{
             //unsigned char ctl[3] = {2,13,107};
             //process_control(ctl);
             //printf("synth.amp-env.av=%f\n", s.amp_env.av);
-            }),
-    Port<Synth>("learn:s", "::",[](msg_t m, Synth*){
+            }},
+    {"learn:s", "::", 0, [](msg_t m, void*){
             midi.learn(rtosc_argument(m,0).s);
-            })
+            }}
 
-}}};
+};
 
-
-mPorts &Synth::ports = _synthPorts;
-mPorts *root_ports = &_synthPorts;
-
-void Synth::dispatch(msg_t m)
-{
-    _synthPorts.dispatch(m,this);
-}
+Ports *root_ports = &Synth::ports;
 
 
 float &freq = s.freq;
@@ -153,7 +109,7 @@ bool  &gate = s.gate;
 
 void event_cb(msg_t m)
 {
-    s.dispatch(m+1);
+    Synth::ports.dispatch(m+1, &s);
     bToU.raw_write(m);
     puts("event-cb");
     if(rtosc_type(m,0) == 'f')
@@ -165,9 +121,9 @@ void event_cb(msg_t m)
 #include <err.h>
 void synth_init(void)
 {
-    printf("%p\n", _adsrPorts["dv"]->metadata);
-    printf("'%d'\n", _adsrPorts["dv"]->metadata[0]);
-    if(strlen(_adsrPorts["dv"]->metadata)<3)
+    printf("%p\n", Adsr::ports["dv"]->metadata);
+    printf("'%d'\n", Adsr::ports["dv"]->metadata[0]);
+    if(strlen(Adsr::ports["dv"]->metadata)<3)
         errx(1,"bad metadata");
     midi.event_cb = event_cb;
 }
@@ -180,7 +136,7 @@ void process_control(unsigned char ctl[3])
 void process_output(float *smps, unsigned nframes)
 {
     while(uToB.hasNext())
-        s.dispatch(uToB.read()+1);
+        Synth::ports.dispatch(uToB.read()+1, &s);
 
     for(unsigned i=0; i<nframes; ++i)
         smps[i] = s.sample();

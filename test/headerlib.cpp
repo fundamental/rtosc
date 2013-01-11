@@ -8,11 +8,11 @@ using namespace rtosc;
 
 std::string resultA;
 int resultB = 0;
-Ports<3,void*> ports{{{
-    Port<void*>("setstring:s", "", [](msg_t msg,void*) {resultA = rtosc_argument(msg,0).s;}),
-    Port<void*>("setint:i",    "", [](msg_t msg,void*) {resultB = rtosc_argument(msg,0).i;}),
-    Port<void*>("echo:ss",     "", [](msg_t,void*) {})
-}}};
+Ports ports = {
+    {"setstring:s", "", 0, [](msg_t msg,void*) {resultA = rtosc_argument(msg,0).s;}},
+    {"setint:i",    "", 0, [](msg_t msg,void*) {resultB = rtosc_argument(msg,0).i;}},
+    {"echo:ss",     "", 0, [](msg_t,void*v) {}}
+};
 
 ThreadLink<2048,100> tlink;
 

@@ -15,23 +15,23 @@ int main()
     char buffer[100];
     //simple event
     rtosc_message(buffer,100,"volume","f", 0.37);
-    synth.dispatch(buffer);
-    
+    Synth::ports.dispatch(buffer, &synth);
+
     //simple nested event
     rtosc_message(buffer,100,"oscil/freq","f", 1002.3);
-    synth.dispatch(buffer);
+    Synth::ports.dispatch(buffer, &synth);
 
     //received event
     rtosc_message(buffer,100,"effect2/echo/time", "f", 8.0);
-    synth.dispatch(buffer);
-    
+    Synth::ports.dispatch(buffer, &synth);
+
     //discarded event
     rtosc_message(buffer,100,"effect2/lfo/freq", "f", 2.0);
-    synth.dispatch(buffer);
-    
+    Synth::ports.dispatch(buffer, &synth);
+
     //discarded event
     rtosc_message(buffer,100,"effect0/lfo/freq", "f", 2.0);
-    synth.dispatch(buffer);
+    Synth::ports.dispatch(buffer, &synth);
 
 
     printf("synth.oscil.freq            = %f\n", synth.oscil.freq);

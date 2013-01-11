@@ -36,32 +36,34 @@ class Fl_Osc_Tree:Fl_Tree
 
             if(reason==3) //Populate fields
             {
-                const mPorts *p=Fl_Osc_Tree::subtree_lookup(t->root_ports,pathname+1);
+                const Ports &p = *Fl_Osc_Tree::subtree_lookup(t->root_ports,pathname+1);
                 if(auto *i = t->find_item((std::string(pathname)+"/"+"nil").c_str()))
                     t->remove(i);
-                for(unsigned i=0; i<p->nports(); ++i) {
-                    bool subnodes = index(p->port(i).name,'/');
-                    string path = std::string(pathname)+"/"+p->port(i).name;
+                for(const Port &port : p) {
+                    bool subnodes = index(port.name, '/');
+                    string path = std::string(pathname)+"/"+port.name;
                     if(subnodes) {
-                        t->add(path.c_str());
-                        t->add((path+"nil").c_str());
+                        if(!t->find_item(path.c_str()))
+                            t->add(path.c_str());
+                        if(!t->find_item((path+"nil").c_str()))
+                            t->add((path+"nil").c_str());
                         t->close(path.c_str());
-                    } else if(index(p->port(i).metadata,'v')) {
-                        t->add(path.c_str());
+                    } else if(index(port.metadata,'v')) {
+                        if(!t->find_item(path.c_str()))
+                            t->add(path.c_str());
                     }
                 }
 
             }
         }
 
-        static const rtosc::mPorts *subtree_lookup(const rtosc::mPorts *p, std::string s)
+        static const rtosc::Ports *subtree_lookup(const rtosc::Ports *p, std::string s)
         {
             using namespace rtosc;
             if(s=="")
                 return p;
 
-            for(unsigned i = 0; i < p->nports(); ++i) {
-                const mPort &port = p->port(i);
+            for(const Port &port : *p) {
                 const char *name  = port.name;
                 if(index(name,'/') && s.substr(0,(index(name,'/')-name)+1) == std::string(name).substr(0,strlen(name)-1)){
                     return subtree_lookup(port.ports, s.substr(index(name,'/')-name));
@@ -72,6 +74,6 @@ class Fl_Osc_Tree:Fl_Tree
             return p;
         }
 
-        rtosc::mPorts *root_ports;
+        rtosc::Ports *root_ports;
         Fl_Osc_Interface *osc;
 };

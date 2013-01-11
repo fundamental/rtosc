@@ -23,6 +23,7 @@
  */
 
 #include <rtosc/ports.h>
+#include <array>
 #include <string.h>
 #include <algorithm>
 
@@ -53,7 +54,7 @@ struct MidiTable
 {
     std::array<MidiAddr<len>,elms> table;
 
-    mPorts &dispatch_root;
+    Ports &dispatch_root;
     short unhandled_ch;
     short unhandled_ctl;
     char  unhandled_path[len];
@@ -61,7 +62,7 @@ struct MidiTable
     void (*error_cb)(const char *, const char *);
     void (*event_cb)(const char *);
 
-    MidiTable(mPorts &_dispatch_root)
+    MidiTable(Ports &_dispatch_root)
         :dispatch_root(_dispatch_root), unhandled_ch(-1), unhandled_ctl(-1),
         error_cb(MidiTable::black_hole2), event_cb(MidiTable::black_hole1)
     {
@@ -94,7 +95,7 @@ struct MidiTable
         return NULL;
     }
 
-    bool mash_port(MidiAddr<len> &e, const mPort &port)
+    bool mash_port(MidiAddr<len> &e, const Port &port)
     {
         const char *args = index(port.name, ':');
 
@@ -121,7 +122,7 @@ struct MidiTable
 
     void addElm(uint8_t ch, uint8_t ctl, const char *path)
     {
-        const mPort *port = dispatch_root.apropos(path);
+        const Port *port = dispatch_root.apropos(path);
 
         if(!port) {
             error_cb("Bad path", path);

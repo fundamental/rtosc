@@ -19,6 +19,7 @@
 #include <map>
 
 #include "synth.h"
+#include "util.h"
 
 using std::string;
 using std::map;
@@ -40,44 +41,35 @@ class Osc_Interface : public Fl_Osc_Interface
     void requestValue(string path)
     {
         uToB.write(path.c_str(), "");
-        printf("request: %s\n", path.c_str());
+        printf("request: %s\n", path.c_str());
     }
 
     void writeValue(string path, float val)
     {
         uToB.write(path.c_str(), "f", val);
-        printf("write float: %s\n", path.c_str());
+        printf("write float: %s\n", path.c_str());
     }
 
     void writeValue(string path, string val)
     {
         uToB.write(path.c_str(), "s", val.c_str());
-        printf("write string: %s\n", path.c_str());
+        printf("write string: %s\n", path.c_str());
     }
 
     void writeValue(string path, bool val)
     {
         uToB.write(path.c_str(), val ? "T" : "F");
-        printf("write bool: %s\n", path.c_str());
+        printf("write bool: %s\n", path.c_str());
     }
 
 } OSC_API;
 
-template<typename T>
-T max(const T &a, const T &b)
-{
-    return a>b?a:b;
-}
-
-template<typename T>
-T min(const T &a, const T &b)
-{
-    return b>a?a:b;
-}
+template<typename T> T max(const T &a, const T &b) { return a>b?a:b; }
+template<typename T> T min(const T &a, const T &b) { return b>a?a:b; } 
 
 struct Fl_Center_Knob : public Fl_Osc_Dial
 {
-    Fl_Center_Knob(int x, int y, int w, int h, const mPort *port)
+    Fl_Center_Knob(int x, int y, int w, int h, const Port *port)
         :Fl_Osc_Dial(x,y,w,h,port->name,port->metadata)
     {
     };
@@ -93,7 +85,7 @@ struct Fl_Center_Knob : public Fl_Osc_Dial
 template<typename T>
 struct Fl_Square : public Fl_Osc_Group
 {
-    Fl_Square<T>(int x, int y, int w, int h, int _pad, const mPort *port)
+    Fl_Square<T>(int x, int y, int w, int h, int _pad, const Port *port)
         :Fl_Osc_Group(x,y,w,h,NULL), pad(_pad)
     {
         const int l = min(max(w-2*pad,0),max(h-2*pad,0));
@@ -152,17 +144,17 @@ struct ADSR_Pane : public Fl_Osc_Group
 };
 
 
-void traverse_tree(const mPorts *p)
+void traverse_tree(const Ports *p)
 {
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
 
     walk_ports(p, buffer, sizeof(buffer),
-            [](const mPort *, const char *name) {
+            [](const Port *, const char *name) {
                 printf("%s\n", name);});
 }
 
-extern mPorts *root_ports;
+extern Ports *root_ports;
 
 float translate(float x, const char *meta);
 

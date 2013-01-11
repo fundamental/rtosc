@@ -28,8 +28,8 @@
 #include <jack/ringbuffer.h>
 
 #include <cstring>
-#include <assert.h>
-#include <stdio.h>
+#include <cassert>
+#include <cstdio>
 #include <rtosc/rtosc.h>
 
 namespace rtosc {

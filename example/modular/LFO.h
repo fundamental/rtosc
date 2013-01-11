@@ -3,6 +3,5 @@
 struct LFO : public Effect
 {
     float freq;//Hz
-    void dispatch(const char *m);
-    static class rtosc::mPorts *ports;
+    static rtosc::Ports ports;
 };

@@ -1,5 +1,5 @@
 #pragma once
-namespace rtosc{class mPorts;};
+namespace rtosc{struct Ports;};
 
 struct EffectMgr
 {
@@ -10,6 +10,5 @@ struct EffectMgr
     };
     EffectMgr(void);
     ~EffectMgr(void);
-    void dispatch(const char *m);
-    static class rtosc::mPorts *ports;
+    static rtosc::Ports ports;
 };
