@@ -6,7 +6,9 @@
 #include <rtosc/ports.h>
 
 static const char *
-__attribute__((unused))
+snip(const char *m)
+__attribute__((unused));
+static const char *
 snip(const char *m)
 {
     while(*m && *m!='/')++m;
