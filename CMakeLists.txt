@@ -45,6 +45,9 @@ target_link_libraries(modular-example m rtosc)
 
 
 # Testing code
+execute_process(COMMAND pkg-config liblo --exists
+    RESULT_VARIABLE LIBLO_MISSING)
+set(LIBLO_FOUND NOT LIBLO_MISSING)
 enable_testing()
 macro(maketest fname)
     add_executable(${fname} test/${fname}.c)
@@ -58,6 +61,10 @@ maketest(null-messages)
 maketest(bundles)
 maketest(patterns)
 maketest(nested-bundles)
+if(LIBLO_FOUND)
+    maketest(liblo)
+    target_link_libraries(liblo lo)
+endif()
 
 if(JACK_FOUND)
     add_executable(headerlib test/headerlib.cpp)
