@@ -33,23 +33,22 @@
 extern "C" {
 #endif
 
-//TODO prefix blob_t and arg_t
 typedef struct {
     int32_t len;
     uint8_t *data;
-} blob_t;
+} rtosc_blob_t;
 
 typedef union {
-    int32_t     i;   //i,c,r
-    char        T;   //I,T,F,N
-    float       f;   //f
-    double      d;   //d
-    int64_t     h;   //h
-    uint64_t    t;   //t
-    uint8_t     m[4];//m
-    const char *s;   //s,S
-    blob_t      b;   //b
-} arg_t;
+    int32_t       i;   //i,c,r
+    char          T;   //I,T,F,N
+    float         f;   //f
+    double        d;   //d
+    int64_t       h;   //h
+    uint64_t      t;   //t
+    uint8_t       m[4];//m
+    const char   *s;   //s,S
+    rtosc_blob_t  b;   //b
+} rtosc_arg_t;
 
 /**
  * Write OSC message to fixed length buffer
@@ -98,7 +97,7 @@ size_t rtosc_amessage(char        *buffer,
                       size_t       len,
                       const char  *address,
                       const char  *arguments,
-                      const arg_t *args);
+                      const rtosc_arg_t *args);
 
 /**
  * Returns the number of arguments found in a given message
@@ -119,9 +118,9 @@ char rtosc_type(const char *msg, unsigned i);
  * Blob data may be safely written to
  * @param msg OSC message
  * @param i   index of argument
- * @returns an argument by value via the arg_t union
+ * @returns an argument by value via the rtosc_arg_t union
  */
-arg_t rtosc_argument(const char *msg, unsigned i);
+rtosc_arg_t rtosc_argument(const char *msg, unsigned i);
 
 /**
  * @param msg OSC message

@@ -13,18 +13,18 @@ int err = 0;
 //verifies a message with all types included serializes and deserializes
 int main()
 {
-    int32_t     i = 42;             //integer
-    float       f = 0.25;           //float
-    const char *s = "string";       //string
-    blob_t      b = {3,(uint8_t*)s};//blob
-    int64_t     h = -125;           //long integer
-    uint64_t    t = 22412;          //timetag
-    double      d = 0.125;          //double
-    const char *S = "Symbol";       //symbol
-    char        c = 25;             //character
-    int32_t     r = 0x12345678;     //RGBA
-    midi_t      m = {0x12,0x23,     //midi
-                     0x34,0x45};
+    int32_t      i = 42;             //integer
+    float        f = 0.25;           //float
+    const char  *s = "string";       //string
+    rtosc_blob_t b = {3,(uint8_t*)s};//blob
+    int64_t      h = -125;           //long integer
+    uint64_t     t = 22412;          //timetag
+    double       d = 0.125;          //double
+    const char  *S = "Symbol";       //symbol
+    char         c = 25;             //character
+    int32_t      r = 0x12345678;     //RGBA
+    midi_t       m = {0x12,0x23,     //midi
+                      0x34,0x45};
     //true
     //false
     //nil

@@ -151,9 +151,9 @@ size_t rtosc_message(char   *buffer,
 }
 
 //Calculate the size of the message without writing to a buffer
-static size_t vsosc_null(const char  *address,
-                         const char  *arguments,
-                         const arg_t *args)
+static size_t vsosc_null(const char        *address,
+                         const char        *arguments,
+                         const rtosc_arg_t *args)
 {
     unsigned pos = 0;
     pos += strlen(address);
@@ -217,7 +217,7 @@ size_t rtosc_vmessage(char   *buffer,
     if(!nargs)
         return rtosc_amessage(buffer,len,address,arguments,NULL);
 
-    arg_t args[nargs];
+    rtosc_arg_t args[nargs];
 
     unsigned arg_pos = 0;
     const char *arg_str = arguments;
@@ -264,11 +264,11 @@ size_t rtosc_vmessage(char   *buffer,
     return rtosc_amessage(buffer,len,address,arguments,args);
 }
 
-size_t rtosc_amessage(char        *buffer,
-                      size_t       len,
-                      const char  *address,
-                      const char  *arguments,
-                      const arg_t *args)
+size_t rtosc_amessage(char              *buffer,
+                      size_t             len,
+                      const char        *address,
+                      const char        *arguments,
+                      const rtosc_arg_t *args)
 {
     const size_t total_len = vsosc_null(address, arguments, args);
 
@@ -307,7 +307,7 @@ size_t rtosc_amessage(char        *buffer,
         const uint8_t *m;
         const char *s;
         const unsigned char *u;
-        blob_t b;
+        rtosc_blob_t b;
         switch(arg) {
             case 'h':
             case 't':
@@ -376,12 +376,12 @@ size_t rtosc_amessage(char        *buffer,
     return pos;
 }
 
-arg_t rtosc_argument(const char *msg, unsigned idx)
+rtosc_arg_t rtosc_argument(const char *msg, unsigned idx)
 {
     //hack to allow reading of arguments from truncated message
     msg-=(msg-(const char *)0)%4;
 
-    arg_t result = {0};
+    rtosc_arg_t result = {0};
     char type = rtosc_type(msg, idx);
     //trivial case
     if(!has_reserved(type)) {
