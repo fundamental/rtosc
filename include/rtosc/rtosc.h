@@ -33,17 +33,22 @@
 extern "C" {
 #endif
 
+//TODO prefix blob_t and arg_t
 typedef struct {
     int32_t len;
     uint8_t *data;
 } blob_t;
 
 typedef union {
-    int32_t i;
-    char T;
-    float f;
-    const char *s;
-    blob_t b;
+    int32_t     i;   //i,c,r
+    char        T;   //I,T,F,N
+    float       f;   //f
+    double      d;   //d
+    int64_t     h;   //h
+    uint64_t    t;   //t
+    uint8_t     m[4];//m
+    const char *s;   //s,S
+    blob_t      b;   //b
 } arg_t;
 
 /**

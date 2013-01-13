@@ -17,23 +17,36 @@ const char *rtosc_argument_string(const char *msg)
 
 unsigned rtosc_narguments(const char *msg)
 {
-    return strlen(rtosc_argument_string(msg));
+    const char *args = rtosc_argument_string(msg);
+    int nargs = 0;
+    while(*args++)
+        nargs += (*args == ']' || *args == '[') ? 0 : 1;
+    return nargs;
 }
 
 static int has_reserved(char type)
 {
     switch(type)
     {
-        case 'i':
+        case 'i'://official types
         case 's':
         case 'b':
         case 'f':
+
+        case 'h'://unofficial
+        case 't':
+        case 'd':
+        case 'S':
+        case 'r':
+        case 'm':
         case 'c':
             return 1;
         case 'T':
         case 'F':
         case 'N':
         case 'I':
+        case '[':
+        case ']':
             return 0;
     }
 
@@ -53,34 +66,69 @@ static unsigned nreserved(const char *args)
 char rtosc_type(const char *msg, unsigned pos)
 {
     assert(pos < rtosc_narguments(msg));
-    return rtosc_argument_string(msg)[pos];
+    const char *arg = rtosc_argument_string(msg);
+    while(1) {
+        if(*arg == '[' || *arg == ']')
+            ++arg;
+        else if(!pos || !*arg)
+            return *arg;
+        else
+            ++arg, --pos;
+    }
 }
 
-//TODO make aligment issues a bit less messy here
+//TODO make alignment issues a bit less messy here
 static unsigned arg_off(const char *msg, unsigned idx)
 {
-    if(!has_reserved(rtosc_argument_string(msg)[idx]))
+    if(!has_reserved(rtosc_type(msg,idx)))
         return 0;
 
     //Iterate to the right position
     const uint8_t *args = (const uint8_t*) rtosc_argument_string(msg);
     const uint8_t *arg_pos = args;
 
+
     while(*++arg_pos);
     //Alignment
     arg_pos += 4-(arg_pos-(uint8_t*)msg)%4;
 
+    //ignore any leading '[' or ']'
+    while(*args == '[' || *args == ']')
+        ++args;
+
     while(idx--) {
+        uint32_t bundle_length = 0;
         switch(*args++)
         {
+            case 'h':
+            case 't':
+            case 'd':
+                arg_pos +=8;
+                break;
+            case 'm':
+            case 'r':
             case 'f':
             case 'c':
             case 'i':
                 arg_pos += 4;
                 break;
+            case 'S':
             case 's':
                 while(*++arg_pos);
                 arg_pos += 4-(arg_pos-(uint8_t*)msg)%4;
+                break;
+            case 'b':
+                bundle_length |= (*arg_pos++ << 24);
+                bundle_length |= (*arg_pos++ << 16);
+                bundle_length |= (*arg_pos++ << 8);
+                bundle_length |= (*arg_pos++);
+                bundle_length += 4-bundle_length%4;
+                arg_pos += bundle_length;
+                break;
+            case '[':
+            case ']':
+                //completely ignore array chars
+                ++idx;
                 break;
             case 'T':
             case 'F':
@@ -124,6 +172,15 @@ static size_t vsosc_null(const char  *address,
         int i;
         const char *s;
         switch(arg) {
+            case 'h':
+            case 't':
+            case 'd':
+                ++arg_pos;
+                pos += 8;
+                --toparse;
+                break;
+            case 'm':
+            case 'r':
             case 'c':
             case 'f':
             case 'i':
@@ -132,6 +189,7 @@ static size_t vsosc_null(const char  *address,
                 --toparse;
                 break;
             case 's':
+            case 'S':
                 s = args[arg_pos++].s;
                 pos += strlen(s);
                 pos += 4-pos%4;
@@ -163,13 +221,30 @@ size_t rtosc_vmessage(char   *buffer,
 
     unsigned arg_pos = 0;
     const char *arg_str = arguments;
+    uint8_t *midi_tmp;
     while(arg_pos < nargs)
     {
         switch(*arg_str++) {
+            case 'h':
+            case 't':
+                args[arg_pos++].h = va_arg(ap, int64_t);
+                break;
+            case 'd':
+                args[arg_pos++].d = va_arg(ap, double);
+                break;
             case 'c':
             case 'i':
+            case 'r':
                 args[arg_pos++].i = va_arg(ap, int);
                 break;
+            case 'm':
+                midi_tmp = va_arg(ap, uint8_t *);
+                args[arg_pos].m[0] = midi_tmp[0];
+                args[arg_pos].m[1] = midi_tmp[1];
+                args[arg_pos].m[2] = midi_tmp[2];
+                args[arg_pos++].m[3] = midi_tmp[3];
+                break;
+            case 'S':
             case 's':
                 args[arg_pos++].s = va_arg(ap, const char *);
                 break;
@@ -228,10 +303,27 @@ size_t rtosc_amessage(char        *buffer,
         char arg = *arguments++;
         assert(arg);
         int32_t i;
+        int64_t d;
+        const uint8_t *m;
         const char *s;
         const unsigned char *u;
         blob_t b;
         switch(arg) {
+            case 'h':
+            case 't':
+            case 'd':
+                d = args[arg_pos++].t;
+                buffer[pos++] = ((d>>56) & 0xff);
+                buffer[pos++] = ((d>>48) & 0xff);
+                buffer[pos++] = ((d>>40) & 0xff);
+                buffer[pos++] = ((d>>32) & 0xff);
+                buffer[pos++] = ((d>>24) & 0xff);
+                buffer[pos++] = ((d>>16) & 0xff);
+                buffer[pos++] = ((d>>8) & 0xff);
+                buffer[pos++] = (d & 0xff);
+                --toparse;
+                break;
+            case 'r':
             case 'f':
             case 'c':
             case 'i':
@@ -242,6 +334,16 @@ size_t rtosc_amessage(char        *buffer,
                 buffer[pos++] = (i & 0xff);
                 --toparse;
                 break;
+            case 'm':
+                //TODO verify ordering of spec
+                m = args[arg_pos++].m;
+                buffer[pos++] = m[0];
+                buffer[pos++] = m[1];
+                buffer[pos++] = m[2];
+                buffer[pos++] = m[3];
+                --toparse;
+                break;
+            case 'S':
             case 's':
                 s = args[arg_pos++].s;
                 while(*s)
@@ -280,7 +382,7 @@ arg_t rtosc_argument(const char *msg, unsigned idx)
     msg-=(msg-(const char *)0)%4;
 
     arg_t result = {0};
-    char type = rtosc_argument_string(msg)[idx];
+    char type = rtosc_type(msg, idx);
     //trivial case
     if(!has_reserved(type)) {
         switch(type)
@@ -298,6 +400,19 @@ arg_t rtosc_argument(const char *msg, unsigned idx)
         const unsigned char *arg_pos = (const unsigned char*)msg+arg_off(msg,idx);
         switch(type)
         {
+            case 'h':
+            case 't':
+            case 'd':
+                result.t |= (((uint64_t)*arg_pos++) << 56);
+                result.t |= (((uint64_t)*arg_pos++) << 48);
+                result.t |= (((uint64_t)*arg_pos++) << 40);
+                result.t |= (((uint64_t)*arg_pos++) << 32);
+                result.t |= (((uint64_t)*arg_pos++) << 24);
+                result.t |= (((uint64_t)*arg_pos++) << 16);
+                result.t |= (((uint64_t)*arg_pos++) << 8);
+                result.t |= (((uint64_t)*arg_pos++));
+                break;
+            case 'r':
             case 'f':
             case 'c':
             case 'i':
@@ -306,6 +421,12 @@ arg_t rtosc_argument(const char *msg, unsigned idx)
                 result.i |= (*arg_pos++ << 8);
                 result.i |= (*arg_pos++);
                 break;
+            case 'm':
+                result.m[0] = *arg_pos++;
+                result.m[1] = *arg_pos++;
+                result.m[2] = *arg_pos++;
+                result.m[3] = *arg_pos++;
+                break;
             case 'b':
                 result.b.len |= (*arg_pos++ << 24);
                 result.b.len |= (*arg_pos++ << 16);
@@ -313,6 +434,7 @@ arg_t rtosc_argument(const char *msg, unsigned idx)
                 result.b.len |= (*arg_pos++);
                 result.b.data = (unsigned char *)arg_pos;
                 break;
+            case 'S':
             case 's':
                 result.s = (char *)arg_pos;
                 break;
@@ -381,12 +503,21 @@ size_t rtosc_message_ring_length(ring_t *ring)
         assert(arg);
         int i;
         switch(arg) {
+            case 'h':
+            case 't':
+            case 'd':
+                pos += 8;
+                --toparse;
+                break;
+            case 'm':
+            case 'r':
             case 'c':
             case 'f':
             case 'i':
                 pos += 4;
                 --toparse;
                 break;
+            case 'S':
             case 's':
                 while(deref(++pos,ring));
                 pos += 4-pos%4;
