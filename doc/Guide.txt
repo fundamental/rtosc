@@ -59,6 +59,22 @@ library's goal is to permit the simple use of basic RT OSC messages, nothing too
 much more, so for more complex construction of messages, I recommend liblo.
 This is not to say that all that all features are currently implemented.
 
+For more complex messages there are also varargs and array versions of message
+
+[source,C]
+--------------------------------------------------------------------
+rtosc_vmessage(buffer, sizeof(buffer), address, args, va_arguments);
+
+rtosc_arg_t args[] = {
+  {.s = "foo"},
+  {.i = 1234},
+  {.f = 1024.2}
+}
+rtosc_amessage(buffer, sizeof(buffer), "/path", "sif", args);
+--------------------------------------------------------------------
+
+//TODO message verification layer
+
 The C++ Layer
 -------------
 
@@ -77,7 +93,7 @@ with respect to their size.
 ThreadLink
 ~~~~~~~~~~
 
-For simple usage, calls to _write()_ replace any calls to _sosc()_.
+For simple usage, calls to _write()_ replace any calls to _rtosc_message()_.
 One thread is intended to call _write()_ when messages are sent and the other is
 expected to periodically _read()_ all of the messages.
 
@@ -108,7 +124,7 @@ Possibly the simplest Port type is the unused void* pointer.
 
 [source,cpp]
 ------------------------------------------------------------------------------
-Port<void> port("a_port:f", "", [](const char*, void*){puts("port called")});
+Port port("a_port:f", "", [](const char*, void*){puts("port called")});
 ------------------------------------------------------------------------------
 
 The verbose way to read this is that this defines a port named "a_port" which
@@ -128,24 +144,22 @@ class Foobar
     float a,b,c,d;
 }
 
-Ports<4,Foobar> ports{{{
-    Port<Foobar>("a:f", "",
-        [](const char *m, Foobar *f){f->a = argument(m,0).f;}),
-    Port<Foobar>("b:f", "",
-        [](const char *m, Foobar *f){f->b = argument(m,0).f;}),
-    Port<Foobar>("c:f", "",
-        [](const char *m, Foobar *f){f->c = argument(m,0).f;}),
-    Port<Foobar>("d:f", "",
-        [](const char *m, Foobar *f){f->d = argument(m,0).f;})
-}}}
+Ports ports = {
+    {"a:f", "", NULL,
+        [](const char *m, void *f){((Foobar*)f)->a = argument(m,0).f;}),
+    {"b:f", "", NULL,
+        [](const char *m, void *f){((Foobar*)f)->b = argument(m,0).f;}),
+    {"c:f", "", NULL,
+        [](const char *m, void *f){((Foobar*)f)->c = argument(m,0).f;}),
+    {"d:f", "", NULL
+        [](const char *m, void *f){((Foobar*)f)->d = argument(m,0).f;})
+};
 ----------------------------------------------------------------
-
-NOTE: The triple braces are required to use the correct C++11 calls
 
 This is however quite verbose mainly due to the associated setter functions.
 As this field is a std::function and not just a simple function pointer it is
 possible to abstract this with a generated function (or a macro, though
-generated functions lead to more interesting possibilities).
+generated functions lead to more _interesting_ possibilities).
 
 
 [source,cpp]
@@ -156,17 +170,17 @@ class Foobar
 };
 
 template<class T>
-function<void(const char*,T*)> parameter(float T::*p)
+function<void(const char*,void*)> parameter(float T::*p)
 {
-    return [p](const char *, T*t){(t->*p) = argument(m,0).f};
+    return [p](const char *, void*t){((T*)t)->*p) = argument(m,0).f};
 }
 
-Ports<4,Foobar> ports{{{
-    Port<Foobar>("a:f", "", parameter(&Foobar::a)),
-    Port<Foobar>("b:f", "", parameter(&Foobar::b)), 
-    Port<Foobar>("c:f", "", parameter(&Foobar::c)),
-    Port<Foobar>("d:f", "", parameter(&Foobar::d))
-}}}
+Ports ports = {
+    {"a:f", "", NULL, parameter(&Foobar::a)),
+    {"b:f", "", NULL, parameter(&Foobar::b)), 
+    {"c:f", "", NULL, parameter(&Foobar::c)),
+    {"d:f", "", NULL, parameter(&Foobar::d))
+};
 ----------------------------------------------------------------
 
 There, that is a concise representation of those parameters.
@@ -181,7 +195,7 @@ typedef const char *msg_t;
 template<class T>
 function<void(const char*,T*)> param(float T::*p)
 {
-    return [p](const char *, T*t){(t->*p) = argument(m,0).f};
+    return [p](const char *, void*t){(((T*)t)->*p) = argument(m,0).f};
 }
 
 msg_t snip(msg_t m)
@@ -193,45 +207,35 @@ msg_t snip(msg_t m)
 template<class T, class TT>
 std::function<void(msg_t,T*)> recur(TT T::*p)
 {
-    return [p](msg_t m, T*t){(t->*p).dispatch(snip(m));};
+    return [p](msg_t m, void*t){TT::ports.dispatch(snip(m),(T*)(t->*p));};
 }
 
 class Barfoo
 {
     float e;
-    void dispatch(msg_t m);
+    static Ports ports;
 };
 
 class Foobar
 {
     float a,b,c,d;
     Barfoo baz;
-    void dispatch(msg_t m) 
 };
 
-Ports<1,Barfoo> barPorts{{{
-    Port<Barfoo>("e:f", "", param(&Barfoo::e))
-}}};
+Ports Barfoo::ports = {
+    {"e:f", "", NULL, param(&Barfoo::e)}
+};
 
-Ports<5,Foobar> fooPorts{{{
-    Port<Foobar>("a:f",  "",        param(&Foobar::a)),
-    Port<Foobar>("b:f",  "",        param(&Foobar::b)),
-    Port<Foobar>("c:f",  "",        param(&Foobar::c)),
-    Port<Foobar>("d:f",  "",        param(&Foobar::d)),
-    Port<Foobar>("baz/", &barPorts, recur(&Foobar::baz))
-}}};
-
-void Barfoo::dispatch(msg_t m)
-{
-    barPorts.dispatch(m, this);
-}
-
-void Foobar::dispatch(msg_t m)
-{
-    fooPorts.dispatch(m, this);
-}
+Ports Foobar::ports = {
+    {"a:f",  "", NULL,           param(&Foobar::a)},
+    {"b:f",  "", NULL,           param(&Foobar::b)},
+    {"c:f",  "", NULL,           param(&Foobar::c)},
+    {"d:f",  "", NULL,           param(&Foobar::d)},
+    {"baz/", "", &Barfoo::ports, recur(&Foobar::baz)}
+};
 ----------------------------------------------------------------
 
+//TODO typecheck
 Now a recursive dispatching hierarchy has been formed with only a few more
 lines.
 While this may appear somewhat complicated, all it does is define another
@@ -241,9 +245,10 @@ which (assuming alignment is known) causes no issues whatsoever when decoding it
 Depending upon the topology of the system being described, this can simplify
 things immensely.
 
-Lastly, it should be noted that &barPorts is stored in the port table, rather
-than the standard metadata.
-This permits traversal of the tree of ports with this constant hierarchy.
+Lastly, it should be noted that _&Barfoo::ports_ is stored in the port table.
+This permits traversal of the tree of ports with this hierarchy.
+As this tree does not reveal any actual data, the real data can easily be a
+subset of the ports listed in these structures.
 Speaking of the metadata, it should be noted that it is empty in all of the
 above examples, but it is a great space to provide information on the parameters
 themselves in some ad-hoc manner.
@@ -254,7 +259,125 @@ such as descriptions, units, visibility, and so forth.
 For more detail on the exact methods you should see the doxygen output, or for
 the moment the source itself (it doesn't bite much).
 
-//TODO port path parsing
+For those who's eyes glazed over after looking at this templated `C++` code,
+it is also possible to do the same thing with macros in a very concise manner:
+
+[source,cpp]
+----------------------------------------------------------------
+#define PARAM(Klass, var) \
+{ #var ":f", "", NULL,    \
+  [](const char *m, void *v){((Klass*)v)->var = rtosc_argument(m,0).f;}}
+    
+#define RECUR(src, dest, var) \
+{ #var "/", "", dest::ports,  \
+  [](const char *m, void *v){dest::ports.dispatch(snip(m),((src*)v)->var);}}
+
+Ports Barfoo::ports = {
+    PARAM(Barfoo,e)
+};
+
+Ports Foobar::ports = {
+    PARAM(Foobar, a),
+    PARAM(Foobar, b),
+    PARAM(Foobar, c),
+    PARAM(Foobar, d),
+    RECUR(Foobar, Barfoo, baz)
+};
+----------------------------------------------------------------
+
+You can of course combine these approaches to get the desired input as you like,
+though as only constant character pointers are stored for the port pattern and
+metadata, generating those requires either static strings or external memory
+management.
+While placing closures over pointers-to-member data in a templated tree is not
+trivial nor strait forward, it is a (somewhat) concise, performant, and safe way of 
+describing the dispatching hierarchy.
+While this could be done without the used `C++11` magic, the application domain is
+`C++` on recent systems and the generated dynamic library is not tainted by any
+`C++` code so this layer as previously mentioned is entirely optional.
+
+Path Specifiers
+^^^^^^^^^^^^^^^
+
+The rough specification for the grammar of the path specifiers is:
+
+---------------------------------------------------------
+argument_specializer_delimiter := ':'
+range_specifier   := '#'
+subport_specifier := '/'
+
+path      := location subport
+           | location subport arguments
+
+subport   :=
+           | '/'
+
+location  := text
+           | text '#' number
+
+arguments :=
+           | ':' types arguments
+
+types     :=
+           | type types
+---------------------------------------------------------
+
+A brief justification of this grammar can be summarized in a few points which
+echo the sentiment make 99% of code simple and the 1% possible:
+
+* Array fields are common in signal processing and the '#' specifier is a
+  simple means of explaining the ranges
+* While paths could be denoted outside of this string, it is concise to label
+  them with '/' which is disallowed from the subpaths from the OSC 1.0 spec
+* Type checking arguments is a PITA that can be reduced by formally specifying
+  all possible argument types. This also provides information when the tree is
+  statically traversed
+* All other edge cases can be either explained in the metadata or via the
+  behavior of the handling function
+
+Metadata
+^^^^^^^^
+
+Looking at all of this you may notice that the metadata field of the port is
+left blank every time.
+This field is not shown as it would complicate the above examples and it is only
+really useful when attaching other code to this idiom of a series of ports.
+The roughly established grammar for this specifier is:
+
+---------------------------------------------------------
+metadata_delimiter := ':'
+field_delimiter    := ','
+
+scaling_fn  :=
+             | 'log' ',' number ',' number
+             | 'lin' ',' number ',' number
+             | text
+
+fields      := text
+             | text ',' fields
+
+property    := `'` text `'`
+
+description := text
+
+properties  :=
+             | property
+             | property ',' properties
+
+metadata    :=
+             | scaling_fn ':' properties ':' description
+---------------------------------------------------------
+
+Most of this data has been structured s.t. it is easy to allow some UI to hook
+onto the data to eliminate some data redundancy and to permit documenting
+parameters where they are defined rather than in the mist of some horribly
+convoluted UI code.
+This field does not necessarily need to conform to the above structure, though
+port based extentionds will expect the strings to roughly conform and all
+examples should conform.
+
+For an example of code using this format, see the Fl_Osc_* collection of widgets
+and meta-widgets in the complex example.
 
 Midi
 ~~~~
@@ -262,3 +385,12 @@ Midi
 The midi class just provides simple mapping of midi controls to Ports.
 All this does at the moment is provide a path and conversion string for
 registered ports.
+
+While this functionality is currently still under development, it is intended
+that this object will serve as the mechanism for all midi connections, midi
+learning, and midi translation.
+By this, I mean that when midi events are received (at least CC events), they
+should be sent directly to the midi table which will translate them into OSC
+events if they are known events and store them if they are unknown events.
+With a small amount of external code, it should be possible to also perform
+midi learning by pairing unknown messages and unknown MIDI CC events.

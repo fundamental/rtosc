@@ -136,11 +136,14 @@ args:; //Match the arg string or fail
     return false;
 }
 
+/**
+ * Port in rtosc dispatching hierarchy
+ */
 struct Port {
-        const char *name;
-        const char *metadata;
-        Ports *ports;
-        std::function<void(msg_t, void*)> cb;
+        const char *name;    //< Pattern for messages to match
+        const char *metadata;//< Statically accessable data about port
+        Ports *ports;        //< Pointer to further ports
+        std::function<void(msg_t, void*)> cb;//< Callback for matching functions
 };
 
 struct Ports

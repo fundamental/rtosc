@@ -58,6 +58,7 @@ class ThreadLink
 
         /**
          * Write message to ringbuffer
+         * @see rtosc_message()
          */
         void write(const char *dest, const char *args, ...)
         {
@@ -69,6 +70,10 @@ class ThreadLink
                 jack_ringbuffer_write(ring,write_buffer,len);
         }
 
+        /**
+         * Write an arary of arguments to ringbuffer
+         * @see rtosc_amessage()
+         */
         void writeArray(const char *dest, const char *args, const rtosc_arg_t *aargs)
         {
             const size_t len =
