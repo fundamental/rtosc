@@ -17,6 +17,7 @@ int main()
     lo_message_add_float(message, 24.0);
     lo_message_add_int32(message, 42);
     lo_message_serialise(message, "/path", buffer, &len);
+    lo_message_free(message);
 
     good &= !strcmp("/path", buffer);
     good &= 24.0 == rtosc_argument(buffer, 0).f;
