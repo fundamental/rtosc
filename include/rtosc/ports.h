@@ -204,11 +204,12 @@ struct Ports
     {
         for(const Port &port: ports)
             if(index(port.name,'/') && match(port.name,path))
-                return port.ports->apropos(this->snip(path));
+                return !index(snip(path), '/') ? &port :
+                    port.ports->apropos(this->snip(path));
 
         //This is the lowest level, now find the best port
         for(const Port &port: ports)
-            if(strstr(port.name, path)==port.name)
+            if(*path && strstr(port.name, path)==port.name)
                 return &port;
 
         return NULL;

@@ -11,8 +11,8 @@ using namespace rtosc;
 
 float Fs = 0.0f;
 
-ThreadLink<1024,1024> bToU;
-ThreadLink<1024,1024> uToB;
+ThreadLink bToU(1024,1024);
+ThreadLink uToB(1024,1024);
 
 Ports Adsr::ports = {
     PARAM(Adsr, av, av, lin, -1.0, 1.0, "attack  value"),

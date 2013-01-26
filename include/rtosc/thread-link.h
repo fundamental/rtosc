@@ -41,19 +41,24 @@ typedef const char *msg_t;
  * This class provides the basics of reading and writing events via fixed sized
  * buffers, which can be specified at compile time.
  */
-template<int MAX_MSG, int MAX_MSGS>
 class ThreadLink
 {
     public:
-        ThreadLink(void)
+        ThreadLink(size_t max_message_length, size_t max_messages)
+            :MaxMsg(max_message_length),
+            BufferSize(MaxMsg*max_messages),
+            write_buffer(new char[BufferSize]),
+            read_buffer(new char[BufferSize])
         {
-            ring = jack_ringbuffer_create(MAX_MSG*MAX_MSGS);
+            ring = jack_ringbuffer_create(BufferSize);
             jack_ringbuffer_mlock(ring);
         }
 
         ~ThreadLink(void)
         {
             jack_ringbuffer_free(ring);
+            delete[] write_buffer;
+            delete[] read_buffer;
         }
 
         /**
@@ -65,7 +70,7 @@ class ThreadLink
             va_list va;
             va_start(va,args);
             const size_t len =
-                rtosc_vmessage(write_buffer,MAX_MSG,dest,args,va);
+                rtosc_vmessage(write_buffer,MaxMsg,dest,args,va);
             if(jack_ringbuffer_write_space(ring) >= len)
                 jack_ringbuffer_write(ring,write_buffer,len);
         }
@@ -77,7 +82,7 @@ class ThreadLink
         void writeArray(const char *dest, const char *args, const rtosc_arg_t *aargs)
         {
             const size_t len =
-                rtosc_amessage(write_buffer, MAX_MSG, dest, args, aargs);
+                rtosc_amessage(write_buffer, MaxMsg, dest, args, aargs);
             if(jack_ringbuffer_write_space(ring) >= len)
                 jack_ringbuffer_write(ring,write_buffer,len);
         }
@@ -109,7 +114,7 @@ class ThreadLink
             const size_t len =
                 rtosc_message_ring_length(r);
             assert(jack_ringbuffer_read_space(ring) >= len);
-            assert(len <= MAX_MSG);
+            assert(len <= MaxMsg);
             jack_ringbuffer_read(ring, read_buffer, len);
             return read_buffer;
         }
@@ -129,10 +134,12 @@ class ThreadLink
         /**
          * Access to write buffer length
          */
-        constexpr size_t buffer_size(void) {return MAX_MSG;}
+        size_t buffer_size(void) const {return BufferSize;}
     private:
-        char write_buffer[MAX_MSG];
-        char read_buffer[MAX_MSG];
+        const size_t MaxMsg;
+        const size_t BufferSize;
+        char *write_buffer;
+        char *read_buffer;
 
         //assumes jack ringbuffer
         jack_ringbuffer_t *ring;

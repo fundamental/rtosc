@@ -25,8 +25,8 @@ using std::string;
 using std::map;
 using namespace rtosc;
 
-extern ThreadLink<1024,1024> bToU;
-extern ThreadLink<1024,1024> uToB;
+extern ThreadLink bToU;
+extern ThreadLink uToB;
 
 struct Fl_Knob;
 map<string, Fl_Osc_Widget*> gui_map;
