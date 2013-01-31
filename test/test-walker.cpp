@@ -30,5 +30,9 @@ int main()
             puts(name);
             });
 
-    return 0;
+    const Port *p = ports.apropos("/subtree/port");
+
+    if(p && (std::string(p->name) == "port"))
+        return 0;
+    return 1;
 }

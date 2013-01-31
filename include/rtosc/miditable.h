@@ -124,7 +124,7 @@ struct MidiTable
     {
         const Port *port = dispatch_root.apropos(path);
 
-        if(!port) {
+        if(!port || port->ports) {//missing or directory node
             error_cb("Bad path", path);
             return;
         }

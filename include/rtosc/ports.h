@@ -202,9 +202,12 @@ struct Ports
     //Generate the deepest working match
     const Port *apropos(const char *path) const
     {
+        if(path && path[0] == '/')
+            ++path;
+
         for(const Port &port: ports)
             if(index(port.name,'/') && match(port.name,path))
-                return !index(snip(path), '/') ? &port :
+                return (index(path,'/')[1]==0) ? &port :
                     port.ports->apropos(this->snip(path));
 
         //This is the lowest level, now find the best port
