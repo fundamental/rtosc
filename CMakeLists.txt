@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
 project(RTOSC)
+
+set(VERSION_MAJOR 0)
+set(VERSION_MINOR 1)
+set(VERSION_PATCH 0)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(CMAKE_C_FLAGS "-O2 -std=c99 -Wall -Wextra -fprofile-arcs -ftest-coverage")
 set(CMAKE_CXX_FLAGS "-O2 -std=c++0x -Wall -Wextra -fprofile-arcs -ftest-coverage")
@@ -91,6 +96,10 @@ endif()
 
 
 #Installation
+configure_file(librtosc.pc.cmake
+    ${CMAKE_SOURCE_DIR}/librtosc.pc @ONLY)
+install(FILES ${CMAKE_SOURCE_DIR}/librtosc.pc
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig/")
 install(FILES include/rtosc/rtosc.h 
     include/rtosc/thread-link.h
     include/rtosc/ports.h
