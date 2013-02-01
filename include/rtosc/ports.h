@@ -136,6 +136,13 @@ args:; //Match the arg string or fail
     return false;
 }
 
+struct RtData
+{
+    char *loc;
+    size_t loc_size;
+    void *obj;
+};
+
 /**
  * Port in rtosc dispatching hierarchy
  */
@@ -143,9 +150,10 @@ struct Port {
         const char *name;    //< Pattern for messages to match
         const char *metadata;//< Statically accessable data about port
         Ports *ports;        //< Pointer to further ports
-        std::function<void(msg_t, void*)> cb;//< Callback for matching functions
+        std::function<void(msg_t, RtData)> cb;//< Callback for matching functions
 };
 
+static void scat(char *dest, const char *src);
 struct Ports
 {
     std::vector<Port> ports;
@@ -171,11 +179,46 @@ struct Ports
 
     Ports(const Ports&) = delete;
 
-    void dispatch(msg_t m, void *v)
+    void dispatch(char *loc, size_t loc_size, msg_t m, void *v)
     {
-        for(Port &port: ports) {
-            if(match(port.name,m))
-                port.cb(m,v);
+        //simple case [very very cheap]
+        if(!loc || !loc_size) {
+            for(Port &port: ports) {
+                if(match(port.name,m))
+                    port.cb(m,{NULL,0,v});
+            }
+        } else { //somewhat cheap
+
+            //TODO this function is certainly buggy at the moment, some tests
+            //are needed to make it clean
+            //XXX buffer_size is not properly handled yet
+            if(loc[0] == 0)
+                loc[0] = '/';
+
+            char *old_end = loc;
+            while(*old_end) ++old_end;
+
+            for(const Port &port: ports) {
+                if(!match(port.name, m))
+                    continue;
+
+                //Append the path
+                if(index(port.name,'#')) {
+                    const char *msg = m;
+                    char       *pos = old_end;
+                    while(*msg && *msg != '/')
+                        *pos++ = *msg++;
+                    *pos = '/';
+                } else
+                    scat(loc, port.name);
+
+                //Apply callback
+                port.cb(m,{loc,loc_size,v});
+
+                //Remove the rest of the path
+                char *tmp = old_end;
+                while(*tmp) *tmp++=0;
+            }
         }
     }
 
@@ -259,7 +302,7 @@ static void scat(char *dest, const char *src)
 
 typedef std::function<void(const Port*,const char*)> port_walker_t;
 
-    static __attribute__((unused))
+static
 void walk_ports(const Ports *base,
         char         *name_buffer,
         size_t        buffer_size,

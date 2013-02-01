@@ -7,7 +7,7 @@ using namespace rtosc;
 std::string resultA;
 int resultB = 0;
 
-void null_fn(const char*,void*){}
+void null_fn(const char*,RtData){}
 
 Ports subtree = {
     {"port", "", 0, null_fn}

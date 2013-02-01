@@ -79,9 +79,9 @@ rtosc::Ports Synth::ports = {
     RECUR(Synth, Adsr, amp-env, amp_env, "amplitude envelope"),
     RECUR(Synth, Adsr, frq-env, frq_env, "frequency envelope"),
     PARAM(Synth, freq, freq,    log, 1, 1e3, "note frequency"),
-    {"gate:T","::", 0, [](msg_t,void*v){((Synth*)v)->gate=true;}},
-    {"gate:F","::", 0, [](msg_t,void*v){((Synth*)v)->gate=false;}},
-    {"register:iis","::", 0, [](msg_t m,void*){
+    {"gate:T","::", 0, [](msg_t,RtData d){((Synth*)d.obj)->gate=true;}},
+    {"gate:F","::", 0, [](msg_t,RtData d){((Synth*)d.obj)->gate=false;}},
+    {"register:iis","::", 0, [](msg_t m,RtData){
             //printf("registering element...\n");
             //printf("%d %d\n",argument(m,0).i,argument(m,1).i);
             const char *pos = rtosc_argument(m,2).s;
@@ -95,7 +95,7 @@ rtosc::Ports Synth::ports = {
             //process_control(ctl);
             //printf("synth.amp-env.av=%f\n", s.amp_env.av);
             }},
-    {"learn:s", "::", 0, [](msg_t m, void*){
+    {"learn:s", "::", 0, [](msg_t m, RtData){
             midi.learn(rtosc_argument(m,0).s);
             }}
 
@@ -109,7 +109,8 @@ bool  &gate = s.gate;
 
 void event_cb(msg_t m)
 {
-    Synth::ports.dispatch(m+1, &s);
+    char buffer[1024];
+    Synth::ports.dispatch(buffer, 1024, m+1, &s);
     bToU.raw_write(m);
     puts("event-cb");
     if(rtosc_type(m,0) == 'f')
@@ -135,8 +136,9 @@ void process_control(unsigned char ctl[3])
 
 void process_output(float *smps, unsigned nframes)
 {
+    char buffer[1024];
     while(uToB.hasNext())
-        Synth::ports.dispatch(uToB.read()+1, &s);
+        Synth::ports.dispatch(buffer, 1024, uToB.read()+1, &s);
 
     for(unsigned i=0; i<nframes; ++i)
         smps[i] = s.sample();
