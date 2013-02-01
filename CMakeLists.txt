@@ -8,10 +8,9 @@ set(CMAKE_EXE_LINKER_FLAGS "-fprofile-arcs -ftest-coverage")
 add_library(rtosc SHARED src/rtosc.c)
 
 # Example Code
+find_package(PkgConfig REQUIRED)
 find_package(FLTK)
-execute_process(COMMAND pkg-config jack --exists
-    RESULT_VARIABLE JACK_MISSING)
-set(JACK_FOUND NOT JACK_MISSING)
+pkg_check_modules(JACK jack)
 
 if(FLTK_FOUND)
     execute_process(COMMAND fltk-config --api-version
@@ -45,9 +44,7 @@ target_link_libraries(modular-example m rtosc)
 
 
 # Testing code
-execute_process(COMMAND pkg-config liblo --exists
-    RESULT_VARIABLE LIBLO_MISSING)
-set(LIBLO_FOUND NOT LIBLO_MISSING)
+pkg_check_modules(LIBLO liblo)
 enable_testing()
 macro(maketest fname)
     add_executable(${fname} test/${fname}.c)
@@ -104,6 +101,11 @@ install(TARGETS rtosc
 
 
 #Describe overall configuration
+if(LIBLO_FOUND)
+    message("-- Found Liblo...")
+else()
+    message("-- Did NOT find Liblo...")
+endif()
 if(JACK_FOUND)
     message("-- Found JACK...")
 else()
