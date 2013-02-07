@@ -25,14 +25,15 @@ attempt to alleviate this issue without creating an entirely hideous API.
 Status
 ------
 
-- OSC 1.0 spec consistent implementation of floating point, strings, integers,
-  blobs, true, false, and Nil.
-- Somewhat non-conformant bundle implementation
+- OSC 1.0 spec consistent implementation of all message types, and bundles
+- Lightly tested liblo based implementation verification
 - Working C++ based dispatch system
 
 Todo
 ----
 
+- Refine C++ layer
 - Increase test coverage over C++ layer
-- Implement rest of OSC message spec
+- Provide standard compliant path/pattern matching algorithms
+- Add some syntax for integer enumerated options
 - Formally specify C++ port strings

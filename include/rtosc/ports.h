@@ -29,6 +29,7 @@
 #include <functional>
 #include <initializer_list>
 #include <rtosc/rtosc.h>
+#include <rtosc/matcher.h>
 #include <cstring>
 #include <cctype>
 #include <cstdlib>
@@ -41,100 +42,6 @@ typedef const char *msg_t;
 
 struct Port;
 struct Ports;
-
-/**
- * This is a non-compliant pattern matcher for dispatching OSC messages
- *
- * Overall the pattern specification is
- *   (normal-path)(\#digit-specifier)?(/)?(:argument-restrictor)*
- *
- * @param pattern The pattern string stored in the Port
- * @param msg     The OSC message to be matched
- * @returns 3 if a path match, 1 if a normal match, and 0 if unmatched
- */
-inline int match(const char *pattern, const char *msg)
-{
-    const char *_msg = msg;
-    bool path_flag   = false;
-
-    unsigned val, max;
-
-normal:; //Match character by character or hop to speical cases
-
-    //Check for special characters
-    if(*pattern == ':') {
-        ++pattern;
-        goto args;
-    }
-
-    if(*pattern == '#') {
-        ++pattern;
-        goto number;
-    }
-
-    if(*pattern == '/' && *msg == '/') {
-        path_flag  = 1;
-        ++pattern;
-        if(*pattern == ':') {
-            ++pattern;
-            goto args;
-        }
-        else
-            return 3;
-    }
-
-    //Verify they are still the same and return if both are fully parsed
-    if((*pattern == *msg)) {
-        if(*msg)
-            ++pattern, ++msg;
-        else
-            return (path_flag<<1)|1;
-        goto normal;
-    } else
-        return false;
-
-number:; //Match the number
-
-    //Verify both hold digits
-    if(!isdigit(*pattern) || !isdigit(*msg))
-        return false;
-
-    //Read in both numeric values
-    max = atoi(pattern);
-    val = atoi(msg);
-
-    //Match iff msg number is strictly less than pattern
-    if(val < max) {
-
-        //Advance pointers
-        while(isdigit(*pattern))++pattern;
-        while(isdigit(*msg))++msg;
-
-        goto normal;
-    } else
-        return false;
-
-args:; //Match the arg string or fail
-
-    const char *arg_str = rtosc_argument_string(_msg);
-
-    bool arg_match = *pattern || *pattern == *arg_str;
-    while(*pattern) {
-        if(*pattern==':') {
-            if(arg_match && !*arg_str)
-                return (path_flag<<1)|1;
-            else {
-                ++pattern;
-                goto args; //retry
-            }
-        }
-        arg_match &= (*pattern++==*arg_str++);
-    }
-
-    if(arg_match)
-        return (path_flag<<1)|1;
-    return false;
-}
 
 struct RtData
 {
@@ -154,21 +61,35 @@ struct Port {
 };
 
 static void scat(char *dest, const char *src);
+
+/**
+ * Ports - a dispatchable collection of Port entries
+ *
+ * This structure makes it somewhat easier to perform actions on collections of
+ * port entries and it is responsible for the dispatching of OSC messages to
+ * their respective ports.
+ * That said, it is a very simple structure, which uses a stl container to store
+ * all data in a simple dispatch table.
+ * All methods post-initialization are RT safe (assuming callbacks are RT safe)
+ */
 struct Ports
 {
     std::vector<Port> ports;
 
+    /**Forwards to builtin container*/
     auto begin() const -> decltype(ports.begin())
     {
         return ports.begin();
     }
 
+    /**Forwards to builtin container*/
     auto end() const -> decltype(ports.end())
     {
         return ports.end();
     }
 
-    const Port &operator[](unsigned i)const
+    /**Forwards to builtin container*/
+    const Port &operator[](unsigned i) const
     {
         return ports[i];
     }
@@ -179,12 +100,21 @@ struct Ports
 
     Ports(const Ports&) = delete;
 
+    /**
+     * Dispatches message to all matching ports.
+     * This uses simple pattern matching available in rtosc::match.
+     *
+     * @param loc      A buffer for storing path information or NULL
+     * @param loc_size The length of the provided buffer
+     * @param m        a valid OSC message
+     * @param v        a pointer to data or NULL
+     */
     void dispatch(char *loc, size_t loc_size, msg_t m, void *v)
     {
         //simple case [very very cheap]
         if(!loc || !loc_size) {
             for(Port &port: ports) {
-                if(match(port.name,m))
+                if(rtosc_match(port.name,m))
                     port.cb(m,{NULL,0,v});
             }
         } else { //somewhat cheap
@@ -199,7 +129,7 @@ struct Ports
             while(*old_end) ++old_end;
 
             for(const Port &port: ports) {
-                if(!match(port.name, m))
+                if(!rtosc_match(port.name, m))
                     continue;
 
                 //Append the path
@@ -222,6 +152,10 @@ struct Ports
         }
     }
 
+    /**
+     * Retrieve local port by name
+     * TODO implement full matching
+     */
     const Port *operator[](const char *name) const
     {
         for(const Port &port:ports) {
@@ -236,20 +170,21 @@ struct Ports
         return NULL;
     }
 
+    //util
     msg_t snip(msg_t m) const
     {
         while(*m && *m != '/') ++m;
         return m+1;
     }
 
-    //Generate the deepest working match
+    /** Find the best match for a given path or NULL*/
     const Port *apropos(const char *path) const
     {
         if(path && path[0] == '/')
             ++path;
 
         for(const Port &port: ports)
-            if(index(port.name,'/') && match(port.name,path))
+            if(index(port.name,'/') && rtosc_match_path(port.name,path))
                 return (index(path,'/')[1]==0) ? &port :
                     port.ports->apropos(this->snip(path));
 
@@ -259,32 +194,6 @@ struct Ports
                 return &port;
 
         return NULL;
-    }
-
-    const char *meta_data(const char *path) const
-    {
-        for(const Port &port: ports) {
-            const char *p = mmatch(port.name,path);
-            if(*p == '/') {
-                ++path;
-                while(*++path!='/');
-                return port.ports->meta_data(path+1);
-            }
-            if(*p == ':') {
-                return port.metadata;
-            }
-        }
-        puts("failed to get meta-data...");
-        return "";
-    }
-
-    /**
-     * Match partial path
-     */
-    inline const char *mmatch(const char *pattern, const char *path) const
-    {
-        for(;*pattern&&*path&&*path!=':'&&*path!='/'&&*path==*pattern;++path,++pattern);
-        return pattern;
     }
 };
 

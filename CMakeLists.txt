@@ -10,7 +10,7 @@ set(CMAKE_C_FLAGS "-O2 -std=c99 -Wall -Wextra -fprofile-arcs -ftest-coverage")
 set(CMAKE_CXX_FLAGS "-O2 -std=c++0x -Wall -Wextra -fprofile-arcs -ftest-coverage")
 set(CMAKE_SHARED_LINKER_FLAGS "-fprofile-arcs -ftest-coverage")
 set(CMAKE_EXE_LINKER_FLAGS "-fprofile-arcs -ftest-coverage")
-add_library(rtosc SHARED src/rtosc.c)
+add_library(rtosc SHARED STATIC src/rtosc.c)
 
 # Example Code
 find_package(PkgConfig REQUIRED)
