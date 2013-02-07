@@ -104,6 +104,7 @@ install(FILES include/rtosc/rtosc.h
     include/rtosc/thread-link.h
     include/rtosc/ports.h
     include/rtosc/miditable.h
+    include/rtosc/matcher.h
     DESTINATION include/rtosc)
 install(TARGETS rtosc
     DESTINATION lib)
