@@ -99,7 +99,7 @@ expected to periodically _read()_ all of the messages.
 
 [source,cpp]
 -----------------------------------------
-ThreadLink<1024,128> link;
+ThreadLink link(1024,128);
 link.write("hello", "s", "world");
 link.hasNext(); //true
 link.read(); //yields the hello:s:world message
@@ -115,21 +115,21 @@ With trivial programs, one might want to establish one table of ports to
 describe all of the possible connections, but this is not feasible for moderately
 sized to large sized applications.
 As such each set of ports defines one layer of a tree of ports statically.
-As all of the data presented via the _Port interface can be statically
-specified, this means that any sort of interface to these ports can look at the
-data without needing to perform any cross thread operations.
+As all of the data presented via the Port interface can be statically
+specified, this means that the tree can easily be used as a read only data
+structure by both the frontend and RT backend.
 
 The _Port_ class defines one port which works on a OSC message and value.
-Possibly the simplest Port type is the unused void* pointer.
+Below is a simple example port.
 
 [source,cpp]
 ------------------------------------------------------------------------------
-Port port("a_port:f", "", [](const char*, void*){puts("port called")});
+Port port("a_port:f", "::Example port", [](const char*, RtData){puts("port called")});
 ------------------------------------------------------------------------------
 
 The verbose way to read this is that this defines a port named "a_port" which
-accepts messages of type "f" with metadata of "" and a function that acts on the
-message and a void pointer.
+accepts messages of type "f" with metadata of "::Example port" and a function that
+acts on the message and some additional data.
 The concise way is to state that port maps float messages to "a_port" to the
 given function.
 
@@ -235,7 +235,6 @@ Ports Foobar::ports = {
 };
 ----------------------------------------------------------------
 
-//TODO typecheck
 Now a recursive dispatching hierarchy has been formed with only a few more
 lines.
 While this may appear somewhat complicated, all it does is define another
