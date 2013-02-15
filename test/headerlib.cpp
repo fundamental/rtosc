@@ -9,9 +9,9 @@ using namespace rtosc;
 std::string resultA;
 int resultB = 0;
 Ports ports = {
-    {"setstring:s", "", 0, [](msg_t msg,RtData) {resultA = rtosc_argument(msg,0).s;}},
-    {"setint:i",    "", 0, [](msg_t msg,RtData) {resultB = rtosc_argument(msg,0).i;}},
-    {"echo:ss",     "", 0, [](msg_t,RtData) {}}
+    {"setstring:s", "", 0, [](msg_t msg,RtData&) {resultA = rtosc_argument(msg,0).s;}},
+    {"setint:i",    "", 0, [](msg_t msg,RtData&) {resultB = rtosc_argument(msg,0).i;}},
+    {"echo:ss",     "", 0, [](msg_t,RtData&) {}}
 };
 
 ThreadLink tlink(2048,100);
@@ -27,8 +27,9 @@ int main()
             tlink.write("echo",      "ss", "hello", "rtosc");
         }
 
+        RtData d = {NULL, 0, NULL};
         while(tlink.hasNext())
-            ports.dispatch(NULL, 0, tlink.read(),NULL);
+            ports.dispatch(tlink.read(), d);
     }
     tlink.write("echo", "ss", "hello", "rtosc");
 

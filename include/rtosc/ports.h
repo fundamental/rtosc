@@ -57,7 +57,7 @@ struct Port {
         const char *name;    //< Pattern for messages to match
         const char *metadata;//< Statically accessable data about port
         Ports *ports;        //< Pointer to further ports
-        std::function<void(msg_t, RtData)> cb;//< Callback for matching functions
+        std::function<void(msg_t, RtData&)> cb;//< Callback for matching functions
 };
 
 static void scat(char *dest, const char *src);
@@ -104,28 +104,28 @@ struct Ports
      * Dispatches message to all matching ports.
      * This uses simple pattern matching available in rtosc::match.
      *
-     * @param loc      A buffer for storing path information or NULL
-     * @param loc_size The length of the provided buffer
-     * @param m        a valid OSC message
-     * @param v        a pointer to data or NULL
+     * @param m a valid OSC message
+     * @param d The RtData object shall contain a path buffer (or null), the length of
+     *          the buffer, a pointer to data.
      */
-    void dispatch(char *loc, size_t loc_size, msg_t m, void *v)
+    void dispatch(const char *m, RtData &d)
     {
+        void *obj = d.obj;
         //simple case [very very cheap]
-        if(!loc || !loc_size) {
+        if(!d.loc || !d.loc_size) {
             for(Port &port: ports) {
                 if(rtosc_match(port.name,m))
-                    port.cb(m,{NULL,0,v});
+                    port.cb(m,d), d.obj = obj;
             }
         } else { //somewhat cheap
 
             //TODO this function is certainly buggy at the moment, some tests
             //are needed to make it clean
             //XXX buffer_size is not properly handled yet
-            if(loc[0] == 0)
-                loc[0] = '/';
+            if(d.loc[0] == 0)
+                d.loc[0] = '/';
 
-            char *old_end = loc;
+            char *old_end = d.loc;
             while(*old_end) ++old_end;
 
             for(const Port &port: ports) {
@@ -140,10 +140,10 @@ struct Ports
                         *pos++ = *msg++;
                     *pos = '/';
                 } else
-                    scat(loc, port.name);
+                    scat(d.loc, port.name);
 
                 //Apply callback
-                port.cb(m,{loc,loc_size,v});
+                port.cb(m,d), d.obj = obj;
 
                 //Remove the rest of the path
                 char *tmp = old_end;
