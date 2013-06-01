@@ -37,7 +37,7 @@ struct MidiAddr
     //The midi values that map to the specified action
     uint8_t ch, ctl;
 
-    //The type of the event 'f', 'i', 'T'
+    //The type of the event 'f', 'i', 'T', 'c'
     char type;
     //The path of the event
     char path[len];
@@ -115,6 +115,8 @@ struct MidiTable
             e.type = 'i';
         else if(index(args, 'T'))
             e.type = 'T';
+        else if(index(args, 'c'))
+            e.type = 'c';
         else
             return false;
         return true;
@@ -198,6 +200,9 @@ struct MidiTable
                 rtosc_message(buffer, 1024, addr->path,
                         (val<64 ? "F" : "T"));
                 break;
+            case 'c':
+                rtosc_message(buffer, 1024, addr->path,
+                        "c", val);
         }
 
         event_cb(buffer);

@@ -14,7 +14,7 @@ using rtosc::RtData;
 {#name"::f", #scale "," # _min "," #_max ":'parameter'" desc, 0, \
     [](const char *m, RtData &d) { \
         if(rtosc_narguments(m)==0) \
-            bToU.write(uToB.peak(), "f", ((type*)d.obj)->var); \
+            d.reply(d.loc, "f", ((type*)d.obj)->var); \
         else if(rtosc_narguments(m)==1 && rtosc_type(m,0)=='f') \
             ((type*)d.obj)->var=rtosc_argument(m,0).f;}} \
 

@@ -50,7 +50,7 @@ static const char *rtosc_match_path(const char *pattern, const char *msg)
 {
     while(1) {
         //Check for special characters
-        if(*pattern == ':')
+        if(*pattern == ':' && !*msg)
             return pattern;
         else if(*pattern == '/' && *msg == '/')
             return ++pattern;

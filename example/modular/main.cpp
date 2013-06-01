@@ -13,7 +13,10 @@ int main()
 
 
     char buffer[100];
-    rtosc::RtData d = {NULL, 0, &synth};
+    rtosc::RtData d;
+    d.loc = NULL;
+    d.loc_size = 0;
+    d.obj = &synth;
     //simple event
     rtosc_message(buffer,100,"volume","f", 0.37);
     Synth::ports.dispatch(buffer, d);

@@ -45,9 +45,19 @@ struct Ports;
 
 struct RtData
 {
+    RtData(void)
+        :loc(NULL), loc_size(0), obj(NULL), matches(0)
+    {}
+
     char *loc;
     size_t loc_size;
     void *obj;
+    int  matches;
+
+    virtual void reply(const char *path, const char *args, ...){(void)path;(void)args;};
+    virtual void reply(const char *msg){(void)msg;};
+    virtual void broadcast(const char *path, const char *args, ...){(void)path;(void)args;};
+    virtual void broadcast(const char *msg){(void)msg;};
 };
 
 /**
@@ -122,8 +132,10 @@ struct Ports
             //TODO this function is certainly buggy at the moment, some tests
             //are needed to make it clean
             //XXX buffer_size is not properly handled yet
-            if(d.loc[0] == 0)
+            if(d.loc[0] == 0) {
+                memset(d.loc, 0, d.loc_size);
                 d.loc[0] = '/';
+            }
 
             char *old_end = d.loc;
             while(*old_end) ++old_end;
@@ -131,6 +143,9 @@ struct Ports
             for(const Port &port: ports) {
                 if(!rtosc_match(port.name, m))
                     continue;
+
+                if(!port.ports)
+                    d.matches++;
 
                 //Append the path
                 if(index(port.name,'#')) {

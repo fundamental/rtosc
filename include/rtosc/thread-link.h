@@ -52,6 +52,8 @@ class ThreadLink
         {
             ring = jack_ringbuffer_create(BufferSize);
             jack_ringbuffer_mlock(ring);
+            memset(write_buffer, 0, BufferSize);
+            memset(read_buffer, 0, BufferSize);
         }
 
         ~ThreadLink(void)

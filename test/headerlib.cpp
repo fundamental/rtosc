@@ -27,7 +27,9 @@ int main()
             tlink.write("echo",      "ss", "hello", "rtosc");
         }
 
-        RtData d = {NULL, 0, NULL};
+        RtData d;
+        d.loc_size = 0;
+        d.obj = d.loc = NULL;
         while(tlink.hasNext())
             ports.dispatch(tlink.read(), d);
     }
