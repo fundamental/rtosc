@@ -5,7 +5,7 @@
 #include <string.h>
 #include <cmath>
 #include "synth.h"
-#include "util.h"
+#include <rtosc/port-sugar.h>
 
 using namespace rtosc;
 
@@ -14,14 +14,17 @@ float Fs = 0.0f;
 ThreadLink bToU(1024,1024);
 ThreadLink uToB(1024,1024);
 
+#define rObject Adsr
+
 Ports Adsr::ports = {
-    PARAM(Adsr, av, av, lin, -1.0, 1.0, "attack  value"),
-    PARAM(Adsr, dv, dv, lin, -1.0, 1.0, "decay   value"),
-    PARAM(Adsr, sv, sv, lin, -1.0, 1.0, "sustain value"),
-    PARAM(Adsr, rv, rv, lin, -1.0, 1.0, "release value"),
-    PARAM(Adsr, at, at, log,  1e-3, 10, "attack  time"),
-    PARAM(Adsr, dt, dt, log,  1e-3, 10, "decay   time"),
-    PARAM(Adsr, rt, rt, log,  1e-3, 10, "release time")
+    rParamF(av, rLinear(-1,1), "attack  value"),
+    rParamF(dv, rLinear(-1,1), "decay   value"),
+    rParamF(sv, rLinear(-1,1), "sustain value"),
+    rParamF(rv, rLinear(-1,1), "release value"),
+
+    rParamF(at, rLog(1e-3,10), "attach  time"),
+    rParamF(dt, rLog(1e-3,10), "decay   time"),
+    rParamF(rt, rLog(1e-3,10), "release time"),
 };
 
 //sawtooth generator
@@ -71,34 +74,21 @@ float Adsr::operator()(bool gate)
     return rv;
 }
 
-MidiTable<64,64> midi(Synth::ports);
+MidiTable midi(Synth::ports);
 
 Synth s;
 void process_control(unsigned char control[3]);
-rtosc::Ports Synth::ports = {
-    RECUR(Synth, Adsr, amp-env, amp_env, "amplitude envelope"),
-    RECUR(Synth, Adsr, frq-env, frq_env, "frequency envelope"),
-    PARAM(Synth, freq, freq,    log, 1, 1e3, "note frequency"),
-    {"gate:T","::", 0, [](msg_t,RtData &d){((Synth*)d.obj)->gate=true;}},
-    {"gate:F","::", 0, [](msg_t,RtData &d){((Synth*)d.obj)->gate=false;}},
-    {"register:iis","::", 0, [](msg_t m,RtData&){
-            //printf("registering element...\n");
-            //printf("%d %d\n",argument(m,0).i,argument(m,1).i);
-            const char *pos = rtosc_argument(m,2).s;
-            while(*pos) putchar(*pos++);
-            //printf("%p %p %c(%d)\n", m, argument(m,2).s, *(argument(m,2).s), *(argument(m,2).s));
-            //printf("%p\n", argument(m,2).s);
-            midi.addElm(rtosc_argument(m,0).i,rtosc_argument(m,1).i,rtosc_argument(m,2).s);
-            //printf("adding element %d %d\n",argument(m,0).i,argument(m,1).i);
-            //printf("---------path: %s %s\n",argument(m,2).s, Synth::ports.meta_data(argument(m,2).s+1));
-            //unsigned char ctl[3] = {2,13,107};
-            //process_control(ctl);
-            //printf("synth.amp-env.av=%f\n", s.amp_env.av);
-            }},
-    {"learn:s", "::", 0, [](msg_t m, RtData&){
-            midi.learn(rtosc_argument(m,0).s);
-            }}
 
+#undef  rObject
+#define rObject Synth
+
+rtosc::Ports Synth::ports = {
+    rRecur(amp_env, "amplitude envelope"),
+    rRecur(frq_env, "frequency envelope"),
+    rParamF(freq, rLog(1,1e3), "note frequency"),
+    rToggle(gate, "Note enable"),
+    midi.registerPort(),
+    midi.learnPort(),
 };
 
 Ports *root_ports = &Synth::ports;
@@ -138,13 +128,56 @@ void process_control(unsigned char ctl[3])
     midi.process(ctl[0]&0x0F, ctl[1], ctl[2]);
 }
 
+class DispatchData:public rtosc::RtData
+{
+    public:
+        DispatchData(void)
+        {
+            memset(buffer, 0, 1024);
+            loc = buffer;
+            loc_size = 1024;
+            obj = &s;
+        }
+        char buffer[1024];
+
+        void reply(const char *path, const char *args, ...)
+        {
+            va_list va;
+            va_start(va,args);
+            const size_t len =
+                rtosc_vmessage(bToU.buffer(),bToU.buffer_size(),path,args,va);
+            if(len)
+                bToU.raw_write(bToU.buffer());
+        }
+
+        void reply(const char *msg)
+        {
+            bToU.raw_write(msg);
+        }
+
+        void broadcast(const char *path, const char *args, ...)
+        {
+            bToU.write("/broadcast","");
+            va_list va;
+            va_start(va,args);
+            const size_t len =
+                rtosc_vmessage(bToU.buffer(),bToU.buffer_size(),path,args,va);
+            if(len)
+                bToU.raw_write(bToU.buffer());
+        }
+
+
+        void broadcast(const char *msg)
+        {
+            bToU.write("/broadcast","");
+            bToU.raw_write(msg);
+        }
+
+};
+
 void process_output(float *smps, unsigned nframes)
 {
-    char buffer[1024];
-    rtosc::RtData d;
-    d.loc      = buffer;
-    d.loc_size = 1024;
-    d.obj      = (void*) &s;
+    DispatchData d;
     while(uToB.hasNext())
         Synth::ports.dispatch(uToB.read()+1, d);
 

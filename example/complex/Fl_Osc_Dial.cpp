@@ -18,7 +18,8 @@ B string_cast(const A &a)
     return b;
 }
 
-Fl_Osc_Dial::Fl_Osc_Dial(int X, int Y, int W, int H, string n, string m)
+Fl_Osc_Dial::Fl_Osc_Dial(int X, int Y, int W, int H, string n,
+        const char *m)
     :Fl_Dial(X,Y,W,H), Fl_Osc_Widget(n,m)
 {
     bounds(0.0f,1.0f);
@@ -29,7 +30,6 @@ Fl_Osc_Dial::Fl_Osc_Dial(int X, int Y, int W, int H, string n, string m)
     osc = pane->osc;
     osc->createLink(full_path, this);
     osc->requestValue(full_path);
-    
 };
 
 Fl_Osc_Dial::~Fl_Osc_Dial(void)
@@ -39,23 +39,31 @@ Fl_Osc_Dial::~Fl_Osc_Dial(void)
 
 void Fl_Osc_Dial::OSC_value(float v)
 {
+    printf("setting osc value via '%f'\n", v);
     real_value = v;
-    const float val = Fl_Osc_Widget::inv_translate(v, metadata.c_str());
+
+    const float val = Fl_Osc_Widget::inv_translate(v);
+
     Fl_Dial::value(val);
-    label_str = string_cast<float,string>(v);
+    string tmp = string_cast<float,string>(v);
+    memset(label_str, 0, sizeof(label_str));
+    strncpy(label_str, tmp.c_str(), sizeof(label_str)-1);
     label("                ");
-    label(label_str.c_str());
+    label(label_str);
 }
 
 void Fl_Osc_Dial::cb(void)
 {
-    const float val = Fl_Osc_Widget::translate(Fl_Dial::value(), metadata.c_str());
+    const float val = translate(Fl_Dial::value());
+
     osc->writeValue(full_path, val);
     OSC_value(val);
 
-    label_str = string_cast<float,string>(val);
+    string tmp = string_cast<float,string>(val);
+    memset(label_str, 0, sizeof(label_str));
+    strncpy(label_str, tmp.c_str(), sizeof(label_str)-1);
     label("                ");
-    label(label_str.c_str());
+    label(label_str);
 }
 
 void Fl_Osc_Dial::_cb(Fl_Widget *w, void *)

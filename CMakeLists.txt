@@ -6,15 +6,15 @@ set(VERSION_MINOR 1)
 set(VERSION_PATCH 0)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(CMAKE_C_FLAGS "-O2 -std=c99 -Wall -Wextra -fprofile-arcs -ftest-coverage")
-set(CMAKE_CXX_FLAGS "-O2 -std=c++0x -Wall -Wextra -fprofile-arcs -ftest-coverage")
-set(CMAKE_SHARED_LINKER_FLAGS "-fprofile-arcs -ftest-coverage")
-set(CMAKE_EXE_LINKER_FLAGS "-fprofile-arcs -ftest-coverage")
-add_library(rtosc SHARED src/rtosc.c)
+set(CMAKE_C_FLAGS "-O2 -std=c99 -Wall -Wextra")
+set(CMAKE_CXX_FLAGS "-O2 -std=c++0x -Wall -Wextra")
+add_library(rtosc SHARED src/rtosc.c src/dispatch.c)
+add_library(rtosc-cpp SHARED src/cpp/ports.cpp src/cpp/miditable.cpp)
 
 # Example Code
 find_package(PkgConfig REQUIRED)
 find_package(FLTK)
+pkg_check_modules(NTK ntk)
 pkg_check_modules(JACK jack)
 
 if(FLTK_FOUND)
@@ -23,16 +23,29 @@ if(FLTK_FOUND)
         OUTPUT_STRIP_TRAILING_WHITESPACE)
 endif(FLTK_FOUND)
 
+if(NTK_FOUND)
+    #Default to NTK, as everything looks better there
+    set(GUI_FOUND TRUE)
+    set(GUI_LIBRARIES ${NTK_LIBRARIES})
+    include_directories(${NTK_INCLUDE_DIRS})
+elseif(FLTK_FOUND AND (FLTK_VERSION STREQUAL "1.3"))
+    set(GUI_FOUND TRUE)
+    set(GUI_LIBRARIES ${FLTK_LIBRARIES})
+else()
+    set(GUI_FOUND FALSE)
+endif()
 
-if(JACK_FOUND AND FLTK_FOUND AND (FLTK_VERSION STREQUAL "1.3"))
+
+if(JACK_FOUND AND GUI_FOUND)
     add_executable(simple-example example/simple/ui.cpp example/simple/synth.cpp)
-    target_link_libraries(simple-example m rtosc ${FLTK_LIBRARIES} jack)
+    target_link_libraries(simple-example m rtosc ${GUI_LIBRARIES} jack)
 
     add_executable(complex-example example/complex/audio.cpp
         example/complex/synth.cpp example/complex/window.cpp
         example/complex/Fl_Osc_Dial.cpp example/complex/Fl_Osc_Slider.cpp
         example/complex/Fl_Osc_Button.cpp)
-    target_link_libraries(complex-example m rtosc ${FLTK_LIBRARIES} jack)
+    target_link_libraries(complex-example m rtosc rtosc-cpp ${GUI_LIBRARIES}
+        jack)
     #TODO add complex example (ie klatter (an unplublished project for those reading))
 endif()
 
@@ -45,7 +58,7 @@ add_executable(modular-example
     example/modular/Synth.cpp
     example/modular/util.cpp
     )
-target_link_libraries(modular-example m rtosc)
+target_link_libraries(modular-example m rtosc rtosc-cpp)
 
 
 # Testing code
@@ -54,7 +67,7 @@ enable_testing()
 macro(maketest fname)
     add_executable(${fname} test/${fname}.c)
     add_test(${fname} ${fname})
-    target_link_libraries(${fname} rtosc gcov)
+    target_link_libraries(${fname} rtosc)
 endmacro(maketest)
 
 maketest(osc-spec)
@@ -71,13 +84,17 @@ if(LIBLO_FOUND)
 endif()
 
 if(JACK_FOUND)
+    add_executable(metadata test/metadata.cpp)
+    add_test(metadata metadata)
+    target_link_libraries(metadata rtosc rtosc-cpp jack)
+
     add_executable(headerlib test/headerlib.cpp)
     add_test(headerlib headerlib)
-    target_link_libraries(headerlib rtosc jack gcov)
+    target_link_libraries(headerlib rtosc rtosc-cpp jack)
 
     add_executable(test-walker test/test-walker.cpp)
     add_test(test-walker test-walker)
-    target_link_libraries(test-walker rtosc jack gcov)
+    target_link_libraries(test-walker rtosc rtosc-cpp jack)
 endif()
 
 # Documentation
@@ -104,9 +121,9 @@ install(FILES include/rtosc/rtosc.h
     include/rtosc/thread-link.h
     include/rtosc/ports.h
     include/rtosc/miditable.h
-    include/rtosc/matcher.h
+    include/rtosc/port-sugar.h
     DESTINATION include/rtosc)
-install(TARGETS rtosc
+install(TARGETS rtosc rtosc-cpp
     DESTINATION lib)
 
 

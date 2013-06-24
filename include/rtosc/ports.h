@@ -29,7 +29,6 @@
 #include <functional>
 #include <initializer_list>
 #include <rtosc/rtosc.h>
-#include <rtosc/matcher.h>
 #include <cstring>
 #include <cctype>
 #include <cstdlib>
@@ -45,32 +44,70 @@ struct Ports;
 
 struct RtData
 {
-    RtData(void)
-        :loc(NULL), loc_size(0), obj(NULL), matches(0)
-    {}
+    RtData(void);
 
     char *loc;
     size_t loc_size;
     void *obj;
     int  matches;
+    const Port *port;
 
-    virtual void reply(const char *path, const char *args, ...){(void)path;(void)args;};
-    virtual void reply(const char *msg){(void)msg;};
-    virtual void broadcast(const char *path, const char *args, ...){(void)path;(void)args;};
-    virtual void broadcast(const char *msg){(void)msg;};
+    virtual void reply(const char *path, const char *args, ...);
+    virtual void reply(const char *msg);
+    virtual void broadcast(const char *path, const char *args, ...);
+    virtual void broadcast(const char *msg);
 };
+
 
 /**
  * Port in rtosc dispatching hierarchy
  */
 struct Port {
-        const char *name;    //< Pattern for messages to match
-        const char *metadata;//< Statically accessable data about port
-        Ports *ports;        //< Pointer to further ports
-        std::function<void(msg_t, RtData&)> cb;//< Callback for matching functions
-};
+    const char *name;    //< Pattern for messages to match
+    const char *metadata;//< Statically accessable data about port
+    Ports *ports;        //< Pointer to further ports
+    std::function<void(msg_t, RtData&)> cb;//< Callback for matching functions
 
-static void scat(char *dest, const char *src);
+    class MetaIterator
+    {
+        public:
+            MetaIterator(const char *str);
+
+            //A bit odd to return yourself, but it seems to work for this
+            //context
+            const MetaIterator& operator*(void) const {return *this;}
+            const MetaIterator* operator->(void) const {return this;}
+            bool operator==(MetaIterator a) {return title == a.title;}
+            bool operator!=(MetaIterator a) {return title != a.title;}
+            MetaIterator& operator++(void);
+
+            const char *title;
+            const char *value;
+    };
+
+    class MetaContainer
+    {
+        public:
+            MetaContainer(const char *str_);
+
+            MetaIterator begin(void) const;
+            MetaIterator end(void) const;
+
+            MetaIterator find(const char *str) const;
+            size_t length(void) const;
+            const char *operator[](const char *str) const;
+
+            const char *str_ptr;
+    };
+
+    MetaContainer meta(void) const
+    {
+        if(metadata && *metadata == ':')
+            return MetaContainer(metadata+1);
+        else
+            return MetaContainer(metadata);
+    }
+};
 
 /**
  * Ports - a dispatchable collection of Port entries
@@ -87,22 +124,13 @@ struct Ports
     std::vector<Port> ports;
 
     /**Forwards to builtin container*/
-    auto begin() const -> decltype(ports.begin())
-    {
-        return ports.begin();
-    }
+    auto begin() const -> decltype(ports.begin()) {return ports.begin();}
 
     /**Forwards to builtin container*/
-    auto end() const -> decltype(ports.end())
-    {
-        return ports.end();
-    }
+    auto end() const -> decltype(ports.end()) {return ports.end();}
 
     /**Forwards to builtin container*/
-    const Port &operator[](unsigned i) const
-    {
-        return ports[i];
-    }
+    const Port &operator[](unsigned i) const {return ports[i];}
 
     Ports(std::initializer_list<Port> l)
         :ports(l)
@@ -118,166 +146,29 @@ struct Ports
      * @param d The RtData object shall contain a path buffer (or null), the length of
      *          the buffer, a pointer to data.
      */
-    void dispatch(const char *m, RtData &d)
-    {
-        void *obj = d.obj;
-        //simple case [very very cheap]
-        if(!d.loc || !d.loc_size) {
-            for(Port &port: ports) {
-                if(rtosc_match(port.name,m))
-                    port.cb(m,d), d.obj = obj;
-            }
-        } else { //somewhat cheap
-
-            //TODO this function is certainly buggy at the moment, some tests
-            //are needed to make it clean
-            //XXX buffer_size is not properly handled yet
-            if(d.loc[0] == 0) {
-                memset(d.loc, 0, d.loc_size);
-                d.loc[0] = '/';
-            }
-
-            char *old_end = d.loc;
-            while(*old_end) ++old_end;
-
-            for(const Port &port: ports) {
-                if(!rtosc_match(port.name, m))
-                    continue;
-
-                if(!port.ports)
-                    d.matches++;
-
-                //Append the path
-                if(index(port.name,'#')) {
-                    const char *msg = m;
-                    char       *pos = old_end;
-                    while(*msg && *msg != '/')
-                        *pos++ = *msg++;
-                    *pos = '/';
-                } else
-                    scat(d.loc, port.name);
-
-                //Apply callback
-                port.cb(m,d), d.obj = obj;
-
-                //Remove the rest of the path
-                char *tmp = old_end;
-                while(*tmp) *tmp++=0;
-            }
-        }
-    }
+    void dispatch(const char *m, RtData &d);
 
     /**
      * Retrieve local port by name
      * TODO implement full matching
      */
-    const Port *operator[](const char *name) const
-    {
-        for(const Port &port:ports) {
-            const char *_needle = name,
-                  *_haystack = port.name;
-            while(*_needle && *_needle==*_haystack)_needle++,_haystack++;
+    const Port *operator[](const char *name) const;
 
-            if(*_needle == 0 && *_haystack == ':') {
-                return &port;
-            }
-        }
-        return NULL;
-    }
-
-    //util
-    msg_t snip(msg_t m) const
-    {
-        while(*m && *m != '/') ++m;
-        return m+1;
-    }
 
     /** Find the best match for a given path or NULL*/
-    const Port *apropos(const char *path) const
-    {
-        if(path && path[0] == '/')
-            ++path;
-
-        for(const Port &port: ports)
-            if(index(port.name,'/') && rtosc_match_path(port.name,path))
-                return (index(path,'/')[1]==0) ? &port :
-                    port.ports->apropos(this->snip(path));
-
-        //This is the lowest level, now find the best port
-        for(const Port &port: ports)
-            if(*path && strstr(port.name, path)==port.name)
-                return &port;
-
-        return NULL;
-    }
+    const Port *apropos(const char *path) const;
 };
 
 
 /*********************
  * Port walking code *
  *********************/
-static void scat(char *dest, const char *src)
-{
-    while(*dest) dest++;
-    if(*dest) dest++;
-    while(*src && *src!=':') *dest++ = *src++;
-    *dest = 0;
-}
-
 typedef std::function<void(const Port*,const char*)> port_walker_t;
 
-static
 void walk_ports(const Ports *base,
         char         *name_buffer,
         size_t        buffer_size,
-        port_walker_t walker)
-{
-    //XXX buffer_size is not properly handled yet
-    if(name_buffer[0] == 0)
-        name_buffer[0] = '/';
-
-    char *old_end         = name_buffer;
-    while(*old_end) ++old_end;
-
-    for(const Port &p: *base) {
-        if(index(p.name, '/')) {//it is another tree
-            if(index(p.name,'#')) {
-                const char *name = p.name;
-                char       *pos  = old_end;
-                while(*name != '#') *pos++ = *name++;
-                const unsigned max = atoi(name+1);
-
-                for(unsigned i=0; i<max; ++i)
-                {
-                    sprintf(pos,"%d",i);
-
-                    //Ensure the result is a path
-                    if(rindex(name_buffer, '/')[1] != '/')
-                        strcat(name_buffer, "/");
-
-                    //Recurse
-                    walk_ports(p.ports, name_buffer, buffer_size, walker);
-                }
-            } else {
-                //Append the path
-                scat(name_buffer, p.name);
-
-                //Recurse
-                walk_ports(p.ports, name_buffer, buffer_size, walker);
-            }
-        } else {
-            //Append the path
-            scat(name_buffer, p.name);
-
-            //Apply walker function
-            walker(&p, name_buffer);
-        }
-
-        //Remove the rest of the path
-        char *tmp = old_end;
-        while(*tmp) *tmp++=0;
-    }
-}
+        port_walker_t walker);
 };
 
 

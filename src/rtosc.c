@@ -198,6 +198,7 @@ static size_t vsosc_null(const char        *address,
             case 'b':
                 i = args[arg_pos++].b.len;
                 pos += 4 + i;
+                pos += 4-pos%4;
                 --toparse;
                 break;
             default:

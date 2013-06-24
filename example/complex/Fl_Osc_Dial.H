@@ -9,14 +9,15 @@ class Fl_Osc_Dial:public Fl_Dial, Fl_Osc_Widget
 {
 
     public:
-        Fl_Osc_Dial(int X, int Y, int W, int H, string name, string metadata);
+        Fl_Osc_Dial(int X, int Y, int W, int H, string name,
+                const char *metadata);
         virtual ~Fl_Osc_Dial(void);
         void OSC_value(float);
 
         void cb(void);
         static void _cb(Fl_Widget *w, void *);
     private:
-        string label_str;
+        char label_str[64];
         double real_value;
         class Fl_Osc_Interface *osc;
 };

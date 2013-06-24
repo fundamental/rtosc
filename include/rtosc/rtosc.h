@@ -28,6 +28,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -191,6 +192,28 @@ int rtosc_bundle_p(const char *msg);
  * @returns Time Tag for a bundle
  */
 uint64_t rtosc_bundle_timetag(const char *msg);
+
+
+/**
+ * This is a non-compliant pattern matcher for dispatching OSC messages
+ *
+ * Overall the pattern specification is
+ *   (normal-path)(\#digit-specifier)?(/)?(:argument-restrictor)*
+ *
+ * @param pattern The pattern string stored in the Port
+ * @param msg     The OSC message to be matched
+ * @returns true if a normal match and false if unmatched
+ */
+bool rtosc_match(const char *pattern, const char *msg);
+
+
+/**
+ * Attempt to match a rtosc style path while ignoring arguments
+ *
+ * @param pattern rtosc pattern
+ * @param msg a normal C string or a rtosc message
+ */
+const char *rtosc_match_path(const char *pattern, const char *msg);
 
 #ifdef __cplusplus
 };

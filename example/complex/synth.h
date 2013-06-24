@@ -9,7 +9,7 @@ struct Adsr
     bool  pgate;
 
     float at,dt,   rt;
-    float av,dv,sv,rv;;
+    float av,dv,sv,rv;
 
     float operator()(bool gate);
     static struct rtosc::Ports ports;

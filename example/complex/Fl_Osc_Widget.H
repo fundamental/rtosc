@@ -2,17 +2,18 @@
 #include <string>
 #include <cstring>
 #include <cmath>
+#include <rtosc/ports.h>
 #include <FL/Fl_Group.H>
 #include "Fl_Osc_Pane.H"
 
 class Fl_Osc_Widget
 {
     public:
-        Fl_Osc_Widget(std::string nname, std::string metadata)
+        Fl_Osc_Widget(std::string nname, const char *metadata)
             :path(dynamic_cast<Fl_Osc_Group*>(Fl_Group::current()) ?
                     dynamic_cast<Fl_Osc_Group*>(Fl_Group::current())->pane_name : "/"),
             name(nname,0,nname.find_first_of(":")),
-            full_path(path+name),metadata(metadata)
+            full_path(path+name),meta(metadata)
         {}
         ~Fl_Osc_Widget(void){};
 
@@ -24,31 +25,27 @@ class Fl_Osc_Widget
         std::string path;
         std::string name;
         std::string full_path;
-        std::string metadata;
+        rtosc::Port::MetaContainer meta;
 
         class Fl_Osc_Interface *osc;
     protected:
         //translations
-        static float translate(float x, const char *meta)
+        float translate(float x) const
         {
-            //Gather type
-            char shape[4] = {0};
-            unsigned pos  = 0;
-            while(*meta && *meta != ',' && pos < 3)
-                shape[pos++] = *meta++;
+            for(auto e : meta)
+                fprintf(stderr, "'%s' => '%s'\n", e.title, e.value);
+            if(!meta["min"] || !meta["max"] || !meta["scale"]) {
+                fprintf(stderr, "failed to get properties\n");
+                return 0.0f;
+            }
 
+            const float min   = atof(meta["min"]);
+            const float max   = atof(meta["max"]);
+            const char *scale = meta["scale"];
 
-            //Gather args
-            while(*meta && *meta!=',') meta++; meta++;
-            float min = atof(meta);
-            while(*meta && *meta!=',') meta++; meta++;
-            float max = atof(meta);
-
-
-            //Translate
-            if(!strcmp("lin",shape))
+            if(!strcmp(scale,"linear"))
                 return x*(max-min)+min;
-            else if(!strcmp("log", shape)) {
+            else if(!strcmp(scale,"logarithmic")) {
                 const float b = log(min);
                 const float a = log(max)-b;
                 return expf(a*x+b);
@@ -57,26 +54,18 @@ class Fl_Osc_Widget
             return 0.0f;
         }
 
-        static float inv_translate(float x, const char *meta)
+        float inv_translate(float x) const
         {
-            //Gather type
-            char shape[4] = {0};
-            unsigned pos  = 0;
-            while(*meta && *meta != ',' && pos < 3)
-                shape[pos++] = *meta++;
+            if(!meta["min"] || !meta["max"] || !meta["scale"])
+                return 0.0f;
 
+            const float min   = atof(meta["min"]);
+            const float max   = atof(meta["max"]);
+            const char *scale = meta["scale"];
 
-            //Gather args
-            while(*meta && *meta!=',') meta++; meta++;
-            float min = atof(meta);
-            while(*meta && *meta!=',') meta++; meta++;
-            float max = atof(meta);
-
-
-            //Translate
-            if(!strcmp("lin",shape))
+            if(!strcmp(scale, "linear"))
                 return (x-min)/(max-min);
-            else if(!strcmp("log", shape)) {
+            else if(!strcmp(scale, "logarithmic")) {
                 const float b = log(min);
                 const float a = log(max)-b;
                 return (log(x)-b)/a;

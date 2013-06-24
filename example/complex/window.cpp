@@ -19,7 +19,6 @@
 #include <map>
 
 #include "synth.h"
-#include "util.h"
 
 using std::string;
 using std::map;
@@ -65,7 +64,7 @@ class Osc_Interface : public Fl_Osc_Interface
 } OSC_API;
 
 template<typename T> T max(const T &a, const T &b) { return a>b?a:b; }
-template<typename T> T min(const T &a, const T &b) { return b>a?a:b; } 
+template<typename T> T min(const T &a, const T &b) { return b>a?a:b; }
 
 struct Fl_Center_Knob : public Fl_Osc_Dial
 {
@@ -166,8 +165,8 @@ struct Synth_Window : public Fl_Double_Window, public Fl_Osc_Pane
         osc       = &OSC_API;
         pane_name = "/";
 
-        ADSR_Pane *ampl_env = new ADSR_Pane(0,0,400,200, "amp-env/");
-        ADSR_Pane *freq_env = new ADSR_Pane(0,200,400,200, "frq-env/");
+        ADSR_Pane *ampl_env = new ADSR_Pane(0,0,400,200, "amp_env/");
+        ADSR_Pane *freq_env = new ADSR_Pane(0,200,400,200, "frq_env/");
         ampl_env->box(FL_DOWN_BOX);
         freq_env->box(FL_DOWN_BOX);
 
@@ -176,7 +175,7 @@ struct Synth_Window : public Fl_Double_Window, public Fl_Osc_Pane
         b->type(FL_TOGGLE_BUTTON);
         b->label("Gate Switch");
         Fl_Osc_Slider *s = new Fl_Osc_Slider(0, 460, 400, 50,
-                "freq", "log,10,1000::Frequency");
+                "freq", Synth::ports["freq"]->metadata);
         s->type(FL_HOR_SLIDER);
 
         end();
@@ -192,7 +191,6 @@ void audio_init(void);
 int main()
 {
     audio_init();
-    //Fl::scheme("plastic");
     Fl_Window *win = new Synth_Window();
     win->show();
 
@@ -207,10 +205,11 @@ int main()
     puts(">>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
 
-    while(win->shown())
+    while(1)//win->shown())
     {
         while(bToU.hasNext()) {
             const char *msg = bToU.read();
+            printf("handling a '%s'\n", msg);
             if(gui_map.find(msg) != gui_map.end()) {
                 if(rtosc_narguments(msg) != 1)
                     continue;

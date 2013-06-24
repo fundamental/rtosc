@@ -18,7 +18,7 @@ B string_cast(const A &a)
     return b;
 }
 
-Fl_Osc_Slider::Fl_Osc_Slider(int X, int Y, int W, int H, string n, string m)
+Fl_Osc_Slider::Fl_Osc_Slider(int X, int Y, int W, int H, string n, const char *m)
     :Fl_Slider(X,Y,W,H), Fl_Osc_Widget(n,m)
 {
     bounds(0.0f,1.0f);
@@ -39,7 +39,7 @@ Fl_Osc_Slider::~Fl_Osc_Slider(void)
 void Fl_Osc_Slider::OSC_value(float v)
 {
     real_value = v;
-    const float val = Fl_Osc_Widget::inv_translate(v, metadata.c_str());
+    const float val = inv_translate(v);
     Fl_Slider::value(val);
     label_str = string_cast<float,string>(v);
     label("                ");
@@ -48,7 +48,7 @@ void Fl_Osc_Slider::OSC_value(float v)
 
 void Fl_Osc_Slider::cb(void)
 {
-    const float val = translate(Fl_Slider::value(), metadata.c_str());
+    const float val = translate(Fl_Slider::value());
     osc->writeValue(full_path, val);
     OSC_value(val);
 

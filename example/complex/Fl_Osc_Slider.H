@@ -9,7 +9,8 @@ class Fl_Osc_Slider:public Fl_Slider, Fl_Osc_Widget
 {
 
     public:
-        Fl_Osc_Slider(int X, int Y, int W, int H, string name, string metadata);
+        Fl_Osc_Slider(int X, int Y, int W, int H, string name,
+                const char *metadata);
 
         virtual ~Fl_Osc_Slider(void);
         void OSC_value(float);
