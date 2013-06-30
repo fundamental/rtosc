@@ -85,5 +85,10 @@ int main()
     check(rtosc_argument(buffer, 3).i == 0xef,
             "Bad argument", __LINE__);
 
+    //Verify argument retreval for short messages
+    check(rtosc_message(buffer, 256, "/b", "c", 7) != 0,
+            "Bad message", __LINE__);
+    check(rtosc_argument(buffer+1, 0).i == 7,
+            "Bad argument", __LINE__);
     return 0;
 }

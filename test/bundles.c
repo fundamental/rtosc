@@ -7,6 +7,11 @@ char buffer_a[256];
 char buffer_b[256];
 char buffer_c[256];
 
+size_t len_a;
+size_t len_b;
+size_t len_c;
+
+
 void check(int b, const char *msg, int loc)
 {
     if(!b) {
@@ -15,19 +20,33 @@ void check(int b, const char *msg, int loc)
     }
 }
 
+#define MSG1 "/fly" "ing-" "monk" "ey\0\0" ",s\0\0" "bann" "ana\0"
+#define MSG2 "/foo" "bar-" "mess" "age\0" ",iT\0" "\0\0\0\x2a"
+
+               /*bundle          timetag*/
+#define RESULT "#bun" "dle\0" "\0\0\0\0" "\0\0\0\0" \
+               /*size1             size2*/ \
+               "\0\0\0\x1c" MSG1 "\0\0\0\x18" MSG2
+
+//TODO nested bundles (though I swore those were already done)
 int main()
 {
-    check(rtosc_message(buffer_a, 256, "/flying-monkey", "s", "bannana"),
+    printf("%d %d %d\n", sizeof(MSG1)-1, sizeof(MSG2)-1, sizeof(RESULT)-1);
+    check((len_a = rtosc_message(buffer_a, 256,
+                    "/flying-monkey", "s", "bannana")) == sizeof(MSG1)-1,
             "bad message", __LINE__);
-    check(rtosc_message(buffer_b, 256, "/foobar-message", "ifT", 42, 3.14159),
+    check((len_b = rtosc_message(buffer_b, 256,
+                    "/foobar-message", "iT", 42)) == sizeof(MSG2)-1,
             "bad message", __LINE__);
     check(!rtosc_bundle_p(buffer_a),
             "False positive bundle_p()", __LINE__);
     check(!rtosc_bundle_p(buffer_b),
             "False positive bundle_p()", __LINE__);
-    check(rtosc_bundle(buffer_c, 256, 0, 2, buffer_a, buffer_b) == 84,
+    len_c = rtosc_bundle(buffer_c, 256, 0, 2, buffer_a, buffer_b);
+        printf("len_c => '%d'\n correct is %d\n", len_c, sizeof(RESULT)-1);
+    check((len_c = rtosc_bundle(buffer_c, 256, 0, 2, buffer_a, buffer_b)) == sizeof(RESULT)-1,
             "bad bundle", __LINE__);
-    check(rtosc_message_length(buffer_c, 256) == 84,
+    check(rtosc_message_length(buffer_c, len_c) == len_c,
             "bad message length", __LINE__);
 
     check(rtosc_bundle_p(buffer_c),

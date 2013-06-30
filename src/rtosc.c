@@ -63,17 +63,17 @@ static unsigned nreserved(const char *args)
     return res;
 }
 
-char rtosc_type(const char *msg, unsigned pos)
+char rtosc_type(const char *msg, unsigned nargument)
 {
-    assert(pos < rtosc_narguments(msg));
+    assert(nargument < rtosc_narguments(msg));
     const char *arg = rtosc_argument_string(msg);
     while(1) {
         if(*arg == '[' || *arg == ']')
             ++arg;
-        else if(!pos || !*arg)
+        else if(!nargument || !*arg)
             return *arg;
         else
-            ++arg, --pos;
+            ++arg, --nargument;
     }
 }
 
@@ -380,7 +380,7 @@ size_t rtosc_amessage(char              *buffer,
 rtosc_arg_t rtosc_argument(const char *msg, unsigned idx)
 {
     //hack to allow reading of arguments from truncated message
-    msg-=(msg-(const char *)0)%4;
+    msg -= (unsigned) (msg-(const char *)0)%4;
 
     rtosc_arg_t result = {0};
     char type = rtosc_type(msg, idx);
