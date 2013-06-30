@@ -9,7 +9,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(CMAKE_C_FLAGS "-O2 -std=c99 -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "-O2 -std=c++0x -Wall -Wextra")
 add_library(rtosc SHARED src/rtosc.c src/dispatch.c)
-add_library(rtosc-cpp SHARED src/cpp/ports.cpp src/cpp/miditable.cpp)
+add_library(rtosc-cpp SHARED src/cpp/ports.cpp src/cpp/miditable.cpp
+    src/cpp/undo-history.cpp
+    src/cpp/subtree-serialize.cpp)
 
 # Example Code
 find_package(PkgConfig REQUIRED)
@@ -70,6 +72,12 @@ macro(maketest fname)
     target_link_libraries(${fname} rtosc)
 endmacro(maketest)
 
+macro(maketestcpp fname)
+    add_executable(${fname} test/${fname}.cpp)
+    add_test(${fname} ${fname})
+    target_link_libraries(${fname} rtosc rtosc-cpp jack)
+endmacro(maketestcpp)
+
 maketest(osc-spec)
 maketest(simple-messages)
 maketest(null-messages)
@@ -84,18 +92,12 @@ if(LIBLO_FOUND)
 endif()
 
 if(JACK_FOUND)
-    add_executable(metadata test/metadata.cpp)
-    add_test(metadata metadata)
-    target_link_libraries(metadata rtosc rtosc-cpp jack)
-
-    add_executable(headerlib test/headerlib.cpp)
-    add_test(headerlib headerlib)
-    target_link_libraries(headerlib rtosc rtosc-cpp jack)
-
-    add_executable(test-walker test/test-walker.cpp)
-    add_test(test-walker test-walker)
-    target_link_libraries(test-walker rtosc rtosc-cpp jack)
+    maketestcpp(metadata)
+    maketestcpp(headerlib)
+    maketestcpp(test-walker)
 endif()
+maketestcpp(undo-test)
+maketestcpp(serializer)
 
 # Documentation
 find_package(Doxygen)
@@ -122,6 +124,8 @@ install(FILES include/rtosc/rtosc.h
     include/rtosc/ports.h
     include/rtosc/miditable.h
     include/rtosc/port-sugar.h
+    include/rtosc/undo-history.h
+    include/rtosc/subtree-serialize.h
     DESTINATION include/rtosc)
 install(TARGETS rtosc rtosc-cpp
     DESTINATION lib)

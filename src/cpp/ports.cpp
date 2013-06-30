@@ -1,4 +1,5 @@
 #include "../../include/rtosc/ports.h"
+#include <cassert>
 
 using namespace rtosc;
 
@@ -107,12 +108,12 @@ const char *Port::MetaContainer::operator[](const char *str) const
     return NULL;
 }
 
-void Ports::dispatch(const char *m, rtosc::RtData &d)
+void Ports::dispatch(const char *m, rtosc::RtData &d) const
 {
     void *obj = d.obj;
     //simple case [very very cheap]
     if(!d.loc || !d.loc_size) {
-        for(Port &port: ports) {
+        for(const Port &port: ports) {
             if(rtosc_match(port.name,m))
                 d.port = &port, port.cb(m,d), d.obj = obj;
         }
@@ -199,8 +200,10 @@ const Port *Ports::apropos(const char *path) const
 void rtosc::walk_ports(const Ports *base,
                        char         *name_buffer,
                        size_t        buffer_size,
+                       void         *data,
                        port_walker_t walker)
 {
+    assert(name_buffer);
     //XXX buffer_size is not properly handled yet
     if(name_buffer[0] == 0)
         name_buffer[0] = '/';
@@ -225,21 +228,38 @@ void rtosc::walk_ports(const Ports *base,
                         strcat(name_buffer, "/");
 
                     //Recurse
-                    rtosc::walk_ports(p.ports, name_buffer, buffer_size, walker);
+                    rtosc::walk_ports(p.ports, name_buffer, buffer_size,
+                            data, walker);
                 }
             } else {
                 //Append the path
                 scat(name_buffer, p.name);
 
                 //Recurse
-                rtosc::walk_ports(p.ports, name_buffer, buffer_size, walker);
+                rtosc::walk_ports(p.ports, name_buffer, buffer_size,
+                        data, walker);
             }
         } else {
-            //Append the path
-            scat(name_buffer, p.name);
+            if(index(p.name,'#')) {
+                const char *name = p.name;
+                char       *pos  = old_end;
+                while(*name != '#') *pos++ = *name++;
+                const unsigned max = atoi(name+1);
 
-            //Apply walker function
-            walker(&p, name_buffer);
+                for(unsigned i=0; i<max; ++i)
+                {
+                    sprintf(pos,"%d",i);
+
+                    //Apply walker function
+                    walker(&p, name_buffer, data);
+                }
+            } else {
+                //Append the path
+                scat(name_buffer, p.name);
+
+                //Apply walker function
+                walker(&p, name_buffer, data);
+            }
         }
 
         //Remove the rest of the path

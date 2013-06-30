@@ -25,8 +25,8 @@ int main()
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
     walk_ports(&ports, 
-            buffer, 1024,
-            [](const Port*, const char *name) {
+            buffer, 1024, NULL,
+            [](const Port*, const char *name, void *) {
             puts(name);
             });
 

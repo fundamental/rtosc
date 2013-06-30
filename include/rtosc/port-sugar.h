@@ -51,6 +51,8 @@
   {STRINGIFY(name) "::c",   DOC(__VA_ARGS__), NULL, rParamCb(name)}
 #define rParamF(name, ...) \
   {STRINGIFY(name) "::f",  DOC(__VA_ARGS__), NULL, rParamFCb(name)}
+#define rParamI(name, ...) \
+  {STRINGIFY(name) "::i",   DOC(__VA_ARGS__), NULL, rParamICb(name)}
 #define rToggle(name, ...) \
   {STRINGIFY(name) "::T:F",DOC(__VA_ARGS__), NULL, rToggleCb(name)}
 
@@ -58,11 +60,12 @@
 #define rArrayF(name, length, ...) \
 {STRINGIFY(name) "#" STRINGIFY(length) "::f", DOC(__VA_ARGS__), NULL, rArrayFCb}
 #define rArray(name, length, ...) \
-{STRINGIFY(name) "#" STRINGIFY(length) "::c", DOC(__VA_ARGS__), NULL, 
+{STRINGIFY(name) "#" STRINGIFY(length) "::c", DOC(__VA_ARGS__), NULL, rArrayCb(name)}
 
-//Recursion
+//Recursion [two ports in one for pointer manipulation]
 #define rRecur(name, ...) \
-    {STRINGIFY(name) "/", DOC(__VA_ARGS__), &decltype(rObject::name)::ports, rRecurCb(name)}
+    {STRINGIFY(name) "/", DOC(__VA_ARGS__), &decltype(rObject::name)::ports, rRecurCb(name)}, \
+    {STRINGIFY(name) ":", rProp(internal), NULL, rRecurPtrCb(name)}
 
 //Misc
 #define rDummy(name, ...) {STRINIFY(name), rProp(dummy), NULL, [](msg_t, RtData &){}}
@@ -82,7 +85,7 @@
 //Misc properties
 #define rDoc(doc) ":documentation\0" STRINGIFY(doc) "\0"
 
-    
+
 //Callback Implementations
 #define rBOIL_BEGIN [](const char *msg, RtData &data) { \
         (void) msg; (void) data; \
@@ -99,15 +102,41 @@
     if(prop["max"] && obj->name > convert(prop["max"])) \
         obj->name = convert(prop["max"]);
 
+#define rTYPE(n) decltype(obj->n)
+
+#define rAPPLY(n,t) data.reply("undo_change", "s" #t #t, data.loc, obj->n, var); obj->n = var;
+
+#define rParamCb(name) rBOIL_BEGIN \
+        if(!strcmp("", args)) {\
+            data.reply(loc, "c", obj->name); \
+        } else { \
+            rTYPE(name) var = rtosc_argument(msg, 0).i; \
+            rLIMIT(name, atoi) \
+            rAPPLY(name, c) \
+            data.broadcast(loc, "c", obj->name);\
+        } rBOIL_END
 
 #define rParamFCb(name) rBOIL_BEGIN \
         if(!strcmp("", args)) {\
             data.reply(loc, "f", obj->name); \
         } else { \
-            obj->name = rtosc_argument(msg, 0).f; \
+            rTYPE(name) var = rtosc_argument(msg, 0).f; \
             rLIMIT(name, atof) \
+            rAPPLY(name, f) \
             data.broadcast(loc, "f", obj->name);\
         } rBOIL_END
+
+#define rParamICb(name) rBOIL_BEGIN \
+        if(!strcmp("", args)) {\
+            data.reply(loc, "i", obj->name); \
+        } else { \
+            rTYPE(name) var = rtosc_argument(msg, 0).i; \
+            rLIMIT(name, atoi) \
+            rAPPLY(name, i) \
+            data.broadcast(loc, "i", obj->name);\
+        } rBOIL_END
+
+
 
 #define rToggleCb(name) rBOIL_BEGIN \
         if(!strcmp("", args)) {\
@@ -126,5 +155,30 @@
     SNIP \
     decltype(obj->name)::ports.dispatch(msg, data); \
     rBOIL_END
+
+#define rRecurPtrCb(name) rBOIL_BEGIN \
+    void *ptr = &obj->name; \
+    data.reply(loc, "b", sizeof(void*), &ptr); \
+    rBOIL_END
+
+//Array ops
+
+#define rBOILS_BEGIN rBOIL_BEGIN \
+            const char *mm = msg; \
+            while(*mm && !isdigit(*mm)) ++mm; \
+            unsigned idx = atoi(mm);
+
+#define rBOILS_END rBOIL_END
+
+
+#define rArrayCb(name) rBOILS_BEGIN \
+        if(!strcmp("", args)) {\
+            data.reply(loc, "c", obj->name[idx]); \
+        } else { \
+            char var = rtosc_argument(msg, 0).i; \
+            rLIMIT(name[idx], atoi) \
+            rAPPLY(name[idx], c) \
+            data.broadcast(loc, "c", obj->name[idx]);\
+        } rBOILS_END
 
 #endif

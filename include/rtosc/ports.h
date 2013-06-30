@@ -146,7 +146,7 @@ struct Ports
      * @param d The RtData object shall contain a path buffer (or null), the length of
      *          the buffer, a pointer to data.
      */
-    void dispatch(const char *m, RtData &d);
+    void dispatch(const char *m, RtData &d) const;
 
     /**
      * Retrieve local port by name
@@ -163,12 +163,14 @@ struct Ports
 /*********************
  * Port walking code *
  *********************/
-typedef std::function<void(const Port*,const char*)> port_walker_t;
+//typedef std::function<void(const Port*,const char*)> port_walker_t;
+typedef void(*port_walker_t)(const Port*,const char*,void*);
 
 void walk_ports(const Ports *base,
-        char         *name_buffer,
-        size_t        buffer_size,
-        port_walker_t walker);
+        char          *name_buffer,
+        size_t         buffer_size,
+        void          *data,
+        port_walker_t  walker);
 };
 
 
