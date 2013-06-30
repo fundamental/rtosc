@@ -160,7 +160,7 @@ float translate(float x, const char *meta);
 struct Synth_Window : public Fl_Double_Window, public Fl_Osc_Pane
 {
     Synth_Window(void)
-        :Fl_Double_Window(400,600, "RT-OSC Test Synth")
+        :Fl_Double_Window(400,700, "RT-OSC Test Synth")
     {
         osc       = &OSC_API;
         pane_name = "/";
@@ -177,6 +177,11 @@ struct Synth_Window : public Fl_Double_Window, public Fl_Osc_Pane
         Fl_Osc_Slider *s = new Fl_Osc_Slider(0, 460, 400, 50,
                 "freq", Synth::ports["freq"]->metadata);
         s->type(FL_HOR_SLIDER);
+
+        Fl_Button *save = new Fl_Osc_Button(0,550, 200, 600, "save","");
+        save->label("save");
+        Fl_Button *load = new Fl_Osc_Button(200,550, 400, 600, "load","");
+        load->label("load");
 
         end();
 

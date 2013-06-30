@@ -111,7 +111,10 @@ size_t subtree_serialize(char *buffer, size_t buffer_size,
 
 
     //TODO FIXME this is not currently RT safe at the moment
-    walk_ports(ports, args.v.loc, 128, &args, [](const Port *, const char *, void *dat) {
+    walk_ports(ports, args.v.loc, 128, &args, [](const Port *p, const char *, void *dat) {
+            if(p->meta().find("internal") != p->meta().end())
+                return;
+
             subtree_args_t *args = (subtree_args_t*) dat;
             
             const char *buf = args->vv.capture(args->ports, args->v.loc+1, args->object);
@@ -124,9 +127,8 @@ size_t subtree_serialize(char *buffer, size_t buffer_size,
 }
 
 void subtree_deserialize(char *buffer, size_t buffer_size,
-        void *object, rtosc::Ports *ports)
+        void *object, rtosc::Ports *ports, RtData &d)
 {
-    RtData d;
     d.obj = object;
     //simply replay all objects seen here
     for(unsigned i=0; i<rtosc_bundle_elements(buffer, buffer_size); ++i) {

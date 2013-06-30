@@ -59,6 +59,7 @@ Object o;
 
 void run_test(void)
 {
+    RtData d;
     //Initialize Parameters
     o.foo = 12;
     o.bar = 0.0f;
@@ -90,7 +91,7 @@ void run_test(void)
     assert(sizeb == sizea);
 
     //Reload Save State 1
-    subtree_deserialize(buffera, sizea, &o, &Object::ports);
+    subtree_deserialize(buffera, sizea, &o, &Object::ports, d);
     assert(o.bar == 0);
     assert(o.foo == 12);
     assert(o.baz.foobar == 0);
@@ -98,7 +99,7 @@ void run_test(void)
     assert(o.blam[12] == 80);
 
     //Reload Save State 2
-    subtree_deserialize(bufferb, sizeb, &o, &Object::ports);
+    subtree_deserialize(bufferb, sizeb, &o, &Object::ports, d);
     assert(o.baz.foobar == 1);
     assert(o.blam[12] == 3);
     assert(o.blam[2]  == 5);

@@ -6,6 +6,7 @@
 #include <cmath>
 #include "synth.h"
 #include <rtosc/port-sugar.h>
+#include <rtosc/subtree-serialize.h>
 
 using namespace rtosc;
 
@@ -75,6 +76,8 @@ float Adsr::operator()(bool gate)
 }
 
 MidiTable midi(Synth::ports);
+char   serial[2048];
+size_t serial_size;
 
 Synth s;
 void process_control(unsigned char control[3]);
@@ -89,6 +92,18 @@ rtosc::Ports Synth::ports = {
     rToggle(gate, "Note enable"),
     midi.registerPort(),
     midi.learnPort(),
+    {"save", ":internal\0", NULL, [](const char *, RtData &data)
+        {
+        fprintf(stderr, "saving");
+            serial_size = subtree_serialize(serial, sizeof(serial),
+                    data.obj, &Synth::ports);
+        }},
+    {"load", ":internal\0", NULL, [](const char *, RtData &data)
+        {
+            memset(data.loc, 0, data.loc_size);
+        fprintf(stderr, "loading");
+            subtree_deserialize(serial, serial_size, data.obj, &Synth::ports, data);
+        }},
 };
 
 Ports *root_ports = &Synth::ports;
@@ -178,8 +193,10 @@ class DispatchData:public rtosc::RtData
 void process_output(float *smps, unsigned nframes)
 {
     DispatchData d;
-    while(uToB.hasNext())
+    while(uToB.hasNext()) {
         Synth::ports.dispatch(uToB.read()+1, d);
+        fprintf(stderr, "backend '%s'\n", uToB.peak());
+    }
 
     for(unsigned i=0; i<nframes; ++i)
         smps[i] = s.sample();
