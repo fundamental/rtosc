@@ -98,6 +98,7 @@ if(JACK_FOUND)
 endif()
 maketestcpp(undo-test)
 maketestcpp(serializer)
+maketestcpp(sugar)
 
 # Documentation
 find_package(Doxygen)

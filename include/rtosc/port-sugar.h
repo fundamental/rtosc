@@ -46,6 +46,48 @@
 #define DOC_I(count, ...) DOC_IMP(count,__VA_ARGS__)
 #define DOC(name, ...) name DOC_I(LAST_IMP(__VA_ARGS__), __VA_ARGS__)
 
+//XXX Currently unused macro
+#define MAC_EACH_0(mac, x, ...) INSUFFICIENT_ARGUMENTS_PROVIDED_TO_MAC_EACH
+#define MAC_EACH_1(mac, x, ...) mac(x)
+#define MAC_EACH_2(mac, x, ...) mac(x) MAC_EACH_1(mac, __VA_ARGS__)
+#define MAC_EACH_3(mac, x, ...) mac(x) MAC_EACH_2(mac, __VA_ARGS__)
+#define MAC_EACH_4(mac, x, ...) mac(x) MAC_EACH_3(mac, __VA_ARGS__)
+#define MAC_EACH_5(mac, x, ...) mac(x) MAC_EACH_4(mac, __VA_ARGS__)
+#define MAC_EACH_6(mac, x, ...) mac(x) MAC_EACH_5(mac, __VA_ARGS__)
+#define MAC_EACH_7(mac, x, ...) mac(x) MAC_EACH_6(mac, __VA_ARGS__)
+#define MAC_EACH_8(mac, x, ...) mac(x) MAC_EACH_7(mac, __VA_ARGS__)
+#define MAC_EACH_9(mac, x, ...) mac(x) MAC_EACH_8(mac, __VA_ARGS__)
+
+#define MAC_EACH_IMP(mac, count, ...) MAC_EACH_ ##count(mac,__VA_ARGS__)
+#define MAC_EACH_I(mac, count, ...) MAC_EACH_IMP(mac, count, __VA_ARGS__)
+#define MAC_EACH(mac, ...) MAC_EACH_I(mac, LAST_IMP(__VA_ARGS__), __VA_ARGS__)
+
+#define OPTIONS_IMP9(a,b,c,d,e,f,g,h,i) \
+    rOpt(0,a) rOpt(1,b) rOpt(2,c) rOpt(3,d) rOpt(4,e) rOpt(5,f) rOpt(6,g) \
+    rOpt(7,h) rOpt(8,i)
+#define OPTIONS_IMP8(a,b,c,d,e,f,g,h) \
+    rOpt(0,a) rOpt(1,b) rOpt(2,c) rOpt(3,d) rOpt(4,e) rOpt(5,f) rOpt(6,g) \
+    rOpt(7,h)
+#define OPTIONS_IMP7(a,b,c,d,e,f,g) \
+    rOpt(0,a) rOpt(1,b) rOpt(2,c) rOpt(3,d) rOpt(4,e) rOpt(5,f) rOpt(6,g)
+#define OPTIONS_IMP6(a,b,c,d,e,f) \
+    rOpt(0,a) rOpt(1,b) rOpt(2,c) rOpt(3,d) rOpt(4,e) rOpt(5,f)
+#define OPTIONS_IMP5(a,b,c,d,e) \
+    rOpt(0,a) rOpt(1,b) rOpt(2,c) rOpt(3,d) rOpt(4,e)
+#define OPTIONS_IMP4(a,b,c,d) \
+    rOpt(0,a) rOpt(1,b) rOpt(2,c) rOpt(3,d)
+#define OPTIONS_IMP3(a,b,c) \
+    rOpt(0,a) rOpt(1,b) rOpt(2,c)
+#define OPTIONS_IMP2(a,b) \
+    rOpt(0,a) rOpt(1,b)
+#define OPTIONS_IMP1(a) \
+    rOpt(0,a)
+#define OPTIONS_IMP0() YOU_MUST_PROVIDE_OPTIONS
+#define OPTIONS_IMP(count, ...) OPTIONS_IMP ##count(__VA_ARGS__)
+#define OPTIONS_I(count, ...) OPTIONS_IMP(count, __VA_ARGS__)
+#define OPTIONS(...) OPTIONS_I(LAST_IMP(__VA_ARGS__), __VA_ARGS__)
+
+
 //Normal parameters
 #define rParam(name, ...) \
   {STRINGIFY(name) "::c",   DOC(__VA_ARGS__), NULL, rParamCb(name)}
@@ -55,6 +97,8 @@
   {STRINGIFY(name) "::i",   DOC(__VA_ARGS__), NULL, rParamICb(name)}
 #define rToggle(name, ...) \
   {STRINGIFY(name) "::T:F",DOC(__VA_ARGS__), NULL, rToggleCb(name)}
+#define rOption(name, ...) \
+  {STRINGIFY(name) "::i:s",   DOC(__VA_ARGS__), NULL, rOptionCb(name)}
 
 //Array operators
 #define rArrayF(name, length, ...) \
@@ -84,6 +128,8 @@
 
 //Misc properties
 #define rDoc(doc) ":documentation\0" STRINGIFY(doc) "\0"
+#define rOpt(numeric,symbolic) rMap(map numeric, symbolic)
+#define rOptions(...) OPTIONS(__VA_ARGS__)
 
 
 //Callback Implementations
@@ -136,7 +182,16 @@
             data.broadcast(loc, "i", obj->name);\
         } rBOIL_END
 
-
+//TODO finish me (include string mapper action?)
+#define rOptionCb(name) rBOIL_BEGIN \
+        if(!strcmp("", args)) {\
+            data.reply(loc, "i", obj->name); \
+        } else { \
+            rTYPE(name) var = rtosc_argument(msg, 0).i; \
+            rLIMIT(name, atoi) \
+            rAPPLY(name, i) \
+            data.broadcast(loc, "i", obj->name);\
+        } rBOIL_END
 
 #define rToggleCb(name) rBOIL_BEGIN \
         if(!strcmp("", args)) {\
