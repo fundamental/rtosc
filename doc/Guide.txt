@@ -123,22 +123,24 @@ The _Port_ class defines one port which works on a OSC message and value.
 Below is a simple example port.
 
 [source,cpp]
-------------------------------------------------------------------------------
-Port port("a_port:f", "::Example port", [](const char*, RtData){puts("port called")});
-------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------
+Port port("a_port:f", ":doc\0=Example port\0", [](const char*, RtData&){puts("port called")});
+----------------------------------------------------------------------------------------------
 
 The verbose way to read this is that this defines a port named "a_port" which
-accepts messages of type "f" with metadata of "::Example port" and a function that
-acts on the message and some additional data.
+accepts messages of type "f" (float) with one mapped property which defines the
+doc string "Example port" and a callback which is called at dispatch time.
 The concise way is to state that port maps float messages to "a_port" to the
 given function.
 
-The justification for the templates and use of std::function rather than just
-void* and function pointers comes in when dealing with classes.
+The justification for the use of std::function rather than just plain old function
+is due to the recent addition of C\++11 lambda functions.
 Let's look at how this can be used with classes:
 
 [source,cpp]
 ----------------------------------------------------------------
+#include <rtosc/ports.h>
+
 class Foobar
 {
     float a,b,c,d;
@@ -161,54 +163,38 @@ As this field is a std::function and not just a simple function pointer it is
 possible to abstract this with a generated function (or a macro, though
 generated functions lead to more _interesting_ possibilities).
 
+One option is to use the included syntax sugar which simplifies the port
+definitions massively.
+
 
 [source,cpp]
 ----------------------------------------------------------------
+#include <rtosc/ports.h>
+#include <rtosc/port-sugar.h>
+
 class Foobar
 {
     float a,b,c,d;
 };
 
-template<class T>
-function<void(const char*,void*)> parameter(float T::*p)
-{
-    return [p](const char *, void*t){((T*)t)->*p) = argument(m,0).f};
-}
+#define rObject Foobar
 
 Ports ports = {
-    {"a:f", "", NULL, parameter(&Foobar::a)),
-    {"b:f", "", NULL, parameter(&Foobar::b)), 
-    {"c:f", "", NULL, parameter(&Foobar::c)),
-    {"d:f", "", NULL, parameter(&Foobar::d))
+    rParamF(a, "doc str"),
+    rParamF(b, "doc str"),
+    rParamF(c, "doc str"),
+    rParamF(d, "doc str"),
 };
 ----------------------------------------------------------------
 
 There, that is a concise representation of those parameters.
-It does however make use of a little used C++ feature, pointers to member data.
 This can be further complicated by adding multiple layers to the process of
 dispatching an event.
 
 [source,cpp]
 ----------------------------------------------------------------
-typedef const char *msg_t;
-
-template<class T>
-function<void(const char*,T*)> param(float T::*p)
-{
-    return [p](const char *, void*t){(((T*)t)->*p) = argument(m,0).f};
-}
-
-msg_t snip(msg_t m)
-{
-    while(*m && *m!='/')++m;
-    return *m?m+1:m;
-}
-
-template<class T, class TT>
-std::function<void(msg_t,T*)> recur(TT T::*p)
-{
-    return [p](msg_t m, void*t){TT::ports.dispatch(snip(m),(T*)(t->*p));};
-}
+#include <rtosc/ports.h>
+#include <rtosc/port-sugar.h>
 
 class Barfoo
 {
@@ -222,78 +208,51 @@ class Foobar
     Barfoo baz;
 };
 
+#define rObject Barfoo
+
 Ports Barfoo::ports = {
-    {"e:f", "", NULL, param(&Barfoo::e)}
+    rParamF(e, "doc str"),
 };
+
+#undef  rObject
+#define rObject Foobar
 
 Ports Foobar::ports = {
-    {"a:f",  "", NULL,           param(&Foobar::a)},
-    {"b:f",  "", NULL,           param(&Foobar::b)},
-    {"c:f",  "", NULL,           param(&Foobar::c)},
-    {"d:f",  "", NULL,           param(&Foobar::d)},
-    {"baz/", "", &Barfoo::ports, recur(&Foobar::baz)}
+    rParamF(a, "doc str"),
+    rParamF(b, "doc str"),
+    rParamF(c, "doc str"),
+    rParamF(d, "doc str"),
+    rRecur(baz, "doc str"),
 };
 ----------------------------------------------------------------
-
-Now a recursive dispatching hierarchy has been formed with only a few more
-lines.
-While this may appear somewhat complicated, all it does is define another
-function that handles any object that can dispatch messages.
-The _snip()_ in this context trims off the earlier part of the OSC message,
-which (assuming alignment is known) causes no issues whatsoever when decoding it.
-Depending upon the topology of the system being described, this can simplify
-things immensely.
-
-Lastly, it should be noted that _&Barfoo::ports_ is stored in the port table.
-This permits traversal of the tree of ports with this hierarchy.
-As this tree does not reveal any actual data, the real data can easily be a
-subset of the ports listed in these structures.
-Speaking of the metadata, it should be noted that it is empty in all of the
-above examples, but it is a great space to provide information on the parameters
-themselves in some ad-hoc manner.
-It is a great place to put parameter scaling/range information, which is used by
-the _MidiTable_ in one example and it can contain other properties of the ports,
-such as descriptions, units, visibility, and so forth.
 
 For more detail on the exact methods you should see the doxygen output, or for
 the moment the source itself (it doesn't bite much).
 
-For those who's eyes glazed over after looking at this templated `C++` code,
-it is also possible to do the same thing with macros in a very concise manner:
+While the default syntax sugar might not quite work out, it is possible to
+define any other method of generating ports.
+Notably some C++ templates might help with the definitions though the results
+will likely not be as concise as the provided macros.
 
-[source,cpp]
-----------------------------------------------------------------
-#define PARAM(Klass, var) \
-{ #var ":f", "", NULL,    \
-  [](const char *m, void *v){((Klass*)v)->var = rtosc_argument(m,0).f;}}
-    
-#define RECUR(src, dest, var) \
-{ #var "/", "", dest::ports,  \
-  [](const char *m, void *v){dest::ports.dispatch(snip(m),((src*)v)->var);}}
+Finally as this system is designed to facilitate static inspection of the
+parameter trees, it is very easy to add metadata to the various parameters.
+Consider defining a min and max value for a parameter with an associated midi
+mapping.
+This can be done with several levels of verbosity:
 
-Ports Barfoo::ports = {
-    PARAM(Barfoo,e)
-};
-
+-----------------------------------------------------------------------------
 Ports Foobar::ports = {
-    PARAM(Foobar, a),
-    PARAM(Foobar, b),
-    PARAM(Foobar, c),
-    PARAM(Foobar, d),
-    RECUR(Foobar, Barfoo, baz)
+    rParamF(a, ":scale\0=linear\0:min\0=1\0:max\0=15.2\0", "a verbose port"),
+    rParamF(b, rMap(scale,linear),
+               rMap(min, 0),
+               rMap(max, 15.2), "a macro mapped port"),
+    rParamF(c, rLinear(0,15.2), "a concise port"),
 };
-----------------------------------------------------------------
+-----------------------------------------------------------------------------
 
-You can of course combine these approaches to get the desired input as you like,
-though as only constant character pointers are stored for the port pattern and
-metadata, generating those requires either static strings or external memory
-management.
-While placing closures over pointers-to-member data in a templated tree is not
-trivial nor strait forward, it is a (somewhat) concise, performant, and safe way of 
-describing the dispatching hierarchy.
-While this could be done without the used `C++11` magic, the application domain is
-`C++` on recent systems and the generated dynamic library is not tainted by any
-`C++` code so this layer as previously mentioned is entirely optional.
+Based upon this basic decomposition it should not be difficult to see how
+similar macros could be constructed to define port metadata which can be used
+within the callback or anything that might want to reflect on the ports.
 
 Path Specifiers
 ^^^^^^^^^^^^^^^
@@ -344,27 +303,17 @@ really useful when attaching other code to this idiom of a series of ports.
 The roughly established grammar for this specifier is:
 
 ---------------------------------------------------------
-metadata_delimiter := ':'
-field_delimiter    := ','
+property_start := ':'
+value_start    := '='
+text           := [^\0]
 
-scaling_fn  :=
-             | 'log' ',' number ',' number
-             | 'lin' ',' number ',' number
-             | text
-
-fields      := text
-             | text ',' fields
-
-property    := `'` text `'`
-
-description := text
-
-properties  :=
-             | property
-             | property ',' properties
+entry       :=
+            | ':' text '\0'
+            | ':' text '\0' '=' text '\0'
 
 metadata    :=
-             | scaling_fn ':' properties ':' description
+            | entry
+            | entry metadata
 ---------------------------------------------------------
 
 Most of this data has been structured s.t. it is easy to allow some UI to hook
@@ -372,24 +321,34 @@ onto the data to eliminate some data redundancy and to permit documenting
 parameters where they are defined rather than in the mist of some horribly
 convoluted UI code.
 This field does not necessarily need to conform to the above structure, though
-port based extentionds will expect the strings to roughly conform and all
+port based extensions will expect the strings to roughly conform and all
 examples should conform.
 
 For an example of code using this format, see the Fl_Osc_* collection of widgets
 and meta-widgets in the complex example.
 
-Midi
-~~~~
+MidiTable
+~~~~~~~~~
 
-The midi class just provides simple mapping of midi controls to Ports.
-All this does at the moment is provide a path and conversion string for
-registered ports.
+As this system is designed to be fairly lightweight and the ports expose plenty
+of metadata about what arguments are accepted by each port, a logical next step
+is to enable some form of midi integration.
+The miditable is designed to allow for midi learning and general midi mapping of
+controllers.
+All this really amounts to is mapping a <controller id, channel id> to <path,
+type, conversion-function?>.
 
-While this functionality is currently still under development, it is intended
-that this object will serve as the mechanism for all midi connections, midi
-learning, and midi translation.
-By this, I mean that when midi events are received (at least CC events), they
-should be sent directly to the midi table which will translate them into OSC
-events if they are known events and store them if they are unknown events.
-With a small amount of external code, it should be possible to also perform
-midi learning by pairing unknown messages and unknown MIDI CC events.
+SubTree-Serialization
+~~~~~~~~~~~~~~~~~~~~~
+
+While loading new modules without interrupting the realtime thread is easy
+enough through techniques like pointer swaps, saving a running set of parameters
+can be trickier.
+Through some port reflection and a lot of c string manipulation it is possible
+to serialize arbitrary subtrees of the graph formed by the rtosc::Ports
+structures.
+This currently transforms a readable set of ports into a bundle which contains
+all of the values needed to restore the state of the underlying structures.
+As with most things with this library, this feature is still experimental.
+
+
