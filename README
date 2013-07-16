@@ -9,7 +9,7 @@ Project Goals
 
 * Provide a simple means of handling OSC messages within an application
 * Provide a flexible method of dispatching OSC messages payloads
-* Create a C library with C++ header only wrappers for ease of use
+* Create a C library with C++ wrappers for ease of use
 * Allow legacy code to have readable RT safe messaging added on
 * Keep networking outside of project scope
 
@@ -28,12 +28,11 @@ Status
 - OSC 1.0 spec consistent implementation of all message types, and bundles
 - Lightly tested liblo based implementation verification
 - Working C++ based dispatch system
+- C++ Serialization System
+- C++ Syntax Sugar
 
 Todo
 ----
 
-- Refine C++ layer
 - Increase test coverage over C++ layer
 - Provide standard compliant path/pattern matching algorithms
-- Add some syntax for integer enumerated options
-- Formally specify C++ port strings
