@@ -106,6 +106,20 @@
 #define rArray(name, length, ...) \
 {STRINGIFY(name) "#" STRINGIFY(length) "::c", DOC(__VA_ARGS__), NULL, rArrayCb(name)}
 
+
+//Method callback Actions
+#define rAction(name, ...) \
+{STRINGIFY(name) ":", DOC(__VA_ARGS__), NULL, rActionCb(name)}
+#define rActioni(name, ...) \
+{STRINGIFY(name) ":i", DOC(__VA_ARGS__), NULL, rActioniCb(name)}
+
+
+//Alias operators
+#define rParams(name, length, ...) \
+rArray(name, length, __VA_ARGS__), \
+{STRINGIFY(name) ":", rProp(alias), NULL, rParamsCb(name, length)}
+
+
 //Recursion [two ports in one for pointer manipulation]
 #define rRecur(name, ...) \
     {STRINGIFY(name) "/", DOC(__VA_ARGS__), &decltype(rObject::name)::ports, rRecurCb(name)}, \
@@ -216,6 +230,10 @@
     data.reply(loc, "b", sizeof(void*), &ptr); \
     rBOIL_END
 
+#define rActionCb(name) rBOIL_BEGIN obj->name(); rBOIL_END
+#define rActioniCb(name) rBOIL_BEGIN \
+    obj->name(rtosc_argument(msg,0).i); rBOIL_END
+
 //Array ops
 
 #define rBOILS_BEGIN rBOIL_BEGIN \
@@ -235,5 +253,9 @@
             rAPPLY(name[idx], c) \
             data.broadcast(loc, "c", obj->name[idx]);\
         } rBOILS_END
+
+#define rParamsCb(name, length) rBOIL_BEGIN \
+    data.reply(loc, "b", length, obj->name); rBOIL_END
+
 
 #endif
