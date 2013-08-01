@@ -120,10 +120,19 @@ rArray(name, length, __VA_ARGS__), \
 {STRINGIFY(name) ":", rProp(alias), NULL, rParamsCb(name, length)}
 
 
+template<class T> constexpr T spice(T*t) {return *t;}
+
 //Recursion [two ports in one for pointer manipulation]
 #define rRecur(name, ...) \
     {STRINGIFY(name) "/", DOC(__VA_ARGS__), &decltype(rObject::name)::ports, rRecurCb(name)}, \
     {STRINGIFY(name) ":", rProp(internal), NULL, rRecurPtrCb(name)}
+
+#define rRecurp(name, ...) \
+    {STRINGIFY(name) "/", DOC(__VA_ARGS__), \
+        &decltype(spice(rObject::name))::ports, \
+        rRecurpCb(name)}
+
+//{STRINGIFY(name) ":", rProp(internal), NULL, rRecurPtrCb(name)}
 
 //Misc
 #define rDummy(name, ...) {STRINIFY(name), rProp(dummy), NULL, [](msg_t, RtData &){}}
@@ -228,6 +237,12 @@ rArray(name, length, __VA_ARGS__), \
 #define rRecurPtrCb(name) rBOIL_BEGIN \
     void *ptr = &obj->name; \
     data.reply(loc, "b", sizeof(void*), &ptr); \
+    rBOIL_END
+
+#define rRecurpCb(name) rBOIL_BEGIN \
+    data.obj = obj->name; \
+    SNIP \
+    decltype(spice(rObject::name))::ports.dispatch(msg, data); \
     rBOIL_END
 
 #define rActionCb(name) rBOIL_BEGIN obj->name(); rBOIL_END
