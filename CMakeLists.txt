@@ -6,8 +6,10 @@ set(VERSION_MINOR 1)
 set(VERSION_PATCH 0)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(CMAKE_C_FLAGS "-O2 -std=c99 -Wall -Wextra")
-set(CMAKE_CXX_FLAGS "-O2 -std=c++0x -Wall -Wextra")
+if(NOT WIN32)
+    set(CMAKE_C_FLAGS "-O2 -std=c99 -Wall -Wextra")
+    set(CMAKE_CXX_FLAGS "-O2 -std=c++0x -Wall -Wextra")
+endif()
 add_library(rtosc SHARED src/rtosc.c src/dispatch.c)
 add_library(rtosc-cpp SHARED src/cpp/ports.cpp src/cpp/miditable.cpp
     src/cpp/undo-history.cpp
