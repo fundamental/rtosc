@@ -14,10 +14,13 @@ add_library(rtosc-cpp SHARED src/cpp/ports.cpp src/cpp/miditable.cpp
     src/cpp/subtree-serialize.cpp)
 
 # Example Code
-find_package(PkgConfig REQUIRED)
 find_package(FLTK)
-pkg_check_modules(NTK ntk)
-pkg_check_modules(JACK jack)
+find_package(PkgConfig)
+if(PKG_CONFIG_FOUND)
+    pkg_check_modules(NTK ntk)
+    pkg_check_modules(JACK jack)
+    pkg_check_modules(LIBLO liblo)
+endif()
 
 if(FLTK_FOUND)
     execute_process(COMMAND fltk-config --api-version
@@ -64,7 +67,6 @@ target_link_libraries(modular-example m rtosc rtosc-cpp)
 
 
 # Testing code
-pkg_check_modules(LIBLO liblo)
 enable_testing()
 macro(maketest fname)
     add_executable(${fname} test/${fname}.c)
@@ -116,11 +118,13 @@ endif()
 
 
 #Installation
-configure_file(librtosc.pc.cmake
-    ${CMAKE_SOURCE_DIR}/librtosc.pc @ONLY)
-install(FILES ${CMAKE_SOURCE_DIR}/librtosc.pc
-    DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig/")
-install(FILES include/rtosc/rtosc.h 
+if(PKG_CONFIG_FOUND)
+    configure_file(librtosc.pc.cmake
+        ${CMAKE_SOURCE_DIR}/librtosc.pc @ONLY)
+    install(FILES ${CMAKE_SOURCE_DIR}/librtosc.pc
+        DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig/")
+endif()
+install(FILES include/rtosc/rtosc.h
     include/rtosc/thread-link.h
     include/rtosc/ports.h
     include/rtosc/miditable.h
@@ -133,6 +137,11 @@ install(TARGETS rtosc rtosc-cpp
 
 
 #Describe overall configuration
+if(PKG_CONFIG_FOUND)
+    message("-- Found PkgConfig")
+else()
+    message("-- Did NOT find PkgConfig")
+endif()
 if(LIBLO_FOUND)
     message("-- Found Liblo...")
 else()
@@ -142,6 +151,11 @@ if(JACK_FOUND)
     message("-- Found JACK...")
 else()
     message("-- Did NOT find JACK...")
+endif()
+if(NTK_FOUND)
+    message("-- Found NTK...")
+else()
+    message("-- Did NOT find NTK...")
 endif()
 
 if(FLTK_FOUND)
