@@ -87,6 +87,9 @@
 #define OPTIONS_I(count, ...) OPTIONS_IMP(count, __VA_ARGS__)
 #define OPTIONS(...) OPTIONS_I(LAST_IMP(__VA_ARGS__), __VA_ARGS__)
 
+//Additional Change Callback (after parameters have been changed)
+//This can be used to queue up interpolation or parameter regen
+#define rChangeCb
 
 //Normal parameters
 #define rParam(name, ...) \
@@ -183,6 +186,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
             rLIMIT(name, atoi) \
             rAPPLY(name, c) \
             data.broadcast(loc, "c", obj->name);\
+            rChangeCb \
         } rBOIL_END
 
 #define rParamFCb(name) rBOIL_BEGIN \
@@ -193,6 +197,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
             rLIMIT(name, atof) \
             rAPPLY(name, f) \
             data.broadcast(loc, "f", obj->name);\
+            rChangeCb \
         } rBOIL_END
 
 #define rParamICb(name) rBOIL_BEGIN \
@@ -203,6 +208,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
             rLIMIT(name, atoi) \
             rAPPLY(name, i) \
             data.broadcast(loc, "i", obj->name);\
+            rChangeCb \
         } rBOIL_END
 
 //TODO finish me (include string mapper action?)
@@ -214,6 +220,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
             rLIMIT(name, atoi) \
             rAPPLY(name, i) \
             data.broadcast(loc, "i", obj->name);\
+            rChangeCb \
         } rBOIL_END
 
 #define rToggleCb(name) rBOIL_BEGIN \
@@ -222,6 +229,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
         } else { \
             obj->name = rtosc_argument(msg, 0).T; \
             data.broadcast(loc, args);\
+            rChangeCb \
         } rBOIL_END
 
 #define SNIP \
@@ -267,6 +275,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
             rLIMIT(name[idx], atoi) \
             rAPPLY(name[idx], c) \
             data.broadcast(loc, "c", obj->name[idx]);\
+            rChangeCb \
         } rBOILS_END
 
 #define rParamsCb(name, length) rBOIL_BEGIN \
