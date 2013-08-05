@@ -143,7 +143,9 @@ void Ports::dispatch(const char *m, rtosc::RtData &d) const
                 char       *pos = old_end;
                 while(*msg && *msg != '/')
                     *pos++ = *msg++;
-                *pos = '/';
+                if(index(port.name, '/'))
+                    *pos++ = '/';
+                *pos = '\0';
             } else
                 scat(d.loc, port.name);
 
