@@ -101,7 +101,7 @@
 #define rToggle(name, ...) \
   {STRINGIFY(name) "::T:F",DOC(__VA_ARGS__), NULL, rToggleCb(name)}
 #define rOption(name, ...) \
-  {STRINGIFY(name) "::i:s",   DOC(__VA_ARGS__), NULL, rOptionCb(name)}
+  {STRINGIFY(name) "::i:c",   DOC(__VA_ARGS__), NULL, rOptionCb(name)}
 
 //Array operators
 #define rArrayF(name, length, ...) \
@@ -219,7 +219,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
             rTYPE(name) var = rtosc_argument(msg, 0).i; \
             rLIMIT(name, atoi) \
             rAPPLY(name, i) \
-            data.broadcast(loc, "i", obj->name);\
+            data.broadcast(loc, rtosc_argument_string(msg), obj->name);\
             rChangeCb \
         } rBOIL_END
 
