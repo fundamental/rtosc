@@ -44,7 +44,7 @@
 #define DOC_IMP0() YOU_MUST_DOCUMENT_YOUR_PORTS
 #define DOC_IMP(count, ...) DOC_IMP ##count(__VA_ARGS__)
 #define DOC_I(count, ...) DOC_IMP(count,__VA_ARGS__)
-#define DOC(name, ...) name DOC_I(LAST_IMP(__VA_ARGS__), __VA_ARGS__)
+#define DOC(...) DOC_I(LAST_IMP(__VA_ARGS__), __VA_ARGS__)
 
 //XXX Currently unused macro
 #define MAC_EACH_0(mac, x, ...) INSUFFICIENT_ARGUMENTS_PROVIDED_TO_MAC_EACH
@@ -153,7 +153,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
 #define rCentered ":centered\0"
 
 //Misc properties
-#define rDoc(doc) ":documentation\0" STRINGIFY(doc) "\0"
+#define rDoc(doc) ":documentation\0=" doc "\0"
 #define rOpt(numeric,symbolic) rMap(map numeric, symbolic)
 #define rOptions(...) OPTIONS(__VA_ARGS__)
 
