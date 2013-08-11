@@ -135,6 +135,12 @@ template<class T> constexpr T spice(T*t) {return *t;}
         &decltype(spice(rObject::name))::ports, \
         rRecurpCb(name)}
 
+//Technically this is a pointer pointer method...
+#define rRecursp(name, length, ...) \
+    {STRINGIFY(name)"#" STRINGIFY(length) "/", DOC(__VA_ARGS__), \
+        &decltype(spice(rObject::name[0]))::ports, \
+        rRecurspCb(name)}
+
 //{STRINGIFY(name) ":", rProp(internal), NULL, rRecurPtrCb(name)}
 
 //Misc
@@ -256,6 +262,12 @@ template<class T> constexpr T spice(T*t) {return *t;}
     SNIP \
     decltype(spice(rObject::name))::ports.dispatch(msg, data); \
     rBOIL_END
+
+#define rRecurspCb(name) rBOILS_BEGIN \
+    data.obj = obj->name[idx]; \
+    SNIP \
+    decltype(spice(rObject::name[0]))::ports.dispatch(msg, data); \
+    rBOILS_END
 
 #define rActionCb(name) rBOIL_BEGIN obj->name(); rBOIL_END
 #define rActioniCb(name) rBOIL_BEGIN \
