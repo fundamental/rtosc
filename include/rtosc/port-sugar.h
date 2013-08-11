@@ -139,6 +139,8 @@ template<class T> constexpr T spice(T*t) {return *t;}
 
 //Misc
 #define rDummy(name, ...) {STRINIFY(name), rProp(dummy), NULL, [](msg_t, RtData &){}}
+#define rString(name, len, ...) \
+    {STRINGIFY(name) ":s", rMap(length, len) DOC(__VA_ARGS__), NULL, rStringCb(name,len)}
 
 //General property operators
 #define rMap(name, value) ":" STRINGIFY(name) "\0=" STRINGIFY(value) "\0"
@@ -280,6 +282,15 @@ template<class T> constexpr T spice(T*t) {return *t;}
 
 #define rParamsCb(name, length) rBOIL_BEGIN \
     data.reply(loc, "b", length, obj->name); rBOIL_END
+
+#define rStringCb(name, length) rBOIL_BEGIN \
+        if(!strcmp("", args)) {\
+            data.reply(loc, "s", obj->name); \
+        } else { \
+            strncpy(obj->name, rtosc_argument(msg, 0).s, length); \
+            data.broadcast(loc, "s", obj->name);\
+            rChangeCb \
+        } rBOIL_END
 
 
 #endif
