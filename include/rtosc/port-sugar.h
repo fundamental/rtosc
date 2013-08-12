@@ -93,15 +93,15 @@
 
 //Normal parameters
 #define rParam(name, ...) \
-  {STRINGIFY(name) "::c",   DOC(__VA_ARGS__), NULL, rParamCb(name)}
+  {STRINGIFY(name) "::c",  rProp(parameter) DOC(__VA_ARGS__), NULL, rParamCb(name)}
 #define rParamF(name, ...) \
-  {STRINGIFY(name) "::f",  DOC(__VA_ARGS__), NULL, rParamFCb(name)}
+  {STRINGIFY(name) "::f",  rProp(parameter) DOC(__VA_ARGS__), NULL, rParamFCb(name)}
 #define rParamI(name, ...) \
-  {STRINGIFY(name) "::i",   DOC(__VA_ARGS__), NULL, rParamICb(name)}
+  {STRINGIFY(name) "::i",  rProp(parameter) DOC(__VA_ARGS__), NULL, rParamICb(name)}
 #define rToggle(name, ...) \
-  {STRINGIFY(name) "::T:F",DOC(__VA_ARGS__), NULL, rToggleCb(name)}
+  {STRINGIFY(name) "::T:F",rProp(parameter) DOC(__VA_ARGS__), NULL, rToggleCb(name)}
 #define rOption(name, ...) \
-  {STRINGIFY(name) "::i:c",   DOC(__VA_ARGS__), NULL, rOptionCb(name)}
+  {STRINGIFY(name) "::i:c",rProp(parameter) DOC(__VA_ARGS__), NULL, rOptionCb(name)}
 
 //Array operators
 #define rArrayF(name, length, ...) \
