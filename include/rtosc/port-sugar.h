@@ -151,7 +151,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
 //Misc
 #define rDummy(name, ...) {STRINIFY(name), rProp(dummy), NULL, [](msg_t, RtData &){}}
 #define rString(name, len, ...) \
-    {STRINGIFY(name) ":s", rMap(length, len) DOC(__VA_ARGS__), NULL, rStringCb(name,len)}
+    {STRINGIFY(name) "::s", rMap(length, len) DOC(__VA_ARGS__), NULL, rStringCb(name,len)}
 
 //General property operators
 #define rMap(name, value) ":" STRINGIFY(name) "\0=" STRINGIFY(value) "\0"
