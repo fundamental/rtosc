@@ -159,7 +159,7 @@ UndoHistory uh;
 
 float translate(float x, const char *meta);
 
-int undo_redo_handler(int ev)
+int undo_redo_handler(int)
 {
     const bool undo = Fl::event_ctrl() && Fl::event_key() == 'z';
     const bool redo = Fl::event_ctrl() && Fl::event_key() == 'r';

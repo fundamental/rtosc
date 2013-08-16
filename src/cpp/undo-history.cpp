@@ -2,6 +2,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cassert>
+#include <ctime>
 #include <rtosc/rtosc.h>
 #include <rtosc/undo-history.h>
 
@@ -12,6 +13,8 @@ class UndoHistoryImpl
         long history_pos;
         std::function<void(const char*)> cb;
 
+        time_t last_ev_time;
+
         void rewind(const char *msg);
         void replay(const char *msg);
 };
@@ -19,22 +22,44 @@ class UndoHistoryImpl
 UndoHistory::UndoHistory(void)
 {
     impl = new UndoHistoryImpl;
-    impl->history_pos = 0;
+    impl->history_pos  = 0;
+    impl->last_ev_time = 0;
 }
 
 void UndoHistory::recordEvent(const char *msg)
 {
-    //TODO account for when you have traveled back in time.
+    //TODO Properly account for when you have traveled back in time.
     //while this could result in another branch of history, the simple method
     //would be to kill off any future redos when new history is recorded
-    if(impl->history.size() != (unsigned) impl->history_pos)
+    if(impl->history.size() != (unsigned) impl->history_pos) {
         impl->history.resize(impl->history_pos);
+        impl->last_ev_time = 0;
+    }
     
     size_t len = rtosc_message_length(msg, -1);
     char *data = new char[len];
-    memcpy(data, msg, len);
-    impl->history.push_back(data);
-    impl->history_pos++;
+    if(difftime(impl->last_ev_time, time(NULL)) < 2 && // 2 second threshold
+            !impl->history.empty() &&
+            !strcmp(rtosc_argument(msg,0).s,
+                    rtosc_argument(impl->history[impl->history.size()-1],0).s)) {
+        //We can splice events together, merging them into one event
+        rtosc_arg_t args[3];
+        args[0] = rtosc_argument(msg, 0);
+        args[1] = rtosc_argument(impl->history[impl->history.size()-1],1);
+        args[2] = rtosc_argument(msg, 2);
+
+        rtosc_amessage(data, len, msg, rtosc_argument_string(msg), args);
+
+        delete [] impl->history[impl->history.size()-1];
+        impl->history[impl->history.size()-1] = data;
+        impl->last_ev_time = time(NULL);
+    } else {
+        memcpy(data, msg, len);
+        impl->last_ev_time = time(NULL);
+        impl->history.push_back(data);
+        impl->history_pos++;
+    }
+
 }
 
 void UndoHistory::showHistory(void) const
@@ -66,7 +91,8 @@ void UndoHistoryImpl::replay(const char *msg)
             rtosc_argument_string(msg)+2,
             &arg);
     
-    cb(tmp);
+    if(len)
+        cb(tmp);
 }
 
 void UndoHistory::seekHistory(int distance)
