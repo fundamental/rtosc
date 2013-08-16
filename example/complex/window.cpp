@@ -10,6 +10,7 @@
 #include "Fl_Osc_Interface.H"
 
 #include <rtosc/thread-link.h>
+#include <rtosc/undo-history.h>
 
 #include <string>
 #include <cstring>
@@ -154,8 +155,32 @@ void traverse_tree(const Ports *p)
 }
 
 extern Ports *root_ports;
+UndoHistory uh;
 
 float translate(float x, const char *meta);
+
+int undo_redo_handler(int ev)
+{
+    const bool undo = Fl::event_ctrl() && Fl::event_key() == 'z';
+    const bool redo = Fl::event_ctrl() && Fl::event_key() == 'r';
+    if(undo) {
+        printf("Trying to undo an action\n");
+        uToB.write("/echo", "s", "/UNDO_DISABLE");
+        uh.seekHistory(-1);
+        uToB.write("/echo", "s", "/UNDO_ENABLE");
+    } else if(redo) {
+        printf("Trying to redo an action\n");
+        uToB.write("/echo", "s", "/UNDO_DISABLE");
+        uh.seekHistory(+1);
+        uToB.write("/echo", "s", "/UNDO_ENABLE");
+    }
+    return undo || redo;
+}
+
+void undo_cb(const char *str)
+{
+    uToB.raw_write(str);
+}
 
 struct Synth_Window : public Fl_Double_Window, public Fl_Osc_Pane
 {
@@ -186,6 +211,9 @@ struct Synth_Window : public Fl_Double_Window, public Fl_Osc_Pane
         end();
 
         resizable(new Fl_Box(0,0,400,400));
+
+        Fl::add_handler(undo_redo_handler);
+        uh.setCallback(undo_cb);
     }
     ~Synth_Window(void)
     {}
@@ -210,6 +238,7 @@ int main()
     puts(">>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
 
+    bool ignore_undo = false;
     while(1)//win->shown())
     {
         while(bToU.hasNext()) {
@@ -225,6 +254,12 @@ int main()
                         break;
                 }
             }
+            if(!strcmp("undo_change", msg) && !ignore_undo)
+                uh.recordEvent(msg);
+            if(!strcmp("/UNDO_DISABLE", msg))
+                ignore_undo = true;
+            if(!strcmp("/UNDO_ENABLE", msg))
+                ignore_undo = false;
         }
         Fl::wait(0.01f);
     }

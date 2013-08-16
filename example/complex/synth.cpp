@@ -92,6 +92,10 @@ rtosc::Ports Synth::ports = {
     rToggle(gate, "Note enable"),
     midi.registerPort(),
     midi.learnPort(),
+    {"echo:s", ":internal\0", NULL, [](const char *msg, RtData &d)
+        {
+            d.reply(rtosc_argument(msg, 0).s);
+        }},
     {"save", ":internal\0", NULL, [](const char *, RtData &data)
         {
         fprintf(stderr, "saving");
