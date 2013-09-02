@@ -243,6 +243,10 @@ Ports::~Ports()
     delete [] impl;
 }
 
+#if !defined(__GNUC__)
+#define __builtin_expect(a,b) a
+#endif
+
 void Ports::dispatch(const char *m, rtosc::RtData &d) const
 {
     void *obj = d.obj;
@@ -258,14 +262,14 @@ void Ports::dispatch(const char *m, rtosc::RtData &d) const
         //TODO this function is certainly buggy at the moment, some tests
         //are needed to make it clean
         //XXX buffer_size is not properly handled yet
-        if(d.loc[0] == 0) {
+        if(__builtin_expect(d.loc[0] == 0, 0)) {
             memset(d.loc, 0, d.loc_size);
             d.loc[0] = '/';
         }
 
         uint64_t mask = 0xffffffffffffffff;
         bool fast_path = (m[0] && m[1] && m[2] && m[3]);
-        if(use_mask && fast_path) {
+        if(use_mask && __builtin_expect(fast_path, 1)) {
             if(unambigious)
                 mask = (m[0]==mask_chars[0] ? masks[0] : ~masks[0])
                      & (m[1]==mask_chars[1] ? masks[2] : ~masks[2])
@@ -287,7 +291,7 @@ void Ports::dispatch(const char *m, rtosc::RtData &d) const
             mask >>= 16;
         }
         for(; i<elms; ++i, mask >>= 1) {
-            if(!(mask&1) || !impl[i].match(m, args, fast_path))
+            if(__builtin_expect(!(mask&1) || !impl[i].match(m, args, fast_path), 1))
                 continue;
 
             const Port &port = ports[i];
