@@ -72,7 +72,7 @@ int main()
     rt.matches = 0;
     int len = rtosc_message(message_buff, 128, "b", "c", 7);
     for(int i=0; i<len; ++i)
-        printf("%hx",message_buff[i]);
+        printf("%hhx",message_buff[i]);
     printf("\n");
     ports.dispatch(message_buff, rt);
     assert(rt.matches == 1);
