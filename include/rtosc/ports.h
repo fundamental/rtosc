@@ -130,11 +130,13 @@ struct Ports
     auto end() const -> decltype(ports.end()) {return ports.end();}
 
     /**Forwards to builtin container*/
+    auto size() const -> decltype(ports.size()) {return ports.size();}
+
+    /**Forwards to builtin container*/
     const Port &operator[](unsigned i) const {return ports[i];}
 
-    Ports(std::initializer_list<Port> l)
-        :ports(l)
-    {}
+    Ports(std::initializer_list<Port> l);
+    ~Ports(void);
 
     Ports(const Ports&) = delete;
 
@@ -157,6 +159,15 @@ struct Ports
 
     /** Find the best match for a given path or NULL*/
     const Port *apropos(const char *path) const;
+
+    private:
+    //Performance hacks
+    class Port_Matcher *impl;
+    bool use_mask;
+    char mask_chars[4];
+    uint64_t masks[8];
+    bool unambigious;
+    unsigned elms;
 };
 
 

@@ -42,7 +42,7 @@ Port::MetaIterator::MetaIterator(const char *str)
 {
     metaiterator_advance(title, value);
 }
-            
+
 Port::MetaIterator& Port::MetaIterator::operator++(void)
 {
     if(!title || !*title) {
@@ -107,17 +107,153 @@ const char *Port::MetaContainer::operator[](const char *str) const
             return x.value;
     return NULL;
 }
+//Match the arg string or fail
+inline bool arg_matcher(const char *pattern, const char *args)
+{
+    //match anything if now arg restriction is present (ie the ':')
+    if(*pattern++ != ':')
+        return true;
+
+    const char *arg_str = args;
+    bool      arg_match = *pattern || *pattern == *arg_str;
+
+    while(*pattern && *pattern != ':')
+        arg_match &= (*pattern++==*arg_str++);
+
+    if(*pattern==':') {
+        if(arg_match && !*arg_str)
+            return true;
+        else
+            return arg_matcher(pattern, args); //retry
+    }
+
+    return arg_match;
+}
+
+inline bool scmp(const char *a, const char *b)
+{
+    while(*a && *a == *b) a++, b++;
+    return a[0] == b[0];
+}
+
+namespace rtosc{
+class Port_Matcher
+{
+    public:
+
+        const char *pattern;
+
+        bool fast;
+        char literal[128];
+        unsigned literal_len;
+        char args[128];
+
+        void detectFast(void)
+        {
+            const char *pat = pattern;
+            if(!index(pat, '#') && !index(pat, '/')) {
+                char *ptr = literal;
+                while(*pat && *pat != ':')
+                    *ptr++ = *pat++;
+                *ptr = 0;
+                literal_len = strlen(literal);
+                *args = 0;
+                strcpy(args, pat);
+                fast = true;
+            } else
+                fast = false;
+        }
+
+        inline bool match(const char *path, const char *args_, bool long_enough) const
+        {
+            if(fast && long_enough) {
+                return scmp(literal+4, path+4) && arg_matcher(args, args_);
+            } else if(fast) {
+                return scmp(literal, path) && arg_matcher(args, args_);
+            } else //no precompilation was done...
+                return rtosc_match(pattern, path);
+        }
+};
+}
+
+Ports::Ports(std::initializer_list<Port> l)
+    :ports(l), impl(new Port_Matcher[ports.size()])
+{
+    unsigned nfast = 0;
+    for(unsigned i=0; i<ports.size(); ++i) {
+        impl[i].pattern = ports[i].name;
+        impl[i].detectFast();
+        nfast += impl[i].fast;
+    }
+
+    elms = ports.size();
+    unambigious = true;
+
+    if(16 < ports.size() && ports.size() <= 64) {
+        use_mask = true;
+
+        //if ANY ambigious character was encountered in a given port
+        bool special[64];
+        char freq[255];//character freqeuency table
+        memset(special, 0, 64);
+
+        for(int i=0; i<4; ++i) {
+            memset(freq, 0, 255);
+            for(unsigned j=0; j<ports.size(); ++j) {
+                if(strlen(ports[j].name) < (size_t)i || special[j])
+                    continue;
+                if(ports[j].name[i] == ':' || ports[j].name[i] == '#') {
+                    special[j] = true;
+                    unambigious = false;
+                    continue;
+                }
+                freq[(int)ports[j].name[i]]++;
+            }
+
+            //Find the most frequent character which *should* make the best
+            //discriminting function under a _reasonable_ set of assumptions
+            char best=0;
+            char votes=0;
+            for(int j=0; j<255; ++j) {
+                if(votes < freq[j]) {
+                    best  = j;
+                    votes = freq[j];
+                }
+            }
+
+            mask_chars[i] = best;
+            //Generate the masks depending on the results of the comparison
+            masks[2*i]   = 0x0; //true mask
+            masks[2*i+1] = 0x0; //false mask
+            for(unsigned j=0; j < ports.size(); ++j) {
+                bool tbit = strlen(ports[j].name) < (size_t)i || special[j] ||
+                    ports[j].name[i] == best;
+                bool fbit = strlen(ports[j].name) < (size_t)i || special[j] ||
+                    ports[j].name[i] != best;
+                masks[2*i]   |=  (tbit<<j);
+                masks[2*i+1] |=  (fbit<<j);
+
+            }
+        }
+    }
+}
+
+Ports::~Ports()
+{
+    delete [] impl;
+}
 
 void Ports::dispatch(const char *m, rtosc::RtData &d) const
 {
     void *obj = d.obj;
-    //simple case [very very cheap]
+    const char *args = rtosc_argument_string(m);
+    //simple case
     if(!d.loc || !d.loc_size) {
         for(const Port &port: ports) {
             if(rtosc_match(port.name,m))
                 d.port = &port, port.cb(m,d), d.obj = obj;
         }
-    } else { //somewhat cheap
+    } else {
 
         //TODO this function is certainly buggy at the moment, some tests
         //are needed to make it clean
@@ -127,13 +263,34 @@ void Ports::dispatch(const char *m, rtosc::RtData &d) const
             d.loc[0] = '/';
         }
 
+        uint64_t mask = 0xffffffffffffffff;
+        bool fast_path = (m[0] && m[1] && m[2] && m[3]);
+        if(use_mask && fast_path) {
+            if(unambigious)
+                mask = (m[0]==mask_chars[0] ? masks[0] : ~masks[0])
+                     & (m[1]==mask_chars[1] ? masks[2] : ~masks[2])
+                     & (m[2]==mask_chars[2] ? masks[4] : ~masks[4])
+                     & (m[3]==mask_chars[3] ? masks[6] : ~masks[6]);
+            else
+                mask = (m[0]==mask_chars[0] ? masks[0] : masks[1])
+                     & (m[1]==mask_chars[1] ? masks[2] : masks[3])
+                     & (m[2]==mask_chars[2] ? masks[4] : masks[5])
+                     & (m[3]==mask_chars[3] ? masks[6] : masks[7]);
+        }
+
         char *old_end = d.loc;
         while(*old_end) ++old_end;
 
-        for(const Port &port: ports) {
-            if(!rtosc_match(port.name, m))
+        unsigned i=0;
+        if(!(mask&0xffff)) { //skip ahead when possible
+            i = 16;
+            mask >>= 16;
+        }
+        for(; i<elms; ++i, mask >>= 1) {
+            if(!(mask&1) || !impl[i].match(m, args, fast_path))
                 continue;
 
+            const Port &port = ports[i];
             if(!port.ports)
                 d.matches++;
 
