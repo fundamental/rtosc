@@ -167,7 +167,7 @@ class Port_Matcher
         inline bool match(const char *path, const char *args_, bool long_enough) const
         {
             if(fast && long_enough) {
-                return scmp(literal+4, path+4) && arg_matcher(args, args_);
+                return (*(int32_t*)literal)==(*(int32_t*)path) && scmp(literal+4, path+4) && arg_matcher(args, args_);
             } else if(fast) {
                 return scmp(literal, path) && arg_matcher(args, args_);
             } else //no precompilation was done...
