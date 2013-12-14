@@ -7,11 +7,11 @@
 #include <cassert>
 #include <sstream>
 
-Fl_Osc_Button::Fl_Osc_Button(int X, int Y, int W, int H, string n,
+Fl_Osc_Button::Fl_Osc_Button(int X, int Y, int W, int H, const char *n,
         const char *m)
     :Fl_Button(X,Y,W,H), Fl_Osc_Widget(n,m)
 {
-    label(n.c_str());
+    label(n);
     callback(Fl_Osc_Button::_cb);
 
     Fl_Osc_Pane *pane = dynamic_cast<Fl_Osc_Pane*>(parent());

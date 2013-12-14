@@ -33,6 +33,8 @@ class rtosc::MidiTable_Impl
 //    :ch(RTOSC_INVALID_MIDI),ctl(RTOSC_INVALID_MIDI)
 //{}
 
+static void black_hole3 (const char *, const char *, const char *, int, int)
+{}
 static void black_hole2(const char *a, const char *b)
 {printf("'%s' and '%s'\n", a,b);}
 static void black_hole1(const char *a)
@@ -40,7 +42,7 @@ static void black_hole1(const char *a)
 
 MidiTable::MidiTable(Ports &_dispatch_root)
 :dispatch_root(_dispatch_root), unhandled_ch(-1), unhandled_ctl(-1),
-    error_cb(black_hole2), event_cb(black_hole1)
+    error_cb(black_hole2), event_cb(black_hole1), modify_cb(black_hole3)
 {
     impl = new MidiTable_Impl(128,128);
     unhandled_path = new char[128];
@@ -109,6 +111,7 @@ void MidiTable::addElm(uint8_t ch, uint8_t ctl, const char *path)
             e->ctl = RTOSC_INVALID_MIDI;
             error_cb("Failed to read metadata", path);
         }
+        modify_cb("REPLACE", path, e->conversion, (int) ch, (int) ctl);
         return;
     }
 
@@ -122,6 +125,7 @@ void MidiTable::addElm(uint8_t ch, uint8_t ctl, const char *path)
                 e.ctl = RTOSC_INVALID_MIDI;
                 error_cb("Failed to read metadata", path);
             }
+            modify_cb("ADD", path, e.conversion, (int) ch, (int) ctl);
             return;
         }
     }

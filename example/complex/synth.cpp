@@ -98,14 +98,14 @@ rtosc::Ports Synth::ports = {
         }},
     {"save", ":internal\0", NULL, [](const char *, RtData &data)
         {
-        fprintf(stderr, "saving");
+        fprintf(stderr, "saving...\n");
             serial_size = subtree_serialize(serial, sizeof(serial),
                     data.obj, &Synth::ports);
         }},
     {"load", ":internal\0", NULL, [](const char *, RtData &data)
         {
             memset(data.loc, 0, data.loc_size);
-        fprintf(stderr, "loading");
+            fprintf(stderr, "loading...\n");
             subtree_deserialize(serial, serial_size, data.obj, &Synth::ports, data);
         }},
 };
@@ -132,6 +132,11 @@ void event_cb(msg_t m)
         printf("%s -> %d\n", m, rtosc_argument(m,0).i);
 }
 
+void modify_cb(const char *, const char *path, const char *, int ch, int cc)
+{
+    bToU.write("/midi/add", "sii", path, ch, cc);
+}
+
 #include <err.h>
 void synth_init(void)
 {
@@ -139,7 +144,8 @@ void synth_init(void)
     printf("'%d'\n", Adsr::ports["dv"]->metadata[0]);
     if(strlen(Adsr::ports["dv"]->metadata)<3)
         errx(1,"bad metadata");
-    midi.event_cb = event_cb;
+    midi.event_cb  = event_cb;
+    midi.modify_cb = modify_cb;
 }
 
 void process_control(unsigned char ctl[3])

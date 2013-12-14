@@ -2,6 +2,7 @@
 #include <rtosc/ports.h>
 #include "Fl_Osc_Interface.H"
 #include <FL/Fl_Tree.H>
+#include <string>
 
 class Fl_Osc_Tree:Fl_Tree
 {

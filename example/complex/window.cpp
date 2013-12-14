@@ -2,6 +2,7 @@
 #include <FL/Fl_Double_Window.H>
 #include <FL/Fl_Box.H>
 #include <FL/fl_draw.H>
+#include "Fl_Osc_View.H"
 #include "Fl_Osc_Dial.H"
 #include "Fl_Osc_Button.H"
 #include "Fl_Osc_Slider.H"
@@ -224,14 +225,23 @@ void audio_init(void);
 int main()
 {
     audio_init();
+    //Fl::foreground(0xff,0xff,0xff);
+    //Fl::background(0xff,0xff,0xff);
+    //Fl::background2(0x00,0x00,0x00);
     Fl_Window *win = new Synth_Window();
+    //Fl::foreground(0xff,0xff,0xff);
+    //Fl::background(0xff,0xff,0xff);
+    //Fl::background2(0x00,0x00,0x00);
     win->show();
 
-    Fl_Window *midi_win = new Fl_Double_Window(400, 400, "Midi connections");
-    Fl_Osc_Tree *tree   = new Fl_Osc_Tree(0,0,400,400);
-    tree->root_ports    = root_ports;
-    tree->osc           = &OSC_API;
+    Fl_Osc_View *osc_win = new Fl_Osc_View();
+    Fl_Window *midi_win  = new Fl_Double_Window(400, 400, "Midi connections");
+    Fl_Osc_Tree *tree    = new Fl_Osc_Tree(0,0,400,400);
+    tree->root_ports     = root_ports;
+    tree->osc            = &OSC_API;
+    osc_win->populate(root_ports);
     midi_win->show();
+    osc_win->show();
     //Traverse possible ports
     puts("<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     traverse_tree(root_ports);
@@ -256,6 +266,14 @@ int main()
             }
             if(!strcmp("undo_change", msg) && !ignore_undo)
                 uh.recordEvent(msg);
+            if(!strcmp("/midi/add", msg)) {
+                osc_win->add_midi_cc(rtosc_argument(msg,0).s,
+                                     rtosc_argument(msg,1).i,
+                                     rtosc_argument(msg,2).i);
+                printf("MIDI ADD '%s' '%d' '%d'\n", rtosc_argument(msg,0).s,
+                                     rtosc_argument(msg,1).i,
+                                     rtosc_argument(msg,2).i);
+            }
             if(!strcmp("/UNDO_DISABLE", msg))
                 ignore_undo = true;
             if(!strcmp("/UNDO_ENABLE", msg))

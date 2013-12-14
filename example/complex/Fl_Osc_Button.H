@@ -9,7 +9,7 @@ class Fl_Osc_Button:public Fl_Button, Fl_Osc_Widget
 {
 
     public:
-        Fl_Osc_Button(int X, int Y, int W, int H, string name,
+        Fl_Osc_Button(int X, int Y, int W, int H, const char *name,
                 const char *metadata);
 
         virtual ~Fl_Osc_Button(void);

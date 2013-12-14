@@ -56,6 +56,7 @@ class MidiTable
 
         void (*error_cb)(const char *, const char *);
         void (*event_cb)(const char *);
+        void (*modify_cb)(const char *, const char *, const char *, int, int);
 
         MidiTable(Ports &_dispatch_root);
 
