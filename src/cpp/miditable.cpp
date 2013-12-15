@@ -41,7 +41,7 @@ static void black_hole1(const char *a)
 {printf("'%s'\n", a);}
 
 MidiTable::MidiTable(Ports &_dispatch_root)
-:dispatch_root(_dispatch_root), unhandled_ch(-1), unhandled_ctl(-1),
+:dispatch_root(_dispatch_root), unhandled_ch(RTOSC_INVALID_MIDI), unhandled_ctl(RTOSC_INVALID_MIDI),
     error_cb(black_hole2), event_cb(black_hole1), modify_cb(black_hole3)
 {
     impl = new MidiTable_Impl(128,128);
@@ -146,8 +146,22 @@ void MidiTable::learn(const char *s)
         error_cb("String too long", s);
         return;
     }
+    clear_entry(s);
     strcpy(unhandled_path, s);
     check_learn();
+}
+
+void MidiTable::clear_entry(const char *s)
+{
+    for(unsigned i=0; i<impl->elms; ++i) {
+        if(!strcmp(impl->table[i].path, s)) {
+            //Invalidate
+            impl->table[i].ch  = RTOSC_INVALID_MIDI;
+            impl->table[i].ctl = RTOSC_INVALID_MIDI;
+            modify_cb("DEL", s, "", -1, -1);
+            break;
+        }
+    }
 }
 
 void MidiTable::process(uint8_t ch, uint8_t ctl, uint8_t val)
@@ -187,6 +201,14 @@ Port MidiTable::learnPort(void)
 {
     return Port{"learn:s", "", 0, [this](msg_t m, RtData&){
             this->learn(rtosc_argument(m,0).s);
+            }};
+
+}
+
+Port MidiTable::unlearnPort(void)
+{
+    return Port{"unlearn:s", "", 0, [this](msg_t m, RtData&){
+            this->clear_entry(rtosc_argument(m,0).s);
             }};
 
 }

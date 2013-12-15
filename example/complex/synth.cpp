@@ -92,6 +92,7 @@ rtosc::Ports Synth::ports = {
     rToggle(gate, "Note enable"),
     midi.registerPort(),
     midi.learnPort(),
+    midi.unlearnPort(),
     {"echo:s", ":internal\0", NULL, [](const char *msg, RtData &d)
         {
             d.reply(rtosc_argument(msg, 0).s);
@@ -132,9 +133,12 @@ void event_cb(msg_t m)
         printf("%s -> %d\n", m, rtosc_argument(m,0).i);
 }
 
-void modify_cb(const char *, const char *path, const char *, int ch, int cc)
+void modify_cb(const char *action, const char *path, const char *, int ch, int cc)
 {
-    bToU.write("/midi/add", "sii", path, ch, cc);
+    if(!strcmp(action, "ADD") || !strcmp(action, "REPLACE"))
+        bToU.write("/midi/add", "sii", path, ch, cc);
+    else if(!strcmp(action, "DEL"))
+        bToU.write("/midi/remove", "s", path);
 }
 
 #include <err.h>

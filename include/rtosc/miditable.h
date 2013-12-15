@@ -74,9 +74,12 @@ class MidiTable
 
         void learn(const char *s);
 
+        void clear_entry(const char *s);
+
         void process(uint8_t ch, uint8_t ctl, uint8_t val);
 
         Port learnPort(void);
+        Port unlearnPort(void);
         Port registerPort(void);
 
         //TODO generalize to an addScalingFunction() system

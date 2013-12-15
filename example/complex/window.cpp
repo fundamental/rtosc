@@ -235,6 +235,7 @@ int main()
     win->show();
 
     Fl_Osc_View *osc_win = new Fl_Osc_View();
+    osc_win->osc         = &OSC_API;
     Fl_Window *midi_win  = new Fl_Double_Window(400, 400, "Midi connections");
     Fl_Osc_Tree *tree    = new Fl_Osc_Tree(0,0,400,400);
     tree->root_ports     = root_ports;
@@ -273,8 +274,9 @@ int main()
                 printf("MIDI ADD '%s' '%d' '%d'\n", rtosc_argument(msg,0).s,
                                      rtosc_argument(msg,1).i,
                                      rtosc_argument(msg,2).i);
-            }
-            if(!strcmp("/UNDO_DISABLE", msg))
+            } if(!strcmp("/midi/remove", msg)) {
+                osc_win->remove_midi_cc(rtosc_argument(msg,0).s);
+            } if(!strcmp("/UNDO_DISABLE", msg))
                 ignore_undo = true;
             if(!strcmp("/UNDO_ENABLE", msg))
                 ignore_undo = false;

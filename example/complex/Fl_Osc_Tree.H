@@ -47,7 +47,7 @@ class Fl_Osc_Tree:Fl_Tree
                 char *colon = index(pathname, ':');
                 if(colon) {
                     *colon = 0;
-                    t->osc->writeValue("/learn", string(pathname));
+                    t->osc->writeValue("/learn", std::string(pathname));
                 }
             }
 
@@ -66,7 +66,7 @@ class Fl_Osc_Tree:Fl_Tree
                     printf("handling '%s'\n", port.name);
                     const bool subnodes   = index(port.name, '/');
                     const bool enumerated = index(port.name, '#');
-                    const string path = std::string(pathname)+"/"+port.name;
+                    const std::string path = std::string(pathname)+"/"+port.name;
                     if(!enumerated) {
                         t->sprout(path);
                     } else {

@@ -2,10 +2,13 @@
 #include <FL/fl_draw.H>
 #include <FL/Fl_Double_Window.H>
 #include <FL/Fl_Table_Row.H>
+#include <FL/Fl_Menu.H>
+#include "Fl_Osc_Interface.H"
 #include <rtosc/ports.h>
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <cassert>
 
 #define MAX_ROWS 100
 #define MAX_COLS 100
@@ -34,7 +37,7 @@ class PortTable: public Fl_Table_Row
     void DrawHeader(const char *s, int X, int Y, int W, int H, int COL) {
         if(COL != -1 && fl_width(s) + 10 > col_width(COL)) {
             col_width(COL,fl_width(s)+10);
-            damage();
+            redraw();
         }
         fl_push_clip(X,Y,W,H);
         fl_draw_box(FL_FLAT_BOX, X,Y,W,H, row_header_color());
@@ -104,7 +107,7 @@ class PortTable: public Fl_Table_Row
                     if(COL == 0) {
                         if(fl_width(ports[ROW].name.c_str()) + 10 > col_width(0)) {//might be slower than need be
                             col_width(0,fl_width(ports[ROW].name.c_str())+10);
-                            damage();
+                            redraw();
                         }
                         fl_draw(ports[ROW].name.c_str(), X,Y,W,H, FL_ALIGN_LEFT);
                     } else if(COL == 1) {
@@ -128,18 +131,37 @@ class PortTable: public Fl_Table_Row
         }
 };
 
+static void Delete_CB(Fl_Widget *w, void *v);
+
+static void osc_view_cb(Fl_Widget *w, void *v)
+{
+    (void) v;
+    PortTable &p = *(PortTable*)w;
+    int row_top, col_left, row_bot, col_right;
+    p.get_selection(row_top, col_left, row_bot, col_right);
+
+    if(row_top == row_bot && row_top != -1 && Fl::event_button() == 3)
+    {
+        Fl_Menu_Item rclick_menu[] = {
+            { "Delete Mapping",   0, Delete_CB,  (void*)v},
+            { 0 }
+        };
+        const Fl_Menu_Item *m = rclick_menu->popup(Fl::event_x(), Fl::event_y(), 0, 0, 0);
+        m->do_callback(0, m->user_data());
+    }
+}
 
 class Fl_Osc_View: public Fl_Double_Window
 {
-    PortTable *table;
-
     public:
+    PortTable *table;
     Fl_Osc_View(void)
-        :Fl_Double_Window(400,400,"View of Osc Activity")
+        :Fl_Double_Window(400,400,"View of Osc Activity"), osc(NULL)
     {
         table = new PortTable(0,0,400,400);
         box(FL_FLAT_BOX);
         resizable(table);
+        table->callback(osc_view_cb, this);
         end();
     }
 
@@ -157,7 +179,7 @@ class Fl_Osc_View: public Fl_Double_Window
                 });
         std::sort(table->ports.begin(), table->ports.end());
         table->rows(table->ports.size());
-        table->damage();
+        table->redraw();
     }
 
     void add_midi_cc(const char *path, int chan, int cc)
@@ -168,6 +190,27 @@ class Fl_Osc_View: public Fl_Double_Window
                 p.CC   = cc;
             }
         }
-        table->damage();
+        table->redraw();
     }
+
+    void active_delete(std::string path)
+    {
+        osc->writeValue("/unlearn", path);
+    }
+
+    void remove_midi_cc(const char *path)
+    {
+        add_midi_cc(path, -1, -1);
+    }
+
+    Fl_Osc_Interface *osc;
 };
+
+static void Delete_CB(Fl_Widget *w, void *v_)
+{
+    Fl_Osc_View &v = *(Fl_Osc_View*)v_;
+    int row_top, col_left, row_bot, col_right;
+    v.table->get_selection(row_top, col_left, row_bot, col_right);
+    assert(row_top == row_bot && row_top != -1);
+    v.active_delete(v.table->ports[row_top].name);
+}
