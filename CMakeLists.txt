@@ -5,6 +5,8 @@ set(VERSION_MAJOR 0)
 set(VERSION_MINOR 1)
 set(VERSION_PATCH 0)
 
+include(GNUInstallDirs)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 if(NOT WIN32)
     set(CMAKE_C_FLAGS "-O2 -std=c99 -Wall -Wextra")
@@ -125,7 +127,7 @@ if(PKG_CONFIG_FOUND)
     configure_file(librtosc.pc.cmake
         ${CMAKE_SOURCE_DIR}/librtosc.pc @ONLY)
     install(FILES ${CMAKE_SOURCE_DIR}/librtosc.pc
-        DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig/")
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig/")
 endif()
 install(FILES include/rtosc/rtosc.h
     include/rtosc/thread-link.h
@@ -136,7 +138,7 @@ install(FILES include/rtosc/rtosc.h
     include/rtosc/subtree-serialize.h
     DESTINATION include/rtosc)
 install(TARGETS rtosc rtosc-cpp
-    DESTINATION lib)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 
 #Describe overall configuration
