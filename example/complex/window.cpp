@@ -8,6 +8,7 @@
 #include "Fl_Osc_Slider.H"
 #include "Fl_Osc_Pane.H"
 #include "Fl_Osc_Tree.H"
+#include "Fl_Undo_History.h"
 #include "Fl_Osc_Interface.H"
 
 #include <rtosc/thread-link.h>
@@ -178,15 +179,19 @@ int undo_redo_handler(int)
     return undo || redo;
 }
 
+bool uh_damage = false;
 void undo_cb(const char *str)
 {
+    uToB.write("/echo", "s", "/UNDO_DISABLE");
     uToB.raw_write(str);
+    uToB.write("/echo", "s", "/UNDO_ENABLE");
+    uh_damage = true;
 }
 
 struct Synth_Window : public Fl_Double_Window, public Fl_Osc_Pane
 {
     Synth_Window(void)
-        :Fl_Double_Window(400,700, "RT-OSC Test Synth")
+        :Fl_Double_Window(800,700, "RT-OSC Test Synth")
     {
         osc       = &OSC_API;
         pane_name = "/";
@@ -209,6 +214,9 @@ struct Synth_Window : public Fl_Double_Window, public Fl_Osc_Pane
         Fl_Button *load = new Fl_Osc_Button(200,550, 400, 600, "load","");
         load->label("load");
 
+        undo = new Fl_Undo_History(400,0,700,400);
+        undo->init(uh);
+
         end();
 
         resizable(new Fl_Box(0,0,400,400));
@@ -218,6 +226,7 @@ struct Synth_Window : public Fl_Double_Window, public Fl_Osc_Pane
     }
     ~Synth_Window(void)
     {}
+    Fl_Undo_History *undo;
 };
 
 
@@ -252,6 +261,11 @@ int main()
     bool ignore_undo = false;
     while(1)//win->shown())
     {
+        if(uh_damage) {
+            ((Synth_Window*)win)->undo->totalRefresh();
+            uh_damage = false;
+        }
+
         while(bToU.hasNext()) {
             const char *msg = bToU.read();
             printf("handling a '%s'\n", msg);
@@ -265,9 +279,10 @@ int main()
                         break;
                 }
             }
-            if(!strcmp("undo_change", msg) && !ignore_undo)
+            if(!strcmp("undo_change", msg) && !ignore_undo) {
                 uh.recordEvent(msg);
-            if(!strcmp("/midi/add", msg)) {
+                ((Synth_Window*)win)->undo->totalRefresh();
+            } if(!strcmp("/midi/add", msg)) {
                 osc_win->add_midi_cc(rtosc_argument(msg,0).s,
                                      rtosc_argument(msg,1).i,
                                      rtosc_argument(msg,2).i);

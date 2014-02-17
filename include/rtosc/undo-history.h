@@ -1,3 +1,4 @@
+#pragma once
 #include <functional>
 
 /**
@@ -19,6 +20,10 @@ class UndoHistory
         //Seek to another point in history relative to the current one
         //Negative values mean undo, positive values mean redo
         void seekHistory(int distance);
+
+        unsigned getPos(void) const;
+        const char *getHistory(int i) const;
+        size_t size(void) const;
 
         void setCallback(std::function<void(const char*)> cb);
     private:

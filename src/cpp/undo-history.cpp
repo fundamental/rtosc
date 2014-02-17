@@ -121,6 +121,21 @@ void UndoHistory::seekHistory(int distance)
             impl->replay(impl->history[impl->history_pos++]);
 }
 
+unsigned UndoHistory::getPos(void) const
+{
+    return impl->history_pos;
+}
+
+const char *UndoHistory::getHistory(int i) const
+{
+    return impl->history[i];
+}
+
+size_t UndoHistory::size() const
+{
+    return impl->history.size();
+}
+
 void UndoHistory::setCallback(std::function<void(const char*)> cb)
 {
     impl->cb = cb;

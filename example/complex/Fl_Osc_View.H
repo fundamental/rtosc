@@ -147,7 +147,8 @@ static void osc_view_cb(Fl_Widget *w, void *v)
             { 0 }
         };
         const Fl_Menu_Item *m = rclick_menu->popup(Fl::event_x(), Fl::event_y(), 0, 0, 0);
-        m->do_callback(0, m->user_data());
+        if(m)//yeah, somehow this can be null...
+            m->do_callback(0, m->user_data());
     }
 }
 
