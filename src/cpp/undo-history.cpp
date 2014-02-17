@@ -38,7 +38,7 @@ void UndoHistory::recordEvent(const char *msg)
     
     size_t len = rtosc_message_length(msg, -1);
     char *data = new char[len];
-    if(difftime(impl->last_ev_time, time(NULL)) < 2 && // 2 second threshold
+    if(difftime(time(NULL), impl->last_ev_time) < 2 && // 2 second threshold
             !impl->history.empty() &&
             !strcmp(rtosc_argument(msg,0).s,
                     rtosc_argument(impl->history[impl->history.size()-1],0).s)) {
