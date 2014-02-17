@@ -41,18 +41,13 @@ class Fl_Undo_History:public Fl_Browser
                 add(buf);
             }
             select(hist->getPos(), 1);
-            
+
         }
 
         int handle(int e) {
             int val = Fl_Browser::handle(e);
-            int choice = hist->getPos();
-            for(int i=0; i<this->size(); ++i) {
-                if(selected(i)) {
-                    choice = i;
-                    break;
-                }
-            }
+            int choice = value();
+            select_only(selection());
 
             if(choice != hist->getPos()) {
                 printf("seek(%d)\n",choice-hist->getPos()); 
