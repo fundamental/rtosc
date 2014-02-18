@@ -149,7 +149,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
 //{STRINGIFY(name) ":", rProp(internal), NULL, rRecurPtrCb(name)}
 
 //Misc
-#define rDummy(name, ...) {STRINIFY(name), rProp(dummy), NULL, [](msg_t, RtData &){}}
+#define rDummy(name, ...) {STRINIFY(name), rProp(dummy), NULL, [](msg_t, rtosc::RtData &){}}
 #define rString(name, len, ...) \
     {STRINGIFY(name) "::s", rMap(length, len) DOC(__VA_ARGS__), NULL, rStringCb(name,len)}
 
@@ -172,7 +172,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
 
 
 //Callback Implementations
-#define rBOIL_BEGIN [](const char *msg, RtData &data) { \
+#define rBOIL_BEGIN [](const char *msg, rtosc::RtData &data) { \
         (void) msg; (void) data; \
         rObject *obj = (rObject*) data.obj;(void) obj; \
         const char *args = rtosc_argument_string(msg); (void) args;\

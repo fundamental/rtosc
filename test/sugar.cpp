@@ -1,7 +1,6 @@
 #include <rtosc/ports.h>
 #include <rtosc/port-sugar.h>
 
-using namespace rtosc;
 
 class Object
 {
@@ -13,7 +12,7 @@ class Object
 #define rObject Object
 
 
-Ports p = {
+rtosc::Ports p = {
     rOption(foo, rOpt(0,red) rOpt(1,blue) rOpt(2,green) rOpt(3,teal), "various options"),
     rOption(bar, rOptions(red,blue,green,teal), "various options")
 };
