@@ -93,7 +93,7 @@
 
 //Normal parameters
 #define rParam(name, ...) \
-  {STRINGIFY(name) "::c",  rProp(parameter) DOC(__VA_ARGS__), NULL, rParamCb(name)}
+  {STRINGIFY(name) "::c",  rProp(parameter) rMap(min, 0) rMap(max, 127) DOC(__VA_ARGS__), NULL, rParamCb(name)}
 #define rParamF(name, ...) \
   {STRINGIFY(name) "::f",  rProp(parameter) DOC(__VA_ARGS__), NULL, rParamFCb(name)}
 #define rParamI(name, ...) \
