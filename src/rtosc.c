@@ -147,7 +147,9 @@ size_t rtosc_message(char   *buffer,
 {
     va_list va;
     va_start(va, arguments);
-    return rtosc_vmessage(buffer, len, address, arguments, va);
+    size_t result = rtosc_vmessage(buffer, len, address, arguments, va);
+    va_end(va);
+    return result;
 }
 
 //Calculate the size of the message without writing to a buffer
