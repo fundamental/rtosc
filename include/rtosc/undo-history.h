@@ -1,6 +1,8 @@
 #pragma once
 #include <functional>
 
+namespace rtosc
+{
 /**
  * Known event types:
  * /undo_change /path/location old-data new-data
@@ -28,4 +30,5 @@ class UndoHistory
         void setCallback(std::function<void(const char*)> cb);
     private:
         class UndoHistoryImpl *impl;
+};
 };

@@ -1,4 +1,4 @@
-#include <vector>
+#include <deque>
 #include <cstring>
 #include <cstdio>
 #include <cassert>
@@ -6,24 +6,27 @@
 #include <rtosc/rtosc.h>
 #include <rtosc/undo-history.h>
 
+using std::pair;
+using std::make_pair;
+
+namespace rtosc {
 class UndoHistoryImpl
 {
     public:
-        std::vector<const char *> history;
+        std::deque<pair<time_t, const char *>> history;
         long history_pos;
+        unsigned max_history_size = 20;//XXX Expose this via a public API
         std::function<void(const char*)> cb;
-
-        time_t last_ev_time;
 
         void rewind(const char *msg);
         void replay(const char *msg);
+        bool mergeEvent(time_t t, const char *msg, char *buf, size_t N);
 };
 
 UndoHistory::UndoHistory(void)
 {
     impl = new UndoHistoryImpl;
     impl->history_pos  = 0;
-    impl->last_ev_time = 0;
 }
 
 void UndoHistory::recordEvent(const char *msg)
@@ -33,31 +36,22 @@ void UndoHistory::recordEvent(const char *msg)
     //would be to kill off any future redos when new history is recorded
     if(impl->history.size() != (unsigned) impl->history_pos) {
         impl->history.resize(impl->history_pos);
-        impl->last_ev_time = 0;
     }
-    
+
     size_t len = rtosc_message_length(msg, -1);
     char *data = new char[len];
-    if(difftime(time(NULL), impl->last_ev_time) < 2 && // 2 second threshold
-            !impl->history.empty() &&
-            !strcmp(rtosc_argument(msg,0).s,
-                    rtosc_argument(impl->history[impl->history.size()-1],0).s)) {
-        //We can splice events together, merging them into one event
-        rtosc_arg_t args[3];
-        args[0] = rtosc_argument(msg, 0);
-        args[1] = rtosc_argument(impl->history[impl->history.size()-1],1);
-        args[2] = rtosc_argument(msg, 2);
-
-        rtosc_amessage(data, len, msg, rtosc_argument_string(msg), args);
-
-        delete [] impl->history[impl->history.size()-1];
-        impl->history[impl->history.size()-1] = data;
-        impl->last_ev_time = time(NULL);
-    } else {
+    time_t now = time(NULL);
+    printf("now = '%ld'\n", now);
+    if(!impl->mergeEvent(now, msg, data, len)) {
         memcpy(data, msg, len);
-        impl->last_ev_time = time(NULL);
-        impl->history.push_back(data);
+        impl->history.push_back(make_pair(now, data));
         impl->history_pos++;
+        if(impl->history.size() > impl->max_history_size)
+        {
+            delete[] impl->history[0].second;
+            impl->history.pop_front();
+            impl->history_pos--;
+        }
     }
 
 }
@@ -67,7 +61,7 @@ void UndoHistory::showHistory(void) const
     int i = 0;
     for(auto s : impl->history)
         printf("#%d type: %s dest: %s arguments: %s\n", i++,
-                s, rtosc_argument(s, 0).s, rtosc_argument_string(s));
+                s.second, rtosc_argument(s.second, 0).s, rtosc_argument_string(s.second));
 }
 
 static char tmp[256];
@@ -95,6 +89,40 @@ void UndoHistoryImpl::replay(const char *msg)
         cb(tmp);
 }
 
+const char *getUndoAddress(const char *msg)
+{
+    return rtosc_argument(msg,0).s;
+}
+
+bool UndoHistoryImpl::mergeEvent(time_t now, const char *msg, char *buf, size_t N)
+{
+    if(history_pos == 0)
+        return false;
+    for(int i=history_pos-1; i>=0; --i) {
+        if(difftime(now, history[i].first) > 2)
+            break;
+        if(!strcmp(getUndoAddress(msg),
+                    getUndoAddress(history[i].second)))
+        {
+            //We can splice events together, merging them into one event
+            rtosc_arg_t args[3];
+            args[0] = rtosc_argument(msg, 0);
+            args[1] = rtosc_argument(history[i].second,1);
+            args[2] = rtosc_argument(msg, 2);
+
+            rtosc_amessage(buf, N, msg, rtosc_argument_string(msg), args);
+
+            delete [] history[i].second;
+            history[i].second = buf;
+            history[i].first = now;
+            return true;
+        }
+    }
+    return false;
+}
+
+
+
 void UndoHistory::seekHistory(int distance)
 {
     //TODO print out the events that would need to take place to get to the
@@ -115,10 +143,10 @@ void UndoHistory::seekHistory(int distance)
     //TODO account for traveling back in time
     if(distance<0)
         while(distance++)
-            impl->rewind(impl->history[--impl->history_pos]);
+            impl->rewind(impl->history[--impl->history_pos].second);
     else
         while(distance--)
-            impl->replay(impl->history[impl->history_pos++]);
+            impl->replay(impl->history[impl->history_pos++].second);
 }
 
 unsigned UndoHistory::getPos(void) const
@@ -128,7 +156,7 @@ unsigned UndoHistory::getPos(void) const
 
 const char *UndoHistory::getHistory(int i) const
 {
-    return impl->history[i];
+    return impl->history[i].second;
 }
 
 size_t UndoHistory::size() const
@@ -140,3 +168,4 @@ void UndoHistory::setCallback(std::function<void(const char*)> cb)
 {
     impl->cb = cb;
 }
+};

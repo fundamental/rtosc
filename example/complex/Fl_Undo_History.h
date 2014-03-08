@@ -11,7 +11,7 @@ class Fl_Undo_History:public Fl_Browser
         {
         }
 
-        void init(UndoHistory &hist_)
+        void init(rtosc::UndoHistory &hist_)
         {
             hist = &hist_;
             totalRefresh();
@@ -57,5 +57,5 @@ class Fl_Undo_History:public Fl_Browser
         }
 
 
-        UndoHistory *hist;
+        rtosc::UndoHistory *hist;
 };
