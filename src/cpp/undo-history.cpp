@@ -41,7 +41,7 @@ void UndoHistory::recordEvent(const char *msg)
     size_t len = rtosc_message_length(msg, -1);
     char *data = new char[len];
     time_t now = time(NULL);
-    printf("now = '%ld'\n", now);
+    //printf("now = '%ld'\n", now);
     if(!impl->mergeEvent(now, msg, data, len)) {
         memcpy(data, msg, len);
         impl->history.push_back(make_pair(now, data));

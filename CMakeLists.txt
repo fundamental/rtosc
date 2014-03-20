@@ -14,6 +14,7 @@ if(NOT WIN32)
 endif()
 add_library(rtosc SHARED src/rtosc.c src/dispatch.c)
 add_library(rtosc-cpp SHARED src/cpp/ports.cpp src/cpp/miditable.cpp
+    src/cpp/midimapper.cpp
     src/cpp/undo-history.cpp
     src/cpp/subtree-serialize.cpp)
 
