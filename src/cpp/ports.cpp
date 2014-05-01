@@ -166,11 +166,11 @@ class Port_Matcher
 
         inline bool match(const char *path, const char *args_, bool long_enough) const
         {
-            if(fast && long_enough) {
-                return (*(int32_t*)literal)==(*(int32_t*)path) && scmp(literal+4, path+4) && arg_matcher(args, args_);
-            } else if(fast) {
-                return scmp(literal, path) && arg_matcher(args, args_);
-            } else //no precompilation was done...
+            //if(fast && long_enough) {
+            //    return (*(int32_t*)literal)==(*(int32_t*)path) && scmp(literal+4, path+4) && arg_matcher(args, args_);
+            //} else if(fast) {
+            //    return scmp(literal, path) && arg_matcher(args, args_);
+            //} else //no precompilation was done...
                 return rtosc_match(pattern, path);
         }
 };
@@ -269,27 +269,27 @@ void Ports::dispatch(const char *m, rtosc::RtData &d) const
 
         uint64_t mask = 0xffffffffffffffff;
         bool fast_path = (m[0] && m[1] && m[2] && m[3]);
-        if(use_mask && __builtin_expect(fast_path, 1)) {
-            if(unambigious)
-                mask = (m[0]==mask_chars[0] ? masks[0] : ~masks[0])
-                     & (m[1]==mask_chars[1] ? masks[2] : ~masks[2])
-                     & (m[2]==mask_chars[2] ? masks[4] : ~masks[4])
-                     & (m[3]==mask_chars[3] ? masks[6] : ~masks[6]);
-            else
-                mask = (m[0]==mask_chars[0] ? masks[0] : masks[1])
-                     & (m[1]==mask_chars[1] ? masks[2] : masks[3])
-                     & (m[2]==mask_chars[2] ? masks[4] : masks[5])
-                     & (m[3]==mask_chars[3] ? masks[6] : masks[7]);
-        }
+        //if(use_mask && __builtin_expect(fast_path, 1)) {
+        //    if(unambigious)
+        //        mask = (m[0]==mask_chars[0] ? masks[0] : ~masks[0])
+        //             & (m[1]==mask_chars[1] ? masks[2] : ~masks[2])
+        //             & (m[2]==mask_chars[2] ? masks[4] : ~masks[4])
+        //             & (m[3]==mask_chars[3] ? masks[6] : ~masks[6]);
+        //    else
+        //        mask = (m[0]==mask_chars[0] ? masks[0] : masks[1])
+        //             & (m[1]==mask_chars[1] ? masks[2] : masks[3])
+        //             & (m[2]==mask_chars[2] ? masks[4] : masks[5])
+        //             & (m[3]==mask_chars[3] ? masks[6] : masks[7]);
+        //}
 
         char *old_end = d.loc;
         while(*old_end) ++old_end;
 
         unsigned i=0;
-        if(!(mask&0xffff)) { //skip ahead when possible
-            i = 16;
-            mask >>= 16;
-        }
+        //if(!(mask&0xffff)) { //skip ahead when possible
+        //    i = 16;
+        //    mask >>= 16;
+        //}
         for(; i<elms; ++i, mask >>= 1) {
             if(__builtin_expect(!(mask&1) || !impl[i].match(m, args, fast_path), 1))
                 continue;
