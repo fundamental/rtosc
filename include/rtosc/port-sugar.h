@@ -181,11 +181,11 @@ template<class T> constexpr T spice(T*t) {return *t;}
 
 #define rBOIL_END }
 
-#define rLIMIT(name, convert) \
-    if(prop["min"] && obj->name < convert(prop["min"])) \
-        obj->name = convert(prop["min"]);\
-    if(prop["max"] && obj->name > convert(prop["max"])) \
-        obj->name = convert(prop["max"]);
+#define rLIMIT(var, convert) \
+    if(prop["min"] && var < convert(prop["min"])) \
+        var = convert(prop["min"]);\
+    if(prop["max"] && var > convert(prop["max"])) \
+        var = convert(prop["max"]);
 
 #define rTYPE(n) decltype(obj->n)
 
@@ -196,7 +196,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
             data.reply(loc, "c", obj->name); \
         } else { \
             rTYPE(name) var = rtosc_argument(msg, 0).i; \
-            rLIMIT(name, atoi) \
+            rLIMIT(var, atoi) \
             rAPPLY(name, c) \
             data.broadcast(loc, "c", obj->name);\
             rChangeCb \
@@ -207,7 +207,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
             data.reply(loc, "f", obj->name); \
         } else { \
             rTYPE(name) var = rtosc_argument(msg, 0).f; \
-            rLIMIT(name, atof) \
+            rLIMIT(var, atof) \
             rAPPLY(name, f) \
             data.broadcast(loc, "f", obj->name);\
             rChangeCb \
@@ -218,7 +218,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
             data.reply(loc, "i", obj->name); \
         } else { \
             rTYPE(name) var = rtosc_argument(msg, 0).i; \
-            rLIMIT(name, atoi) \
+            rLIMIT(var, atoi) \
             rAPPLY(name, i) \
             data.broadcast(loc, "i", obj->name);\
             rChangeCb \
@@ -230,7 +230,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
             data.reply(loc, "i", obj->name); \
         } else { \
             rTYPE(name) var = rtosc_argument(msg, 0).i; \
-            rLIMIT(name, atoi) \
+            rLIMIT(var, atoi) \
             rAPPLY(name, i) \
             data.broadcast(loc, rtosc_argument_string(msg), obj->name);\
             rChangeCb \
@@ -299,7 +299,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
             data.reply(loc, "c", obj->name[idx]); \
         } else { \
             char var = rtosc_argument(msg, 0).i; \
-            rLIMIT(name[idx], atoi) \
+            rLIMIT(var, atoi) \
             rAPPLY(name[idx], c) \
             data.broadcast(loc, "c", obj->name[idx]);\
             rChangeCb \
