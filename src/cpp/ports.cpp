@@ -1,9 +1,11 @@
 #include "../../include/rtosc/ports.h"
 #include <cassert>
+#include <climits>
+#include <cstring>
 
 using namespace rtosc;
 
-static void scat(char *dest, const char *src)
+static inline void scat(char *dest, const char *src)
 {
     while(*dest) dest++;
     if(*dest) dest++;
@@ -136,111 +138,275 @@ inline bool scmp(const char *a, const char *b)
     return a[0] == b[0];
 }
 
+typedef std::vector<std::string>  words_t;
+typedef std::vector<std::string>  svec_t;
+typedef std::vector<const char *> cvec_t;
+typedef std::vector<int> ivec_t;
+typedef std::vector<int> tuple_t;
+typedef std::vector<tuple_t> tvec_t;
+
 namespace rtosc{
 class Port_Matcher
 {
     public:
+        bool *enump;
+        svec_t fixed;
+        cvec_t arg_spec;
+        ivec_t pos;
+        ivec_t assoc;
+        ivec_t remap;
 
-        const char *pattern;
-
-        bool fast;
-        char literal[128];
-        unsigned literal_len;
-        char args[128];
-
-        void detectFast(void)
+        bool rtosc_match_args(const char *pattern, const char *msg)
         {
-            const char *pat = pattern;
-            if(!index(pat, '#') && !index(pat, '/')) {
-                char *ptr = literal;
-                while(*pat && *pat != ':')
-                    *ptr++ = *pat++;
-                *ptr = 0;
-                literal_len = strlen(literal);
-                *args = 0;
-                strcpy(args, pat);
-                fast = true;
-            } else
-                fast = false;
+            //match anything if now arg restriction is present
+            //(ie the ':')
+            if(*pattern++ != ':')
+                return true;
+
+            const char *arg_str = rtosc_argument_string(msg);
+            bool      arg_match = *pattern || *pattern == *arg_str;
+
+            while(*pattern && *pattern != ':')
+                arg_match &= (*pattern++==*arg_str++);
+
+            if(*pattern==':') {
+                if(arg_match && !*arg_str)
+                    return true;
+                else
+                    return rtosc_match_args(pattern, msg); //retry
+            }
+
+            return arg_match;
         }
 
-        inline bool match(const char *path, const char *args_, bool long_enough) const
+        bool hard_match(int i, const char *msg)
         {
-            //if(fast && long_enough) {
-            //    return (*(int32_t*)literal)==(*(int32_t*)path) && scmp(literal+4, path+4) && arg_matcher(args, args_);
-            //} else if(fast) {
-            //    return scmp(literal, path) && arg_matcher(args, args_);
-            //} else //no precompilation was done...
-                return rtosc_match(pattern, path);
+            if(strncmp(msg, fixed[i].c_str(), fixed[i].length()))
+                return false;
+            if(arg_spec[i])
+                return rtosc_match_args(arg_spec[i], msg);
+            else
+                return true;
         }
 };
 }
 
-Ports::Ports(std::initializer_list<Port> l)
-    :ports(l), impl(new Port_Matcher[ports.size()])
+
+tvec_t do_hash(const words_t &strs, const ivec_t &pos)
 {
-    unsigned nfast = 0;
-    for(unsigned i=0; i<ports.size(); ++i) {
-        impl[i].pattern = ports[i].name;
-        impl[i].detectFast();
-        nfast += impl[i].fast;
+    tvec_t  tvec;
+    for(auto &s:strs) {
+        tuple_t tuple;
+        tuple.push_back(s.length());
+        for(const auto &p:pos)
+            if(p < (int)s.size())
+                tuple.push_back(s[p]);
+        tvec.push_back(std::move(tuple));
     }
+    return tvec;
+}
 
-    elms = ports.size();
-    unambigious = true;
-
-    if(16 < ports.size() && ports.size() <= 64) {
-        use_mask = true;
-
-        //if ANY ambigious character was encountered in a given port
-        bool special[64];
-        char freq[255];//character freqeuency table
-        memset(special, 0, 64);
-
-        for(int i=0; i<4; ++i) {
-            memset(freq, 0, 255);
-            for(unsigned j=0; j<ports.size(); ++j) {
-                if(strlen(ports[j].name) < (size_t)i || special[j])
-                    continue;
-                if(ports[j].name[i] == ':' || ports[j].name[i] == '#') {
-                    special[j] = true;
-                    unambigious = false;
-                    continue;
-                }
-                freq[(int)ports[j].name[i]]++;
-            }
-
-            //Find the most frequent character which *should* make the best
-            //discriminting function under a _reasonable_ set of assumptions
-            char best=0;
-            char votes=0;
-            for(int j=0; j<255; ++j) {
-                if(votes < freq[j]) {
-                    best  = j;
-                    votes = freq[j];
-                }
-            }
-
-            mask_chars[i] = best;
-            //Generate the masks depending on the results of the comparison
-            masks[2*i]   = 0x0; //true mask
-            masks[2*i+1] = 0x0; //false mask
-            for(unsigned j=0; j < ports.size(); ++j) {
-                bool tbit = strlen(ports[j].name) < (size_t)i || special[j] ||
-                    ports[j].name[i] == best;
-                bool fbit = strlen(ports[j].name) < (size_t)i || special[j] ||
-                    ports[j].name[i] != best;
-                masks[2*i]   |=  (tbit<<j);
-                masks[2*i+1] |=  (fbit<<j);
-
+template<class T>
+int count_dups(std::vector<T> &t)
+{
+    int dups = 0;
+    int N = t.size();
+    bool mark[t.size()];
+    memset(mark, 0, N);
+    for(int i=0; i<N; ++i) {
+        if(mark[i])
+            continue;
+        for(int j=i+1; j<N; ++j) {
+            if(t[i] == t[j]) {
+                dups++;
+                mark[j] = true;
             }
         }
     }
+    return dups;
+}
+
+template<class T, class Z>
+bool has(T &t, Z&z)
+{
+    for(auto tt:t)
+        if(tt==z)
+            return true;
+    return false;
+}
+
+int max(int a, int b) { return a<b?b:a;}
+
+ivec_t find_pos(words_t &strs)
+{
+    ivec_t pos;
+    int current_dups = strs.size();
+    int N = 0;
+    for(auto w:strs)
+        N = max(N,w.length());
+
+    int pos_best = -1;
+    int pos_best_val = INT_MAX;
+    while(true)
+    {
+        for(int i=0; i<N; ++i) {
+            ivec_t npos = pos;
+            if(has(pos, i))
+                continue;
+            npos.push_back(i);
+            auto hashed = do_hash(strs, npos);
+            int d = count_dups(hashed);
+            if(d < pos_best_val) {
+                pos_best_val = d;
+                pos_best = i;
+            }
+        }
+        if(pos_best_val >= current_dups)
+            break;
+        current_dups = pos_best_val;
+        pos.push_back(pos_best);
+    }
+    auto hashed = do_hash(strs, pos);
+    int d = count_dups(hashed);
+    printf("Total Dups: %d\n", d);
+    if(d != 0)
+        pos.clear();
+    return pos;
+}
+
+ivec_t do_hash(const words_t &strs, const ivec_t &pos, const ivec_t &assoc)
+{
+    ivec_t ivec;
+    ivec.reserve(strs.size());
+    for(auto &s:strs) {
+        int t = s.length();
+        for(auto p:pos)
+            if(p < (int)s.size())
+                t += assoc[s[p]];
+        ivec.push_back(t);
+    }
+    return ivec;
+}
+
+ivec_t find_assoc(const words_t &strs, const ivec_t &pos)
+{
+    ivec_t assoc;
+    int current_dups = strs.size();
+    int N = 127;
+    std::vector<char> useful_chars;
+    for(auto w:strs)
+        for(auto c:w)
+            if(!has(useful_chars, c))
+                useful_chars.push_back(c);
+
+    for(int i=0; i<N; ++i)
+        assoc.push_back(0);
+
+    int assoc_best = -1;
+    int assoc_best_val = INT_MAX;
+    for(int k=0; k<4; ++k)
+    {
+        for(int i:useful_chars) {
+            assoc_best_val = INT_MAX;
+            for(int j=0; j<100; ++j) {
+                //printf(".");
+                assoc[i] = j;
+                auto hashed = do_hash(strs, pos, assoc);
+                //for(int i=0; i<hashed.size(); ++i)
+                //    printf("%d ", hashed[i]);
+                //printf("\n");
+                int d = count_dups(hashed);
+                //printf("dup %d\n",d);
+                if(d < assoc_best_val) {
+                    assoc_best_val = d;
+                    assoc_best = j;
+                }
+            }
+            assoc[i] = assoc_best;
+        }
+        if(assoc_best_val >= current_dups)
+            break;
+        current_dups = assoc_best_val;
+    }
+    auto hashed = do_hash(strs, pos, assoc);
+    int d = count_dups(hashed);
+    printf("Total Dups Assoc: %d\n", d);
+    return assoc;
+}
+
+ivec_t find_remap(words_t &strs, ivec_t &pos, ivec_t &assoc)
+{
+    ivec_t remap;
+    auto hashed = do_hash(strs, pos, assoc);
+    //for(int i=0; i<strs.size(); ++i)
+    //    printf("%d) '%s'\n", hashed[i], strs[i].c_str());
+    int N = 0;
+    for(auto h:hashed)
+        N = max(N,h+1);
+    for(int i=0; i<N; ++i)
+        remap.push_back(0);
+    for(int i=0; i<(int)hashed.size(); ++i)
+        remap[hashed[i]] = i;
+
+    return remap;
+}
+
+void generate_minimal_hash(std::vector<std::string> str, Port_Matcher &pm)
+{
+    pm.pos   = find_pos(str);
+    if(pm.pos.empty()) {
+        fprintf(stderr, "rtosc: Failed to generate minimal hash\n");
+        return;
+    }
+    pm.assoc = find_assoc(str, pm.pos);
+    pm.remap = find_remap(str, pm.pos, pm.assoc);
+}
+
+void generate_minimal_hash(Ports &p, Port_Matcher &pm)
+{
+    svec_t keys;
+    cvec_t args;
+
+    bool enump = false;
+    for(unsigned i=0; i<p.ports.size(); ++i)
+        if(index(p.ports[i].name, '#'))
+            enump = true;
+    if(enump)
+        return;
+    for(unsigned i=0; i<p.ports.size(); ++i)
+    {
+        std::string tmp = p.ports[i].name;
+        const char *arg = NULL;
+        int idx = tmp.find(':');
+        if(idx > 0) {
+            arg = p.ports[i].name+idx;
+            tmp = tmp.substr(0,idx);
+        }
+        keys.push_back(tmp);
+        args.push_back(arg);
+
+    }
+    pm.fixed    = keys;
+    pm.arg_spec = args;
+
+    generate_minimal_hash(keys, pm);
+}
+
+Ports::Ports(std::initializer_list<Port> l)
+    :ports(l), impl(new Port_Matcher)
+{
+    generate_minimal_hash(*this, *impl);
+    impl->enump = new bool[ports.size()];
+    for(int i=0; i<(int)ports.size(); ++i)
+        impl->enump[i] = index(ports[i].name, '#');
+
+    elms = ports.size();
 }
 
 Ports::~Ports()
 {
-    delete [] impl;
+    delete []impl->enump;
+    delete impl;
 }
 
 #if !defined(__GNUC__)
@@ -250,7 +416,6 @@ Ports::~Ports()
 void Ports::dispatch(const char *m, rtosc::RtData &d) const
 {
     void *obj = d.obj;
-    const char *args = rtosc_argument_string(m);
     //simple case
     if(!d.loc || !d.loc_size) {
         for(const Port &port: ports) {
@@ -267,57 +432,86 @@ void Ports::dispatch(const char *m, rtosc::RtData &d) const
             d.loc[0] = '/';
         }
 
-        uint64_t mask = 0xffffffffffffffff;
-        bool fast_path = (m[0] && m[1] && m[2] && m[3]);
-        //if(use_mask && __builtin_expect(fast_path, 1)) {
-        //    if(unambigious)
-        //        mask = (m[0]==mask_chars[0] ? masks[0] : ~masks[0])
-        //             & (m[1]==mask_chars[1] ? masks[2] : ~masks[2])
-        //             & (m[2]==mask_chars[2] ? masks[4] : ~masks[4])
-        //             & (m[3]==mask_chars[3] ? masks[6] : ~masks[6]);
-        //    else
-        //        mask = (m[0]==mask_chars[0] ? masks[0] : masks[1])
-        //             & (m[1]==mask_chars[1] ? masks[2] : masks[3])
-        //             & (m[2]==mask_chars[2] ? masks[4] : masks[5])
-        //             & (m[3]==mask_chars[3] ? masks[6] : masks[7]);
-        //}
-
         char *old_end = d.loc;
         while(*old_end) ++old_end;
 
-        unsigned i=0;
-        //if(!(mask&0xffff)) { //skip ahead when possible
-        //    i = 16;
-        //    mask >>= 16;
-        //}
-        for(; i<elms; ++i, mask >>= 1) {
-            if(__builtin_expect(!(mask&1) || !impl[i].match(m, args, fast_path), 1))
-                continue;
+        if(impl->pos.empty()) { //No perfect minimal hash function
+            for(unsigned i=0; i<elms; ++i) {
+                const Port &port = ports[i];
+                if(!rtosc_match(port.name, m))
+                    continue;
+                if(!port.ports)
+                    d.matches++;
 
-            const Port &port = ports[i];
-            if(!port.ports)
-                d.matches++;
+                //Append the path
+                if(index(port.name,'#')) {
+                    const char *msg = m;
+                    char       *pos = old_end;
+                    while(*msg && *msg != '/')
+                        *pos++ = *msg++;
+                    if(index(port.name, '/'))
+                        *pos++ = '/';
+                    *pos = '\0';
+                } else
+                    scat(d.loc, port.name);
 
-            //Append the path
-            if(index(port.name,'#')) {
-                const char *msg = m;
-                char       *pos = old_end;
-                while(*msg && *msg != '/')
-                    *pos++ = *msg++;
-                if(index(port.name, '/'))
-                    *pos++ = '/';
-                *pos = '\0';
-            } else
-                scat(d.loc, port.name);
+                d.port = &port;
 
-            d.port = &port;
+                //Apply callback
+                port.cb(m,d), d.obj = obj;
 
-            //Apply callback
-            port.cb(m,d), d.obj = obj;
+                //Remove the rest of the path
+                char *tmp = old_end;
+                while(*tmp) *tmp++=0;
+            }
+        } else {
 
-            //Remove the rest of the path
-            char *tmp = old_end;
-            while(*tmp) *tmp++=0;
+            //Define string to be hashed
+            unsigned len=0;
+            const char *tmp = m;
+
+            while(*tmp && *tmp != '/')
+                tmp++;
+            if(*tmp == '/')
+                tmp++;
+            len = tmp-m;
+
+            //Compute the hash
+            int t = len;
+            for(auto p:impl->pos)
+                if(p < (int)len)
+                    t += impl->assoc[m[p]];
+            if(t >= (int)impl->remap.size())
+                return;
+            int port_num = impl->remap[t];
+
+            //Verify the chosen port is correct
+            if(__builtin_expect(impl->hard_match(port_num, m), 1)) {
+                const Port &port = ports[impl->remap[t]];
+                if(!port.ports)
+                    d.matches++;
+
+                //Append the path
+                if(impl->enump[port_num]) {
+                    const char *msg = m;
+                    char       *pos = old_end;
+                    while(*msg && *msg != '/')
+                        *pos++ = *msg++;
+                    if(index(port.name, '/'))
+                        *pos++ = '/';
+                    *pos = '\0';
+                } else
+                    memcpy(old_end, impl->fixed[port_num].c_str(),
+                            impl->fixed[port_num].length());
+
+                d.port = &port;
+
+                //Apply callback
+                port.cb(m,d), d.obj = obj;
+
+                //Remove the rest of the path
+                old_end[0] = '\0';
+            }
         }
     }
 }

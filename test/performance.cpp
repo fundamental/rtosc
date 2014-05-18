@@ -2,6 +2,7 @@
 
 #include <ctime>
 #include <cstdio>
+#include <cassert>
 
 #include <rtosc/rtosc.h>
 #include <rtosc/ports.h>
@@ -109,6 +110,7 @@ int main()
     RtData d;
     d.loc_size = 1024;
     d.obj = d.loc = loc_buffer;
+    d.matches = 0;
 
     int repeats = 200000;
     int t_on = clock(); // timer before calling func
@@ -117,6 +119,8 @@ int main()
             port_table.dispatch(events[i], d);
         }
     }
+    //printf("Matches: %d\n", d.matches);
+    assert(d.matches == 3600000);
     int t_off = clock(); // timer when func returns
 
     double seconds = (t_off - t_on) * 1.0 / CLOCKS_PER_SEC;
