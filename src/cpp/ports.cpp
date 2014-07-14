@@ -2,6 +2,7 @@
 #include <cassert>
 #include <climits>
 #include <cstring>
+#include <string>
 
 using namespace rtosc;
 
