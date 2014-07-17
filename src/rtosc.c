@@ -77,7 +77,6 @@ char rtosc_type(const char *msg, unsigned nargument)
     }
 }
 
-//TODO make alignment issues a bit less messy here
 static unsigned arg_off(const char *msg, unsigned idx)
 {
     if(!has_reserved(rtosc_type(msg,idx)))
@@ -85,12 +84,12 @@ static unsigned arg_off(const char *msg, unsigned idx)
 
     //Iterate to the right position
     const uint8_t *args = (const uint8_t*) rtosc_argument_string(msg);
+    const uint8_t *aligned_ptr = args-1;
     const uint8_t *arg_pos = args;
-
 
     while(*++arg_pos);
     //Alignment
-    arg_pos += 4-(arg_pos-(uint8_t*)msg)%4;
+    arg_pos += 4-(arg_pos-((uint8_t*)aligned_ptr))%4;
 
     //ignore any leading '[' or ']'
     while(*args == '[' || *args == ']')
@@ -115,7 +114,7 @@ static unsigned arg_off(const char *msg, unsigned idx)
             case 'S':
             case 's':
                 while(*++arg_pos);
-                arg_pos += 4-(arg_pos-(uint8_t*)msg)%4;
+                arg_pos += 4-(arg_pos-((uint8_t*)aligned_ptr))%4;
                 break;
             case 'b':
                 bundle_length |= (*arg_pos++ << 24);
@@ -381,9 +380,6 @@ size_t rtosc_amessage(char              *buffer,
 
 rtosc_arg_t rtosc_argument(const char *msg, unsigned idx)
 {
-    //hack to allow reading of arguments from truncated message
-    msg -= (unsigned) (msg-(const char *)0)%4;
-
     rtosc_arg_t result = {0};
     char type = rtosc_type(msg, idx);
     //trivial case
