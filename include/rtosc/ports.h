@@ -123,14 +123,17 @@ struct Ports
 {
     std::vector<Port> ports;
 
-    /**Forwards to builtin container*/
-    auto begin() const -> decltype(ports.begin()) {return ports.begin();}
+
+    typedef std::vector<Port>::const_iterator itr_t;
 
     /**Forwards to builtin container*/
-    auto end() const -> decltype(ports.end()) {return ports.end();}
+    itr_t begin() const {return ports.begin();}
 
     /**Forwards to builtin container*/
-    auto size() const -> decltype(ports.size()) {return ports.size();}
+    itr_t end() const {return ports.end();}
+
+    /**Forwards to builtin container*/
+    size_t size() const {return ports.size();}
 
     /**Forwards to builtin container*/
     const Port &operator[](unsigned i) const {return ports[i];}
