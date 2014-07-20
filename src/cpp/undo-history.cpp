@@ -13,9 +13,12 @@ namespace rtosc {
 class UndoHistoryImpl
 {
     public:
+        UndoHistoryImpl(void)
+            :max_history_size(20)
+        {}
         std::deque<pair<time_t, const char *>> history;
         long history_pos;
-        unsigned max_history_size = 20;//XXX Expose this via a public API
+        unsigned max_history_size;//XXX Expose this via a public API
         std::function<void(const char*)> cb;
 
         void rewind(const char *msg);
