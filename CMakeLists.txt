@@ -101,7 +101,7 @@ endmacro(maketest)
 macro(maketestcpp fname)
     add_executable(${fname} test/${fname}.cpp)
     add_test(${fname} ${fname})
-    target_link_libraries(${fname} rtosc rtosc-cpp jack)
+    target_link_libraries(${fname} rtosc-cpp rtosc jack)
 endmacro(maketestcpp)
 
 maketest(osc-spec)
