@@ -126,6 +126,9 @@ float MidiBijection::operator()(int x) const {
 /************************
  * Non realtime portion *
  ************************/
+MidiMappernRT::MidiMappernRT(void)
+    :storage(0),base_ports(0)
+{}
 
 void MidiMappernRT::map(const char *addr, bool coarse)
 {

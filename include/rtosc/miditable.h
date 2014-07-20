@@ -97,6 +97,7 @@ struct MidiBijection
 class MidiMappernRT
 {
     public:
+        MidiMappernRT(void);
         void map(const char *addr, bool coarse = true);
 
         MidiMapperStorage *generateNewBijection(const Port &port, std::string);
@@ -142,8 +143,8 @@ class MidiMappernRT
         std::map<std::string, std::tuple<int, int, int, MidiBijection>> inv_map;
         std::deque<std::pair<std::string,bool>> learnQueue;
         std::function<void(const char *)> rt_cb;
-        MidiMapperStorage *storage = 0;
-        Ports *base_ports = 0;
+        MidiMapperStorage *storage;
+        Ports *base_ports;
 };
 
 class MidiMapperRT
@@ -164,6 +165,7 @@ class MidiMapperRT
         {
             public:
                 PendingQueue()
+                    :pos_r(0), pos_w(0), size(0)
                 {
                     for(int i=0; i<32; ++i)
                         vals[i] = -1;
@@ -192,9 +194,9 @@ class MidiMapperRT
                     return false;
                 }
                 int vals[32];
-                int pos_r  = 0;
-                int pos_w  = 0;
-                int size   = 0;
+                int pos_r;
+                int pos_w;
+                int size;
 
         };
 
