@@ -43,10 +43,11 @@ class VarCapture : public RtData
         char buf[128];
         char location[128];
         char msg[128];
-        const char *dummy = "/ser\0\0\0\0,\0\0\0";
+        const char *dummy;
         bool success;
 
         VarCapture(void)
+            :dummy("/ser\0\0\0\0,\0\0\0")
         {
             memset(buf, 0, sizeof(buf));
             memset(location, 0, sizeof(buf));
