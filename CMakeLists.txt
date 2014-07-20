@@ -12,6 +12,23 @@ if(NOT WIN32)
     set(CMAKE_C_FLAGS "-O2 -std=c99 -Wall -Wextra")
     set(CMAKE_CXX_FLAGS "-O2 -std=c++0x -Wall -Wextra")
 endif()
+
+if(CMAKE_COMPILER_IS_GNUCC)
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
+        OUTPUT_VARIABLE GCC_VERSION)
+    if (GCC_VERSION VERSION_GREATER 4.7 OR GCC_VERSION VERSION_EQUAL
+            4.7)
+        message(STATUS "GCC Version >= 4.7")
+        set(COMPILER_USABILITY TRUE)
+    else()
+        message(STATUS "GCC Version Is Too Old For rtosc/port-sugar.h")
+        message(STATUS "WILL NOT Build Examples or sugar test")
+        set(COMPILER_USABILITY FALSE)
+    endif()
+else()
+    set(COMPILER_USABILITY TRUE)
+endif()
+
 add_library(rtosc SHARED src/rtosc.c src/dispatch.c)
 add_library(rtosc-cpp SHARED src/cpp/ports.cpp src/cpp/miditable.cpp
     src/cpp/midimapper.cpp
@@ -46,7 +63,7 @@ else()
 endif()
 
 
-if(JACK_FOUND AND GUI_FOUND)
+if(JACK_FOUND AND GUI_FOUND AND COMPILER_USABILITY)
     add_executable(simple-example example/simple/ui.cpp example/simple/synth.cpp)
     target_link_libraries(simple-example m rtosc ${GUI_LIBRARIES} jack)
 
@@ -59,16 +76,18 @@ if(JACK_FOUND AND GUI_FOUND)
     #TODO add complex example (ie klatter (an unplublished project for those reading))
 endif()
 
-add_executable(modular-example
-    example/modular/Echo.cpp
-    example/modular/EffectMgr.cpp
-    example/modular/LFO.cpp
-    example/modular/main.cpp
-    example/modular/Oscil.cpp
-    example/modular/Synth.cpp
-    example/modular/util.cpp
-    )
-target_link_libraries(modular-example m rtosc rtosc-cpp)
+if(COMPILER_USABILITY)
+    add_executable(modular-example
+        example/modular/Echo.cpp
+        example/modular/EffectMgr.cpp
+        example/modular/LFO.cpp
+        example/modular/main.cpp
+        example/modular/Oscil.cpp
+        example/modular/Synth.cpp
+        example/modular/util.cpp
+        )
+    target_link_libraries(modular-example m rtosc rtosc-cpp)
+endif(COMPILER_USABILITY)
 
 
 # Testing code
@@ -105,9 +124,12 @@ if(JACK_FOUND)
     maketestcpp(test-walker)
 endif()
 maketestcpp(performance)
-maketestcpp(undo-test)
-maketestcpp(serializer)
-maketestcpp(sugar)
+
+if(COMPILER_USABILITY)
+    maketestcpp(undo-test)
+    maketestcpp(serializer)
+    maketestcpp(sugar)
+endif()
 
 # Documentation
 find_package(Doxygen)
