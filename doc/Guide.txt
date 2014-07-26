@@ -351,4 +351,30 @@ This currently transforms a readable set of ports into a bundle which contains
 all of the values needed to restore the state of the underlying structures.
 As with most things with this library, this feature is still experimental.
 
+NOTE:: Problems may exist with array fields
+
+Undo Support
+~~~~~~~~~~~~
+
+As, all mutations are prsented to the rtosc dispatcher in a set of ordered
+actions, adding undo support is fairly trivial.
+Upon being presentd with a new value, a control can emit (along with its
+update) an undo event, which defines the transition from old to new values.
+These undo events can be used to form a linearized history which can be
+rewound or replayed.
+When a change occurs it is broadcast out to all listeners.
+
+Each undo message consists of some path and a before/after pair of values.
+For example +/undo/handler sff "/volume_dB" 0.7f 20.0f+ would result in an
+event to change +/volume_dB+ from 7dB to 20dB.
+This event can be inserted into the undo history via
+_UndoHistory::recordEvent()_.
+
+By using _UndoHistory::seekHistory(-1)_ this event can be reversed.
+
+NOTE:: UndoHistory instances are NOT realtime safe
+
+
+
+This basic idea is certainly ynot perfect, as it is very dumb to start with 
 
