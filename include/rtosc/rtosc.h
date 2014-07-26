@@ -174,11 +174,20 @@ size_t rtosc_bundle_elements(const char *msg, size_t len);
 /**
  * Fetch a message within the bundle
  *
- * @param buffer OSC bundle
- * @param i      index of sub message
+ * @param msg OSC bundle
+ * @param i      index of sub-message
  * @returns The ith message within the bundle
  */
 const char *rtosc_bundle_fetch(const char *msg, unsigned i);
+
+/**
+ * Get the size of a particular bundle element
+ *
+ * @param msg OSC bundle
+ * @param i   Index of sub-message
+ * @returns   The size of the ith sub-message in bytes
+ */
+size_t rtosc_bundle_size(const char *msg, unsigned i);
 
 /**
  * Test if the buffer contains a bundle

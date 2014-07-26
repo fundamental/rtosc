@@ -596,6 +596,19 @@ const char *rtosc_bundle_fetch(const char *buffer, unsigned elm)
     return (const char*) (elm==elm_pos?lengths+1:NULL);
 }
 
+size_t rtosc_bundle_size(const char *buffer, unsigned elm)
+{
+    const uint32_t *lengths = (const uint32_t*) (buffer+16);
+    size_t elm_pos = 0;
+    size_t last_len = 0;
+    while(elm_pos!=elm && *lengths) {
+        last_len = *lengths;
+        ++elm_pos, lengths+=*lengths/4+1;
+    }
+
+    return last_len;
+}
+
 int rtosc_bundle_p(const char *msg)
 {
     return !strcmp(msg,"#bundle");
