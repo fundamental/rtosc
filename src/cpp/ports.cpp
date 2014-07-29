@@ -269,7 +269,7 @@ ivec_t find_pos(words_t &strs)
     }
     auto hashed = do_hash(strs, pos);
     int d = count_dups(hashed);
-    printf("Total Dups: %d\n", d);
+    //printf("Total Dups: %d\n", d);
     if(d != 0)
         pos.clear();
     return pos;
@@ -331,7 +331,7 @@ ivec_t find_assoc(const words_t &strs, const ivec_t &pos)
     }
     auto hashed = do_hash(strs, pos, assoc);
     int d = count_dups(hashed);
-    printf("Total Dups Assoc: %d\n", d);
+    //printf("Total Dups Assoc: %d\n", d);
     return assoc;
 }
 
