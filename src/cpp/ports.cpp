@@ -626,3 +626,175 @@ void rtosc::walk_ports(const Ports *base,
     }
 }
 
+void walk_ports2(const rtosc::Ports *base,
+                 char         *name_buffer,
+                 size_t        buffer_size,
+                 void         *data,
+                 rtosc::port_walker_t walker)
+{
+    assert(name_buffer);
+    //XXX buffer_size is not properly handled yet
+    if(name_buffer[0] == 0)
+        name_buffer[0] = '/';
+
+    char *old_end         = name_buffer;
+    while(*old_end) ++old_end;
+
+    for(const rtosc::Port &p: *base) {
+        if(index(p.name, '/')) {//it is another tree
+            if(index(p.name,'#')) {
+                const char *name = p.name;
+                char       *pos  = old_end;
+                while(*name != '#') *pos++ = *name++;
+                const unsigned max = atoi(name+1);
+
+                //for(unsigned i=0; i<max; ++i)
+                {
+                    sprintf(pos,"[0,%d]",max);
+
+                    //Ensure the result is a path
+                    if(rindex(name_buffer, '/')[1] != '/')
+                        strcat(name_buffer, "/");
+
+                    //Recurse
+                    walk_ports2(p.ports, name_buffer, buffer_size,
+                            data, walker);
+                }
+            } else {
+                //Append the path
+                scat(name_buffer, p.name);
+
+                //Recurse
+                walk_ports2(p.ports, name_buffer, buffer_size,
+                        data, walker);
+            }
+        } else {
+            if(index(p.name,'#')) {
+                const char *name = p.name;
+                char       *pos  = old_end;
+                while(*name != '#') *pos++ = *name++;
+                const unsigned max = atoi(name+1);
+
+                //for(unsigned i=0; i<max; ++i)
+                {
+                    sprintf(pos,"[0,%d]",max);
+
+                    //Apply walker function
+                    walker(&p, name_buffer, data);
+                }
+            } else {
+                //Append the path
+                scat(name_buffer, p.name);
+
+                //Apply walker function
+                walker(&p, name_buffer, data);
+            }
+        }
+
+        //Remove the rest of the path
+        char *tmp = old_end;
+        while(*tmp) *tmp++=0;
+    }
+}
+
+void units(const char*u)
+{
+    if(!u)
+        return;
+    printf(" units=\"%s\"",u);
+}
+
+void dump_ports_cb(const rtosc::Port *p, const char *name, void*)
+{
+    auto meta = p->meta();
+    if(meta.find("parameter") != p->meta().end()) {
+        char type = 0;
+        const char *foo = index(p->name, ':');
+        if(index(foo, 'f'))
+            type = 'f';
+        else if(index(foo, 'i'))
+            type = 'i';
+        else if(index(foo, 'c'))
+            type = 'c';
+        else if(index(foo, 'T'))
+            type = 't';
+        if(!type) {
+            printf("Cannot handle '%s'\n", p->name);
+            return;
+        }
+
+        if(type == 't')
+        {
+            printf(" <message_in pattern=\"%s\" typetag=\"T\">\n", name);
+            printf("  <desc>Enable %s</desc>\n", p->meta()["documentation"]);
+            printf("  <param_T symbol=\"x\"/>");
+            printf(" </message_in>\n");
+            printf(" <message_in pattern=\"%s\" typetag=\"F\">\n", name);
+            printf("  <desc>Disable %s</desc>\n", p->meta()["documentation"]);
+            printf("  <param_F symbol=\"x\"/>");
+            printf(" </message_in>\n");
+            printf(" <message_in pattern=\"%s\" typetag=\"\">\n", name);
+            printf("  <desc>Get state of %s</desc>\n", p->meta()["documentation"]);
+            printf(" </message_in>\n");
+            printf(" <message_out pattern=\"%s\" typetag=\"T\">\n", name);
+            printf("  <desc>Value of %s</desc>\n", p->meta()["documentation"]);
+            printf("  <param_T symbol=\"x\"/>");
+            printf(" </message_out>\n");
+            printf(" <message_out pattern=\"%s\" typetag=\"F\">\n", name);
+            printf("  <desc>Value of %s</desc>\n", p->meta()["documentation"]);
+            printf("  <param_F symbol=\"x\"/>");
+            printf(" </message_out>\n");
+            return;
+        }
+        //if(type == 'c')
+        //    type = 'i';
+
+        printf(" <message_in pattern=\"%s\" typetag=\"%c\">\n", name, type);
+        printf("  <desc>Set Value of %s</desc>\n", p->meta()["documentation"]);
+        if(meta.find("min") != meta.end() && meta.find("max") != meta.end() && type != 'c')
+        {
+            printf("  <param_%c symbol=\"x\"", type);units(meta["unit"]);printf(">\n");
+            printf("   <range_min_max %s min=\"%s\" max=\"%s\"/>", type == 'f' ? "lmin=\"[\" lmax=\"]\"" : "", meta["min"], meta["max"]);
+            printf("  </param_%c>", type);
+        } else {
+            printf("  <param_%c symbol=\"x\"",type);units(meta["unit"]); printf("/>\n");
+        }
+        printf(" </message_in>\n");
+        printf(" <message_in pattern=\"%s\" typetag=\"\">\n", name);
+        printf("  <desc>Get Value of %s</desc>\n", p->meta()["documentation"]);
+        printf(" </message_in>\n");
+        printf(" <message_out pattern=\"%s\" typetag=\"%c\">\n", name, type);
+        printf("  <desc>Value of %s</desc>\n", p->meta()["documentation"]);
+        if(meta.find("min") != meta.end() && meta.find("max") != meta.end() && type != 'c')
+        {
+            printf("  <param_%c symbol=\"x\"", type);units(meta["unit"]);printf(">\n");
+            printf("   <range_min_max %s min=\"%s\"  max=\"%s\"/>", type == 'f' ? "lmin=\"[\" lmax=\"]\"" : "", meta["min"], meta["max"]);
+            printf("  </param_%c>", type);
+        } else {
+            printf("  <param_%c symbol=\"x\"",type);units(meta["unit"]); printf("/>\n");
+        }
+        printf(" </message_out>\n");
+    }// else if(meta.find("documentation") != meta.end())
+    //    fprintf(stderr, "Skipping \"%s\"\n", name);
+    //else
+    //    fprintf(stderr, "Skipping [UNDOCUMENTED] \"%s\"\n", name);
+}
+
+void dump_ports(Ports *p)
+{
+    puts("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+    puts("<osc_unit format_version=\"1.0\">");
+    puts(" <meta>");
+    puts("  <name>ZynAddSubFX</name>");
+    puts("  <uri>http://zynaddsubfx.sf.net/</uri>");
+    puts("  <doc_origin>http://where.to/?find=this&amp;xml_file</doc_origin>");
+    puts("  <author><firstname>Mark</firstname><lastname>McCurry</lastname></author>");
+    puts(" </meta>");
+    char buffer[1024];
+    memset(buffer, 0, sizeof(buffer));
+    walk_ports2(p, buffer, 1024, NULL, dump_ports_cb);
+    printf("</osc_unit>\n");
+    exit(1);
+}
+
+
