@@ -105,7 +105,7 @@
 
 //Array operators
 #define rArrayF(name, length, ...) \
-{STRINGIFY(name) "#" STRINGIFY(length) "::f", DOC(__VA_ARGS__), NULL, rArrayFCb}
+{STRINGIFY(name) "#" STRINGIFY(length) "::f", DOC(__VA_ARGS__), NULL, rArrayFCb(name)}
 #define rArray(name, length, ...) \
 {STRINGIFY(name) "#" STRINGIFY(length) "::c", DOC(__VA_ARGS__), NULL, rArrayCb(name)}
 
@@ -303,6 +303,16 @@ template<class T> constexpr T spice(T*t) {return *t;}
             rAPPLY(name[idx], c) \
             data.broadcast(loc, "c", obj->name[idx]);\
             rChangeCb \
+        } rBOILS_END
+
+#define rArrayFCb(name) rBOILS_BEGIN \
+        if(!strcmp("", args)) {\
+            data.reply(loc, "f", obj->name[idx]); \
+        } else { \
+            float var = rtosc_argument(msg, 0).f; \
+            rLIMIT(var, atof) \
+            rAPPLY(name[idx], f) \
+            data.broadcast(loc, "f", obj->name[idx]);\
         } rBOILS_END
 
 #define rParamsCb(name, length) rBOIL_BEGIN \

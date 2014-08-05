@@ -12,6 +12,8 @@ class Object
 #define rObject Object
 
 
+//Assuming this test even compiles that implies some level of sanity to the
+//syntaxtual sugar
 rtosc::Ports p = {
     rOption(foo, rOpt(0,red) rOpt(1,blue) rOpt(2,green) rOpt(3,teal), "various options"),
     rOption(bar, rOptions(red,blue,green,teal), "various options")
@@ -19,7 +21,11 @@ rtosc::Ports p = {
 
 int main()
 {
-    //Assuming this test even compiles that implies some level of sanity to the
-    //syntaxtual sugar
+    //Now a quick check for the sanity of memory access
+    auto meta = p["foo"]->meta();
+    for(auto x:meta)
+    {
+        printf("%s->%s\n", x.title, x.value);
+    }
     return 0;
 }
