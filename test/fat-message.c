@@ -13,6 +13,7 @@ int err = 0;
 //verifies a message with all types included serializes and deserializes
 int main()
 {
+    unsigned message_len;
     int32_t      i = 42;             //integer
     float        f = 0.25;           //float
     const char  *s = "string";       //string
@@ -30,7 +31,7 @@ int main()
     //nil
     //inf
 
-    CHECK(rtosc_message(buffer, 1024, "/dest",
+    CHECK(message_len = rtosc_message(buffer, 1024, "/dest",
                 "[ifsbhtdScrmTFNI]",
                 i,f,s,b.len,b.data,h,t,d,S,c,r,m));
 
@@ -53,6 +54,7 @@ int main()
     CHECK(rtosc_type(buffer,12) == 'F');
     CHECK(rtosc_type(buffer,13) == 'N');
     CHECK(rtosc_type(buffer,14) == 'I');
+    CHECK(rtosc_valid_message_p(buffer, message_len));
 
     return err;
 }

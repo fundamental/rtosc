@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <ctype.h>
 #include <assert.h>
 
 #include <rtosc/rtosc.h>
@@ -545,6 +546,40 @@ size_t rtosc_message_length(const char *msg, size_t len)
 {
     ring_t ring[2] = {{(char*)msg,len},{NULL,0}};
     return rtosc_message_ring_length(ring);
+}
+
+bool rtosc_valid_message_p(const char *msg, size_t len)
+{
+    //Validate Path Characters (assumes printable characters are sufficient)
+    if(*msg != '/')
+        return false;
+    const char *tmp = msg;
+    for(unsigned i=0; i<len; ++i) {
+        if(*tmp == 0)
+            break;
+        if(!isprint(*tmp))
+            return false;
+        tmp++;
+    }
+
+    //tmp is now either pointing to a null or the end of the string
+    const size_t offset1 = tmp-msg;
+    size_t       offset2 = tmp-msg;
+    for(; offset2<len; offset2++) {
+        if(*tmp == ',')
+            break;
+        tmp++;
+    }
+
+    //Too many NULL bytes
+    if(offset2-offset1 > 4)
+        return false;
+
+    if((offset2 % 4) != 0)
+        return false;
+
+    size_t observed_length = rtosc_message_length(msg, len);
+    return observed_length == len;
 }
 
 size_t rtosc_bundle(char *buffer, size_t len, uint64_t tt, int elms, ...)

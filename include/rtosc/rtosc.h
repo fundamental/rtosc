@@ -144,6 +144,14 @@ typedef struct {
  */
 size_t rtosc_message_ring_length(ring_t *ring);
 
+
+/**
+ * Validate if an arbitrary byte sequence is an OSC message.
+ * @param msg pointer to memory buffer
+ * @param len length of buffer
+ */
+bool rtosc_valid_message_p(const char *msg, size_t len);
+
 /**
  * @param OSC message
  * @returns the argument string of a given message
