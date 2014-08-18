@@ -1,5 +1,6 @@
 #include <rtosc/ports.h>
 #include <rtosc/port-sugar.h>
+#include <iostream>
 
 
 class Object
@@ -27,5 +28,8 @@ int main()
     {
         printf("%s->%s\n", x.title, x.value);
     }
+
+    rtosc::OscDocFormatter format{&p, "", "", "", "", ""};
+    std::cout << format << std::endl;
     return 0;
 }

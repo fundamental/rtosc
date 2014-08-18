@@ -1,4 +1,5 @@
 #include "../../include/rtosc/ports.h"
+#include <ostream>
 #include <cassert>
 #include <climits>
 #include <cstring>
@@ -697,15 +698,16 @@ void walk_ports2(const rtosc::Ports *base,
     }
 }
 
-void units(const char*u)
+static void units(std::ostream &o, const char *u)
 {
     if(!u)
         return;
-    printf(" units=\"%s\"",u);
+    o << " units=\"" << u << "\"";
 }
 
-void dump_ports_cb(const rtosc::Port *p, const char *name, void*)
+void dump_ports_cb(const rtosc::Port *p, const char *name, void *v)
 {
+    std::ostream &o = *(std::ostream*)v;
     auto meta = p->meta();
     if(meta.find("parameter") != p->meta().end()) {
         char type = 0;
@@ -719,82 +721,90 @@ void dump_ports_cb(const rtosc::Port *p, const char *name, void*)
         else if(index(foo, 'T'))
             type = 't';
         if(!type) {
-            printf("Cannot handle '%s'\n", p->name);
+            fprintf(stderr, "rtosc port dumper: Cannot handle '%s'\n", p->name);
             return;
         }
 
         if(type == 't')
         {
-            printf(" <message_in pattern=\"%s\" typetag=\"T\">\n", name);
-            printf("  <desc>Enable %s</desc>\n", p->meta()["documentation"]);
-            printf("  <param_T symbol=\"x\"/>");
-            printf(" </message_in>\n");
-            printf(" <message_in pattern=\"%s\" typetag=\"F\">\n", name);
-            printf("  <desc>Disable %s</desc>\n", p->meta()["documentation"]);
-            printf("  <param_F symbol=\"x\"/>");
-            printf(" </message_in>\n");
-            printf(" <message_in pattern=\"%s\" typetag=\"\">\n", name);
-            printf("  <desc>Get state of %s</desc>\n", p->meta()["documentation"]);
-            printf(" </message_in>\n");
-            printf(" <message_out pattern=\"%s\" typetag=\"T\">\n", name);
-            printf("  <desc>Value of %s</desc>\n", p->meta()["documentation"]);
-            printf("  <param_T symbol=\"x\"/>");
-            printf(" </message_out>\n");
-            printf(" <message_out pattern=\"%s\" typetag=\"F\">\n", name);
-            printf("  <desc>Value of %s</desc>\n", p->meta()["documentation"]);
-            printf("  <param_F symbol=\"x\"/>");
-            printf(" </message_out>\n");
+            o << " <message_in pattern=\"" << name << "\" typetag=\"T\">\n";
+            o << "  <desc>Enable " << p->meta()["documentation"] << "</desc>\n";
+            o << "  <param_T symbol=\"x\"/>\n";
+            o << " </message_in>\n";
+            o << " <message_in pattern=\"" << name << "\" typetag=\"F\">\n";
+            o << "  <desc>Disable "  << p->meta()["documentation"] << "</desc>\n";
+            o << "  <param_F symbol=\"x\"/>\n";
+            o << " </message_in>\n";
+            o << " <message_in pattern=\"" << name << "\" typetag=\"\">\n";
+            o << "  <desc>Get state of " << p->meta()["documentation"] << "</desc>\n";
+            o << " </message_in>\n";
+            o << " <message_out pattern=\"" << name << "\" typetag=\"T\">\n";
+            o << "  <desc>Value of " << p->meta()["documentation"] << "</desc>\n";
+            o << "  <param_T symbol=\"x\"/>";
+            o << " </message_out>\n";
+            o << " <message_out pattern=\"" << name << "\" typetag=\"F\">\n";
+            o << "  <desc>Value of %s</desc>\n", p->meta()["documentation"];
+            o << "  <param_F symbol=\"x\"/>";
+            o << " </message_out>\n";
             return;
         }
-        //if(type == 'c')
-        //    type = 'i';
 
-        printf(" <message_in pattern=\"%s\" typetag=\"%c\">\n", name, type);
-        printf("  <desc>Set Value of %s</desc>\n", p->meta()["documentation"]);
+        o << " <message_in pattern=\"" << name << "\" typetag=\"" << type << "\">\n";
+        o << "  <desc>Set Value of " << p->meta()["documentation"] << "</desc>\n";
         if(meta.find("min") != meta.end() && meta.find("max") != meta.end() && type != 'c')
         {
-            printf("  <param_%c symbol=\"x\"", type);units(meta["unit"]);printf(">\n");
-            printf("   <range_min_max %s min=\"%s\" max=\"%s\"/>", type == 'f' ? "lmin=\"[\" lmax=\"]\"" : "", meta["min"], meta["max"]);
-            printf("  </param_%c>", type);
+            o << "  <param_" << type << " symbol=\"x\"";
+            units(o, meta["unit"]);
+            o << ">\n";
+            o << "   <range_min_max " << (type == 'f' ? "lmin=\"[\" lmax=\"]\"" : "");
+            o << " min=\"" << meta["min"] << "\"  max=\"" << meta["max"] << "\"/>\n";
+            o << "  </param_" << type << ">";
         } else {
-            printf("  <param_%c symbol=\"x\"",type);units(meta["unit"]); printf("/>\n");
+            o << "  <param_" << type << " symbol=\"x\"";
+            units(o, meta["unit"]);
+            o << "/>\n";
         }
-        printf(" </message_in>\n");
-        printf(" <message_in pattern=\"%s\" typetag=\"\">\n", name);
-        printf("  <desc>Get Value of %s</desc>\n", p->meta()["documentation"]);
-        printf(" </message_in>\n");
-        printf(" <message_out pattern=\"%s\" typetag=\"%c\">\n", name, type);
-        printf("  <desc>Value of %s</desc>\n", p->meta()["documentation"]);
+        o << " </message_in>\n";
+        o << " <message_in pattern=\"" << name << "\" typetag=\"\">\n";
+        o << "  <desc>Get Value of " << p->meta()["documentation"] << "</desc>\n";
+        o << " </message_in>\n";
+        o << " <message_out pattern=\"" << name << "\" typetag=\"" << type << "\">\n";
+        o << "  <desc>Value of " << p->meta()["documentation"] << "</desc>\n";
         if(meta.find("min") != meta.end() && meta.find("max") != meta.end() && type != 'c')
         {
-            printf("  <param_%c symbol=\"x\"", type);units(meta["unit"]);printf(">\n");
-            printf("   <range_min_max %s min=\"%s\"  max=\"%s\"/>", type == 'f' ? "lmin=\"[\" lmax=\"]\"" : "", meta["min"], meta["max"]);
-            printf("  </param_%c>", type);
+            o << "  <param_" << type << " symbol=\"x\"";
+            units(o, meta["unit"]);
+            o << ">\n";
+            o << "   <range_min_max " << (type == 'f' ? "lmin=\"[\" lmax=\"]\"" : "");
+            o << " min=\"" << meta["min"] << "\"  max=\"" << meta["max"] << "\"/>\n";
+            o << "  </param_" << type << ">\n";
         } else {
-            printf("  <param_%c symbol=\"x\"",type);units(meta["unit"]); printf("/>\n");
+            o << "  <param_" << type << " symbol=\"x\"";
+            units(o, meta["unit"]);
+            o << "/>\n";
         }
-        printf(" </message_out>\n");
+        o << " </message_out>\n";
     }// else if(meta.find("documentation") != meta.end())
     //    fprintf(stderr, "Skipping \"%s\"\n", name);
     //else
     //    fprintf(stderr, "Skipping [UNDOCUMENTED] \"%s\"\n", name);
 }
 
-void dump_ports(Ports *p)
+std::ostream &rtosc::operator<<(std::ostream &o, rtosc::OscDocFormatter &formatter)
 {
-    puts("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-    puts("<osc_unit format_version=\"1.0\">");
-    puts(" <meta>");
-    puts("  <name>ZynAddSubFX</name>");
-    puts("  <uri>http://zynaddsubfx.sf.net/</uri>");
-    puts("  <doc_origin>http://where.to/?find=this&amp;xml_file</doc_origin>");
-    puts("  <author><firstname>Mark</firstname><lastname>McCurry</lastname></author>");
-    puts(" </meta>");
+    o << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+    o << "<osc_unit format_version=\"1.0\">\n";
+    o << " <meta>\n";
+    o << "  <name>" << formatter.prog_name << "</name>\n";
+    o << "  <uri>" << formatter.uri << "</uri>\n";
+    o << "  <doc_origin>" << formatter.doc_origin << "</doc_origin>\n";
+    o << "  <author><firstname>" << formatter.author_first;
+    o << "</firstname><lastname>" << formatter.author_last << "</lastname></author>\n";
+    o << " </meta>\n";
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
-    walk_ports2(p, buffer, 1024, NULL, dump_ports_cb);
-    printf("</osc_unit>\n");
-    exit(1);
+    walk_ports2(formatter.p, buffer, 1024, &o, dump_ports_cb);
+    o << "</osc_unit>\n";
+    return o;
 }
-
 

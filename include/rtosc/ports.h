@@ -185,7 +185,22 @@ void walk_ports(const Ports *base,
         size_t         buffer_size,
         void          *data,
         port_walker_t  walker);
+
+/*********************
+ * Port Dumping code *
+ *********************/
+
+struct OscDocFormatter
+{
+    Ports *p;
+    std::string prog_name;
+    std::string uri;
+    std::string doc_origin;
+    std::string author_first;
+    std::string author_last;
+    //TODO extend this some more
 };
 
-
+std::ostream &operator<<(std::ostream &o, OscDocFormatter &formatter);
+};
 #endif
