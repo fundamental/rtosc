@@ -19,10 +19,26 @@ RtData::RtData(void)
     :loc(NULL), loc_size(0), obj(NULL), matches(0)
 {}
 
-void RtData::reply(const char *path, const char *args, ...){(void)path;(void)args;};
-void RtData::reply(const char *msg){(void)msg;};
-void RtData::broadcast(const char *path, const char *args, ...){(void)path;(void)args;};
-void RtData::broadcast(const char *msg){(void)msg;};
+void RtData::reply(const char *path, const char *args, ...)
+{
+    va_list va;
+    va_start(va,args);
+    char buffer[1024];
+    rtosc_vmessage(buffer,1024,path,args,va);
+    reply(buffer);
+};
+void RtData::reply(const char *msg)
+{(void)msg;};
+void RtData::broadcast(const char *path, const char *args, ...)
+{
+    va_list va;
+    va_start(va,args);
+    char buffer[1024];
+    rtosc_vmessage(buffer,1024,path,args,va);
+    broadcast(buffer);
+}
+void RtData::broadcast(const char *msg)
+{reply(msg);};
 
 void metaiterator_advance(const char *&title, const char *&value)
 {
@@ -651,7 +667,7 @@ void walk_ports2(const rtosc::Ports *base,
 
                 //for(unsigned i=0; i<max; ++i)
                 {
-                    sprintf(pos,"[0,%d]",max);
+                    sprintf(pos,"{0,%d}",max);
 
                     //Ensure the result is a path
                     if(rindex(name_buffer, '/')[1] != '/')
@@ -678,7 +694,7 @@ void walk_ports2(const rtosc::Ports *base,
 
                 //for(unsigned i=0; i<max; ++i)
                 {
-                    sprintf(pos,"[0,%d]",max);
+                    sprintf(pos,"{0,%d}",max);
 
                     //Apply walker function
                     walker(&p, name_buffer, data);

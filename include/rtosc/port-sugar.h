@@ -105,9 +105,9 @@
 
 //Array operators
 #define rArrayF(name, length, ...) \
-{STRINGIFY(name) "#" STRINGIFY(length) "::f", DOC(__VA_ARGS__), NULL, rArrayFCb(name)}
+{STRINGIFY(name) "#" STRINGIFY(length) "::f", rProp(parameter) DOC(__VA_ARGS__), NULL, rArrayFCb(name)}
 #define rArray(name, length, ...) \
-{STRINGIFY(name) "#" STRINGIFY(length) "::c", DOC(__VA_ARGS__), NULL, rArrayCb(name)}
+{STRINGIFY(name) "#" STRINGIFY(length) "::c", rProp(parameter) DOC(__VA_ARGS__), NULL, rArrayCb(name)}
 
 
 //Method callback Actions

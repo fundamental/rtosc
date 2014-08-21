@@ -193,6 +193,7 @@ static size_t vsosc_null(const char        *address,
             case 's':
             case 'S':
                 s = args[arg_pos++].s;
+                assert(s && "Input strings CANNOT be NULL");
                 pos += strlen(s);
                 pos += 4-pos%4;
                 --toparse;
