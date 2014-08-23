@@ -60,7 +60,13 @@ Object o;
 void run_test(void)
 {
     RtData d;
+    char rtdatabuf[100];
+
     //Initialize Parameters
+    d.loc = rtdatabuf;
+    d.loc_size = 100;
+    memset(rtdatabuf, 0, sizeof(rtdatabuf));
+
     o.foo = 12;
     o.bar = 0.0f;
     o.baz.foobar = 0;

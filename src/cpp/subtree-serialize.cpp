@@ -11,7 +11,7 @@ using namespace rtosc;
  * Append another message onto a bundle if the space permits it.
  * If insufficient space is available, then zero is returned and the buffer is
  * untouched.
- * 
+ *
  * If this is useful it may be generalized to rtosc_bundle_append()
  */
 static size_t append_bundle(char *dst, const char *src,
@@ -27,7 +27,7 @@ static size_t append_bundle(char *dst, const char *src,
     if(max_len < dst_len + src_len + 4 || dst_len == 0 || src_len == 0)
         return 0;
     *(int32_t*)(dst+dst_len) = (int32_t)src_len;
-    
+
     memcpy(dst+dst_len+4, src, src_len);
 
     return dst_len + src_len + 4;
@@ -83,6 +83,10 @@ class VarCapture : public RtData
             assert(len != 0);
             success = true;
         }
+        virtual void broadcast(const char *msg)
+        {
+            (void) msg;
+        }
 };
 
 struct subtree_args_t
@@ -101,7 +105,7 @@ size_t subtree_serialize(char *buffer, size_t buffer_size,
     (void) object;
     assert(buffer);
     assert(ports);
-    
+
     subtree_args_t args;
     args.v.obj       = object;
     args.len         = rtosc_bundle(buffer, buffer_size, 0xdeadbeef0a0b0c0dULL, 0);
@@ -117,7 +121,7 @@ size_t subtree_serialize(char *buffer, size_t buffer_size,
                 return;
 
             subtree_args_t *args = (subtree_args_t*) dat;
-            
+
             const char *buf = args->vv.capture(args->ports, args->v.loc+1, args->object);
             if(buf)
                 args->len = append_bundle(args->buffer, buf, args->buffer_size, args->len,
@@ -133,7 +137,7 @@ void subtree_deserialize(char *buffer, size_t buffer_size,
     d.obj = object;
     //simply replay all objects seen here
     for(unsigned i=0; i<rtosc_bundle_elements(buffer, buffer_size); ++i) {
-        const char *msg = rtosc_bundle_fetch(buffer, i); 
+        const char *msg = rtosc_bundle_fetch(buffer, i);
         ports->dispatch(msg+1, d);
     }
 }
