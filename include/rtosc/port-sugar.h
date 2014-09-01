@@ -108,6 +108,8 @@
 {STRINGIFY(name) "#" STRINGIFY(length) "::f", rProp(parameter) DOC(__VA_ARGS__), NULL, rArrayFCb(name)}
 #define rArray(name, length, ...) \
 {STRINGIFY(name) "#" STRINGIFY(length) "::c", rProp(parameter) DOC(__VA_ARGS__), NULL, rArrayCb(name)}
+#define rArrayT(name, length, ...) \
+{STRINGIFY(name) "#" STRINGIFY(length) "::T:F", rProp(parameter) DOC(__VA_ARGS__), NULL, rArrayTCb(name)}
 
 
 //Method callback Actions
@@ -313,6 +315,17 @@ template<class T> constexpr T spice(T*t) {return *t;}
             rLIMIT(var, atof) \
             rAPPLY(name[idx], f) \
             data.broadcast(loc, "f", obj->name[idx]);\
+        } rBOILS_END
+
+#define rArrayTCb(name) rBOILS_BEGIN \
+        if(!strcmp("", args)) {\
+            data.reply(loc, obj->name ? "T" : "F"); \
+        } else { \
+            if(obj->name != rtosc_argument(msg, 0).T) { \
+                data.broadcast(loc, args);\
+                rChangeCb \
+            } \
+            obj->name = rtosc_argument(msg, 0).T; \
         } rBOILS_END
 
 #define rParamsCb(name, length) rBOIL_BEGIN \
