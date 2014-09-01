@@ -319,13 +319,13 @@ template<class T> constexpr T spice(T*t) {return *t;}
 
 #define rArrayTCb(name) rBOILS_BEGIN \
         if(!strcmp("", args)) {\
-            data.reply(loc, obj->name ? "T" : "F"); \
+            data.reply(loc, obj->name[idx] ? "T" : "F"); \
         } else { \
             if(obj->name != rtosc_argument(msg, 0).T) { \
                 data.broadcast(loc, args);\
                 rChangeCb \
             } \
-            obj->name = rtosc_argument(msg, 0).T; \
+            obj->name[idx] = rtosc_argument(msg, 0).T; \
         } rBOILS_END
 
 #define rParamsCb(name, length) rBOIL_BEGIN \
