@@ -321,7 +321,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
         if(!strcmp("", args)) {\
             data.reply(loc, obj->name[idx] ? "T" : "F"); \
         } else { \
-            if(obj->name != rtosc_argument(msg, 0).T) { \
+            if(obj->name[idx] != rtosc_argument(msg, 0).T) { \
                 data.broadcast(loc, args);\
                 rChangeCb \
             } \
