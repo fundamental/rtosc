@@ -667,7 +667,7 @@ void walk_ports2(const rtosc::Ports *base,
 
                 //for(unsigned i=0; i<max; ++i)
                 {
-                    sprintf(pos,"{0,%d}",max);
+                    sprintf(pos,"[0,%d]",max);
 
                     //Ensure the result is a path
                     if(rindex(name_buffer, '/')[1] != '/')
@@ -694,7 +694,7 @@ void walk_ports2(const rtosc::Ports *base,
 
                 //for(unsigned i=0; i<max; ++i)
                 {
-                    sprintf(pos,"{0,%d}",max);
+                    sprintf(pos,"[0,%d]",max);
 
                     //Apply walker function
                     walker(&p, name_buffer, data);
