@@ -33,6 +33,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <cstdio>
+#include <string>
 
 namespace rtosc {
 
