@@ -369,7 +369,8 @@ size_t rtosc_amessage(char              *buffer,
                 }
                 else
                     pos += i;
-                pos += 4-pos%4;
+                if(pos%4)
+                    pos += 4-pos%4;
                 --toparse;
                 break;
             default:
@@ -531,7 +532,8 @@ size_t rtosc_message_ring_length(ring_t *ring)
                 i |= (deref(pos++,ring) << 8);
                 i |= (deref(pos++,ring));
                 pos += i;
-                pos += 4-pos%4;
+                if(pos%4)
+                    pos += 4-pos%4;
                 --toparse;
                 break;
             default:
