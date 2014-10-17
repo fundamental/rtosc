@@ -1,6 +1,7 @@
 #include <lo/lo.h>
 #include <rtosc/rtosc.h>
 #include <string.h>
+#include <stdio.h>
 
 char buffer[128];
 
@@ -27,22 +28,22 @@ int main()
     good &= len  == rtosc_message_length(buffer, 128);
 
     size_t len2 = rtosc_message(buffer2, 1024, "/li", "bb", 4, buffer, 4, buffer);
-    for(int i=0; i<len2; i+=4)  {
-        for(int j=i; j<len2 && j<i+4; ++j) {
+    for(size_t i=0; i<len2; i+=4)  {
+        for(size_t j=i; j<len2 && j<i+4; ++j) {
             printf("%02x", (unsigned char)buffer2[j]);
         }
         printf(" ");
     }
     printf("\n");
 
-    for(int i=0; i<len2; i+=4)  {
-        for(int j=i; j<len2 && j<i+4; ++j) {
+    for(size_t i=0; i<len2; i+=4)  {
+        for(size_t j=i; j<len2 && j<i+4; ++j) {
             printf("%c", (unsigned char)buffer2[j]);
         }
         printf(" ");
     }
     printf("\n");
-    printf("message size is '%d'\n", len2);
+    printf("message size is '%zd'\n", len2);
 
     int result = 0;
     lo_message msg2 = lo_message_deserialise((void*)buffer2, len2, &result);

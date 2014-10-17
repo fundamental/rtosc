@@ -1,3 +1,4 @@
+#include <math.h>
 #include <rtosc/miditable.h>
 
 using namespace rtosc;
@@ -40,13 +41,15 @@ static void black_hole2(const char *a, const char *b)
 static void black_hole1(const char *a)
 {printf("'%s'\n", a);}
 
+#define	MAX_UNHANDLED_PATH 128
+
 MidiTable::MidiTable(Ports &_dispatch_root)
 :dispatch_root(_dispatch_root), unhandled_ch(RTOSC_INVALID_MIDI), unhandled_ctl(RTOSC_INVALID_MIDI),
     error_cb(black_hole2), event_cb(black_hole1), modify_cb(black_hole3)
 {
     impl = new MidiTable_Impl(128,128);
-    unhandled_path = new char[128];
-    memset(unhandled_path, 0, 128);
+    unhandled_path = new char[MAX_UNHANDLED_PATH];
+    memset(unhandled_path, 0, MAX_UNHANDLED_PATH);
 }
 
 bool MidiTable::has(uint8_t ch, uint8_t ctl) const
@@ -137,7 +140,7 @@ void MidiTable::check_learn(void)
         return;
     addElm(unhandled_ch, unhandled_ctl, unhandled_path);
     unhandled_ch = unhandled_ctl = RTOSC_INVALID_MIDI;
-    memset(unhandled_path, 0, sizeof(unhandled_path));
+    memset(unhandled_path, 0, MAX_UNHANDLED_PATH);
 }
 
 void MidiTable::learn(const char *s)
@@ -147,7 +150,8 @@ void MidiTable::learn(const char *s)
         return;
     }
     clear_entry(s);
-    strcpy(unhandled_path, s);
+    strncpy(unhandled_path, s, MAX_UNHANDLED_PATH);
+    unhandled_path[MAX_UNHANDLED_PATH-1] = '\0';
     check_learn();
 }
 

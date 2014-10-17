@@ -31,7 +31,7 @@ void check(int b, const char *msg, int loc)
 //TODO nested bundles (though I swore those were already done)
 int main()
 {
-    printf("%d %d %d\n", sizeof(MSG1)-1, sizeof(MSG2)-1, sizeof(RESULT)-1);
+    printf("%d %d %d\n", (int)sizeof(MSG1)-1, (int)sizeof(MSG2)-1, (int)sizeof(RESULT)-1);
     check((len_a = rtosc_message(buffer_a, 256,
                     "/flying-monkey", "s", "bannana")) == sizeof(MSG1)-1,
             "bad message", __LINE__);
@@ -43,7 +43,7 @@ int main()
     check(!rtosc_bundle_p(buffer_b),
             "False positive bundle_p()", __LINE__);
     len_c = rtosc_bundle(buffer_c, 256, 0, 2, buffer_a, buffer_b);
-        printf("len_c => '%d'\n correct is %d\n", len_c, sizeof(RESULT)-1);
+        printf("len_c => '%zd'\n correct is %d\n", len_c, (int)sizeof(RESULT)-1);
     check((len_c = rtosc_bundle(buffer_c, 256, 0, 2, buffer_a, buffer_b)) == sizeof(RESULT)-1,
             "bad bundle", __LINE__);
     check(rtosc_message_length(buffer_c, len_c) == len_c,
