@@ -122,7 +122,8 @@ static unsigned arg_off(const char *msg, unsigned idx)
                 bundle_length |= (*arg_pos++ << 16);
                 bundle_length |= (*arg_pos++ << 8);
                 bundle_length |= (*arg_pos++);
-                bundle_length += 4-bundle_length%4;
+                if(bundle_length%4)
+                    bundle_length += 4-bundle_length%4;
                 arg_pos += bundle_length;
                 break;
             case '[':
@@ -201,7 +202,8 @@ static size_t vsosc_null(const char        *address,
             case 'b':
                 i = args[arg_pos++].b.len;
                 pos += 4 + i;
-                pos += 4-pos%4;
+                if(pos%4)
+                    pos += 4-pos%4;
                 --toparse;
                 break;
             default:

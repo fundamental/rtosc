@@ -4,6 +4,7 @@
 #include <rtosc/rtosc.h>
 
 char buffer[256];
+char buffer2[256];
 
 void check(int b, const char *msg, int loc)
 {
@@ -15,6 +16,8 @@ void check(int b, const char *msg, int loc)
 
 int main()
 {
+    memset(buffer2, 0xff, sizeof(buffer2));
+
     //Check the creation of a simple no arguments message
     check(rtosc_message(buffer, 256, "/page/poge", "TIF") == 20,
             "Incorrect message length", __LINE__);
@@ -89,6 +92,16 @@ int main()
     check(rtosc_message(buffer, 256, "/b", "c", 7) != 0,
             "Bad message", __LINE__);
     check(rtosc_argument(buffer+1, 0).i == 7,
+            "Bad argument", __LINE__);
+
+    //Work on a recently found bug
+    int ll;
+    check((ll = rtosc_message(buffer, 256, "m",
+                "bb", 4, buffer2, 1, buffer2)) == 24,
+            "Bad message", __LINE__);
+    check(rtosc_argument(buffer, 0).b.len == 4,
+            "Bad argument", __LINE__);
+    check(rtosc_argument(buffer, 1).b.len == 1,
             "Bad argument", __LINE__);
     return 0;
 }
