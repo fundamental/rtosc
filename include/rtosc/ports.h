@@ -167,10 +167,6 @@ struct Ports
     private:
     //Performance hacks
     class Port_Matcher *impl;
-    bool use_mask;
-    char mask_chars[4];
-    uint64_t masks[8];
-    bool unambigious;
     unsigned elms;
 };
 

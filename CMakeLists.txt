@@ -5,6 +5,9 @@ set(VERSION_MAJOR 0)
 set(VERSION_MINOR 1)
 set(VERSION_PATCH 0)
 
+SET(BUILD_RTOSC_EXAMPLES FALSE CACHE BOOL
+    "Build RTOSC Example Programs")
+
 include(GNUInstallDirs)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -64,7 +67,7 @@ else()
 endif()
 
 
-if(JACK_FOUND AND GUI_FOUND AND COMPILER_USABILITY)
+if(JACK_FOUND AND GUI_FOUND AND COMPILER_USABILITY AND BUILD_RTOSC_EXAMPLES)
     add_executable(simple-example example/simple/ui.cpp example/simple/synth.cpp)
     target_link_libraries(simple-example m rtosc ${GUI_LIBRARIES} jack)
 
@@ -77,7 +80,7 @@ if(JACK_FOUND AND GUI_FOUND AND COMPILER_USABILITY)
     #TODO add complex example (ie klatter (an unplublished project for those reading))
 endif()
 
-if(COMPILER_USABILITY)
+if(COMPILER_USABILITY AND BUILD_RTOSC_EXAMPLES)
     add_executable(modular-example
         example/modular/Echo.cpp
         example/modular/EffectMgr.cpp
@@ -88,7 +91,7 @@ if(COMPILER_USABILITY)
         example/modular/util.cpp
         )
     target_link_libraries(modular-example m rtosc rtosc-cpp)
-endif(COMPILER_USABILITY)
+endif(COMPILER_USABILITY AND BUILD_RTOSC_EXAMPLES)
 
 
 # Testing code

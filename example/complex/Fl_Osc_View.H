@@ -70,13 +70,13 @@ class PortTable: public Fl_Table_Row
                 case CONTEXT_COL_HEADER:                  // Draw column headers
                     if(COL == 0)
                         DrawHeader("Port Name",X,Y,W,H,COL);
-                    else if(COL == 1) 
+                    else if(COL == 1)
                         DrawHeader("Minimum",X,Y,W,H,COL);
-                    else if(COL == 2) 
+                    else if(COL == 2)
                         DrawHeader("Maximum",X,Y,W,H,COL);
-                    else if(COL == 3) 
+                    else if(COL == 3)
                         DrawHeader("MIDI CC",X,Y,W,H,COL);
-                    else if(COL == 4) 
+                    else if(COL == 4)
                         DrawHeader("Documentation",X,Y,W,H,COL);
                     else {
                         sprintf(s,"%c",'A'+COL);                // "A", "B", "C", etc.
@@ -143,8 +143,8 @@ static void osc_view_cb(Fl_Widget *w, void *v)
     if(row_top == row_bot && row_top != -1 && Fl::event_button() == 3)
     {
         Fl_Menu_Item rclick_menu[] = {
-            { "Delete Mapping",   0, Delete_CB,  (void*)v},
-            { 0 }
+            { "Delete Mapping",   0, Delete_CB,  (void*)v, 0, 0, 0, 0, 0},
+            { 0,  0, 0, 0, 0, 0, 0, 0, 0}
         };
         const Fl_Menu_Item *m = rclick_menu->popup(Fl::event_x(), Fl::event_y(), 0, 0, 0);
         if(m)//yeah, somehow this can be null...

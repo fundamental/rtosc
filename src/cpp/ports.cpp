@@ -347,7 +347,7 @@ ivec_t find_assoc(const words_t &strs, const ivec_t &pos)
         current_dups = assoc_best_val;
     }
     auto hashed = do_hash(strs, pos, assoc);
-    int d = count_dups(hashed);
+    //int d = count_dups(hashed);
     //printf("Total Dups Assoc: %d\n", d);
     return assoc;
 }

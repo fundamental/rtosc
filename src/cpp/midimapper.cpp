@@ -396,7 +396,6 @@ void MidiMappernRT::setBounds(const char *str, float low, float high)
         return;
     string addr  = str;
     auto imap    = inv_map[str];
-    auto oldBi   = get<3>(imap);
     auto newBi   = MidiBijection{0,low,high};
     inv_map[str] = make_tuple(get<0>(imap),get<1>(imap),get<2>(imap),newBi);
     MidiMapperStorage *nstorage = storage->clone();

@@ -25,7 +25,7 @@ class Fl_Undo_History:public Fl_Browser
             type(FL_MULTI_BROWSER);
             char buf[1024] = {0};
 
-            for(int i=0; i<hist->size(); ++i)
+            for(unsigned i=0; i<hist->size(); ++i)
             {
                 const char *info = hist->getHistory(i);
                 const char *args = rtosc_argument_string(info);
@@ -46,11 +46,11 @@ class Fl_Undo_History:public Fl_Browser
 
         int handle(int e) {
             int val = Fl_Browser::handle(e);
-            int choice = value();
+            unsigned choice = value();
             select_only(selection());
 
             if(choice != hist->getPos()) {
-                printf("seek(%d)\n",choice-hist->getPos()); 
+                printf("seek(%d)\n",choice-hist->getPos());
                 hist->seekHistory(choice-hist->getPos());
             }
             return val;
