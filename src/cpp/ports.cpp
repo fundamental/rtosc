@@ -520,7 +520,7 @@ void Ports::dispatch(const char *m, rtosc::RtData &d) const
                     *pos = '\0';
                 } else
                     memcpy(old_end, impl->fixed[port_num].c_str(),
-                            impl->fixed[port_num].length());
+                            impl->fixed[port_num].length()+1);
 
                 d.port = &port;
 
