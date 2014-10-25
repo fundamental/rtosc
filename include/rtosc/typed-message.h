@@ -11,8 +11,16 @@ template<class... Types> class rtMsg;
 template<> class rtMsg<>
 {
     public:
-        rtMsg(const char *arg = NULL, bool _=false)
-            :msg(arg){(void)_;}
+        rtMsg(const char *arg = NULL, const char *spec=NULL, bool _=false)
+            :msg(arg)
+        {
+            if(arg && spec && !rtosc_match_path(spec, arg))
+                msg = NULL;
+            (void)_;
+        }
+
+        operator bool(void){return this->msg;}
+
         const char *msg;
 };
 
@@ -50,17 +58,15 @@ class rtMsg<This, Rest...>:public rtMsg<Rest...>
 {
     public:
         typedef rtMsg<Rest...> T;
-        rtMsg(const char *arg = NULL)
-            :T(arg, false)
+        rtMsg(const char *arg = NULL, const char *spec=NULL)
+            :T(arg, spec, false)
         {
             if(this->msg && !validate<0,This,Rest...>(this->msg))
                 this->msg = NULL;
         }
 
-        operator bool(void){return this->msg;}
-
-        rtMsg(const char *arg, bool)
-            :T(arg, false)
+        rtMsg(const char *arg, const char *spec, bool)
+            :T(arg, spec, false)
         {}
 };
 
@@ -80,7 +86,6 @@ template <size_t Index, class This, class... Rest>
 struct osc_element<Index, rtMsg<This, Rest...>>
 : public osc_element<Index - 1, rtMsg<Rest...>>
 {
-    typedef This type;
 };
 
 template<class T>

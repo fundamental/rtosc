@@ -137,6 +137,7 @@ if(COMPILER_USABILITY)
     maketestcpp(undo-test)
     maketestcpp(serializer)
     maketestcpp(sugar)
+    maketestcpp(typed-template-test)
 endif()
 
 # Documentation
@@ -168,6 +169,7 @@ install(FILES include/rtosc/rtosc.h
     include/rtosc/port-sugar.h
     include/rtosc/undo-history.h
     include/rtosc/subtree-serialize.h
+    include/rtosc/typed-message.h
     DESTINATION include/rtosc)
 install(TARGETS rtosc rtosc-cpp
     DESTINATION ${CMAKE_INSTALL_LIBDIR})

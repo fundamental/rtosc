@@ -1,4 +1,5 @@
-#include <rtosc/typed-message.h>
+//#include <rtosc/typed-message.h>
+#include "../include/rtosc/typed-message.h"
 #include <cstdio>
 
 using rtosc::rtMsg;
@@ -14,7 +15,7 @@ int main() {
     auto s = get<0>(msg);
     printf("s=%s\n", s);
 
-    if(rtMsg<const char *, int32_t> m{buf})
+    if(rtMsg<const char *, int32_t> m{buf+1, "send-to"})
         printf("PASS\n");
     else
         printf("FAIL\n");
@@ -33,6 +34,12 @@ int main() {
         printf("PASS\n");
     else
         printf("FAIL\n");
+
+    if(rtMsg<int32_t, const char*> m{buf}) {
+        printf("FAIL\n");
+        printf("%s\n", get<1>(m));
+    } else
+        printf("PASS\n");
 
     return 0;
 };
