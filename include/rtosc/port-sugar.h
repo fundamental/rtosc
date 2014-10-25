@@ -265,6 +265,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
     rBOIL_END
 
 #define rRecurpCb(name) rBOIL_BEGIN \
+    if(obj->name == NULL) return; \
     data.obj = obj->name; \
     SNIP \
     decltype(spice(rObject::name))::ports.dispatch(msg, data); \
