@@ -281,11 +281,13 @@ size_t rtosc_amessage(char              *buffer,
     if(!buffer)
         return total_len;
 
-    memset(buffer, 0, total_len);
-
     //Abort if the message cannot fit
-    if(total_len>len)
+    if(total_len>len) {
+        memset(buffer, 0, len);
         return 0;
+    }
+
+    memset(buffer, 0, total_len);
 
     unsigned pos = 0;
     while(*address)
