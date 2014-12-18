@@ -7,6 +7,8 @@ char buffer[128];
 
 char buffer2[1024];
 
+char buffer3[2048];
+
 int good = 1;
 int main()
 {
@@ -50,6 +52,15 @@ int main()
     good &= msg2 != NULL;
     if(msg2 == NULL)
         printf("Bad result from liblo '%d'\n", result);
+
+    int len3 = rtosc_message(buffer3+4, 2048, "/close-ui", "");
+    lo_message msg3 = lo_message_deserialise((void*)buffer3+4, len3, &result);
+    printf("len3 = %d\n", len3);
+    good &= msg2 != NULL;
+    if(msg3 == NULL)
+        printf("Bad result from liblo '%d'\n", result);
+    else
+        printf("Good result from liblo\n");
 
     return !good;
 }
