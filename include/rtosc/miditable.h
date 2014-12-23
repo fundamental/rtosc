@@ -243,6 +243,7 @@ class MidiTable
         void (*modify_cb)(const char *, const char *, const char *, int, int);
 
         MidiTable(Ports &_dispatch_root);
+        ~MidiTable();
 
         bool has(uint8_t ch, uint8_t ctl) const;
 

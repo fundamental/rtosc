@@ -19,7 +19,13 @@ class rtosc::MidiTable_Impl
                 table[i].conversion = NULL;
             }
             //TODO initialize all elms
-            //TODO free elms
+        }
+        ~MidiTable_Impl()
+        {
+            for(unsigned i=0; i<elms; ++i) {
+                delete [] table[i].path;
+            }
+            delete [] table;
         }
 
         MidiAddr *begin(void) {return table;}
@@ -50,6 +56,12 @@ MidiTable::MidiTable(Ports &_dispatch_root)
     impl = new MidiTable_Impl(128,128);
     unhandled_path = new char[MAX_UNHANDLED_PATH];
     memset(unhandled_path, 0, MAX_UNHANDLED_PATH);
+}
+
+MidiTable::~MidiTable()
+{
+       delete impl;
+       delete [] unhandled_path;
 }
 
 bool MidiTable::has(uint8_t ch, uint8_t ctl) const
