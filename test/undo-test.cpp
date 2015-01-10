@@ -50,6 +50,7 @@ struct Rt:public RtData
         rtosc_vmessage(reply_buf, sizeof(reply_buf),
                 path, args, va);
         uh->recordEvent(reply_buf);
+        va_end(va);
     }
 
     bool enable;

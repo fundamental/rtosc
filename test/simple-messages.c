@@ -95,8 +95,7 @@ int main()
             "Bad argument", __LINE__);
 
     //Work on a recently found bug
-    int ll;
-    check((ll = rtosc_message(buffer, 256, "m",
+    check((rtosc_message(buffer, 256, "m",
                 "bb", 4, buffer2, 1, buffer2)) == 24,
             "Bad message", __LINE__);
     check(rtosc_argument(buffer, 0).b.len == 4,

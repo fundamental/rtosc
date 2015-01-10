@@ -26,6 +26,7 @@ void RtData::reply(const char *path, const char *args, ...)
     char buffer[1024];
     rtosc_vmessage(buffer,1024,path,args,va);
     reply(buffer);
+    va_end(va);
 };
 void RtData::reply(const char *msg)
 {(void)msg;};
@@ -36,6 +37,7 @@ void RtData::broadcast(const char *path, const char *args, ...)
     char buffer[1024];
     rtosc_vmessage(buffer,1024,path,args,va);
     broadcast(buffer);
+    va_end(va);
 }
 void RtData::broadcast(const char *msg)
 {reply(msg);};

@@ -82,6 +82,7 @@ class VarCapture : public RtData
             (void) len;
             assert(len != 0);
             success = true;
+            va_end(va);
         }
         virtual void broadcast(const char *msg)
         {

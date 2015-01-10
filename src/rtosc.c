@@ -608,6 +608,7 @@ size_t rtosc_bundle(char *buffer, size_t len, uint64_t tt, int elms, ...)
         memcpy(buffer, msg, size);
         buffer+=size;
     }
+    va_end(va);
 
     return buffer-_buffer;
 }

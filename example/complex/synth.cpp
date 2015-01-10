@@ -177,6 +177,7 @@ class DispatchData:public rtosc::RtData
                 rtosc_vmessage(bToU.buffer(),bToU.buffer_size(),path,args,va);
             if(len)
                 bToU.raw_write(bToU.buffer());
+            va_end(va);
         }
 
         void reply(const char *msg)
@@ -193,6 +194,7 @@ class DispatchData:public rtosc::RtData
                 rtosc_vmessage(bToU.buffer(),bToU.buffer_size(),path,args,va);
             if(len)
                 bToU.raw_write(bToU.buffer());
+            va_end(va);
         }
 
 
