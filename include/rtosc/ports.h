@@ -161,7 +161,23 @@ struct Ports
     const Port *operator[](const char *name) const;
 
 
-    /** Find the best match for a given path or NULL*/
+    /**
+     * Find the best match for a given path
+     *
+     * @parameter path partial OSC path
+     * @returns first path prefixed by the argument
+     *
+     * Example usage:
+     * @code
+     *    Ports p = {{"foo",0,0,dummy_method},
+     *               {"flam",0,0,dummy_method},
+     *               {"bar",0,0,dummy_method}};
+     *    p.apropos("/b")->name;//bar
+     *    p.apropos("/f")->name;//foo
+     *    p.apropos("/fl")->name;//flam
+     *    p.apropos("/gg");//NULL
+     * @endcode
+     */
     const Port *apropos(const char *path) const;
 
     private:
