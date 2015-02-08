@@ -35,6 +35,7 @@ endif()
 add_library(rtosc SHARED src/rtosc.c src/dispatch.c)
 add_library(rtosc-cpp SHARED src/cpp/ports.cpp src/cpp/miditable.cpp
     src/cpp/midimapper.cpp
+    src/cpp/thread-link.cpp
     src/cpp/undo-history.cpp
     src/cpp/subtree-serialize.cpp)
 
@@ -127,13 +128,14 @@ endif()
 if(JACK_FOUND)
     link_directories(${JACK_LIBRARY_DIRS})
     include_directories(${JACK_INCLUDE_DIRS})
-    maketestcpp(metadata)
-    maketestcpp(headerlib)
-    maketestcpp(test-walker)
-    maketestcpp(performance)
 endif()
 
-if(COMPILER_USABILITY AND JACK_FOUND)
+maketestcpp(metadata)
+maketestcpp(headerlib)
+maketestcpp(test-walker)
+maketestcpp(performance)
+
+if(COMPILER_USABILITY)
     maketestcpp(undo-test)
     maketestcpp(serializer)
     maketestcpp(sugar)

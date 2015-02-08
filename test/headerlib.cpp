@@ -14,7 +14,7 @@ Ports ports = {
     {"echo:ss",     "", 0, [](msg_t,RtData&) {}}
 };
 
-ThreadLink tlink(2048,100);
+ThreadLink tlink(512,100);
 
 int main()
 {

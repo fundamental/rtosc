@@ -25,8 +25,6 @@
 #ifndef RTOSC_THREAD_LINK
 #define RTOSC_THREAD_LINK
 
-#include <jack/ringbuffer.h>
-
 #include <cstring>
 #include <cassert>
 #include <cstdio>
@@ -44,107 +42,56 @@ typedef const char *msg_t;
 class ThreadLink
 {
     public:
-        ThreadLink(size_t max_message_length, size_t max_messages)
-            :MaxMsg(max_message_length),
-            BufferSize(MaxMsg*max_messages),
-            write_buffer(new char[BufferSize]),
-            read_buffer(new char[BufferSize])
-        {
-            ring = jack_ringbuffer_create(BufferSize);
-            jack_ringbuffer_mlock(ring);
-            memset(write_buffer, 0, BufferSize);
-            memset(read_buffer, 0, BufferSize);
-        }
-
-        ~ThreadLink(void)
-        {
-            jack_ringbuffer_free(ring);
-            delete[] write_buffer;
-            delete[] read_buffer;
-        }
+        ThreadLink(size_t max_message_length, size_t max_messages);
+        ~ThreadLink(void);
 
         /**
          * Write message to ringbuffer
          * @see rtosc_message()
          */
-        void write(const char *dest, const char *args, ...)
-        {
-            va_list va;
-            va_start(va,args);
-            const size_t len =
-                rtosc_vmessage(write_buffer,MaxMsg,dest,args,va);
-            if(jack_ringbuffer_write_space(ring) >= len)
-                jack_ringbuffer_write(ring,write_buffer,len);
-        }
+        void write(const char *dest, const char *args, ...);
 
         /**
          * Write an arary of arguments to ringbuffer
          * @see rtosc_amessage()
          */
-        void writeArray(const char *dest, const char *args, const rtosc_arg_t *aargs)
-        {
-            const size_t len =
-                rtosc_amessage(write_buffer, MaxMsg, dest, args, aargs);
-            if(jack_ringbuffer_write_space(ring) >= len)
-                jack_ringbuffer_write(ring,write_buffer,len);
-        }
+        void writeArray(const char *dest, const char *args, const rtosc_arg_t *aargs);
 
         /**
          * Directly write message to ringbuffer
          */
-        void raw_write(const char *msg)
-        {
-            const size_t len = rtosc_message_length(msg, -1);//assumed valid
-            if(jack_ringbuffer_write_space(ring) >= len)
-                jack_ringbuffer_write(ring,msg,len);
-        }
+        void raw_write(const char *msg);
 
         /**
          * @returns true iff there is another message to be read in the buffer
          */
-        bool hasNext(void) const
-        {
-            return jack_ringbuffer_read_space(ring);
-        }
+        bool hasNext(void) const;
 
         /**
          * Read a new message from the ringbuffer
          */
-        msg_t read(void) {
-            ring_t r[2];
-            jack_ringbuffer_get_read_vector(ring,(jack_ringbuffer_data_t*)r);
-            const size_t len =
-                rtosc_message_ring_length(r);
-            assert(jack_ringbuffer_read_space(ring) >= len);
-            assert(len <= MaxMsg);
-            jack_ringbuffer_read(ring, read_buffer, len);
-            return read_buffer;
-        }
+        msg_t read(void);
 
         /**
          * Peak at last message read without reading another
          */
-        msg_t peak(void) const
-        {
-            return read_buffer;
-        }
+        msg_t peak(void) const;
 
         /**
          * Raw write buffer access for more complicated task
          */
-        char *buffer(void) {return write_buffer;}
+        char *buffer(void);
         /**
          * Access to write buffer length
          */
-        size_t buffer_size(void) const {return BufferSize;}
+        size_t buffer_size(void) const;
     private:
         const size_t MaxMsg;
         const size_t BufferSize;
         char *write_buffer;
         char *read_buffer;
 
-        //assumes jack ringbuffer
-        jack_ringbuffer_t *ring;
+        struct internal_ringbuffer_t *ring;
 };
 };
 #endif
