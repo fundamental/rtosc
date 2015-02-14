@@ -57,9 +57,8 @@ endif(FLTK_FOUND)
 if(NTK_FOUND)
     #Default to NTK, as everything looks better there
     set(GUI_FOUND TRUE)
-    set(GUI_LIBRARIES ${NTK_LIBRARIES})
+    set(GUI_LIBRARIES ${NTK_LDFLAGS})
     include_directories(${NTK_INCLUDE_DIRS})
-    link_directories(${NTK_LIBRARY_DIRS})
 elseif(FLTK_FOUND AND (FLTK_VERSION STREQUAL "1.3"))
     set(GUI_FOUND TRUE)
     set(GUI_LIBRARIES ${FLTK_LIBRARIES})
@@ -70,14 +69,15 @@ endif()
 
 if(JACK_FOUND AND GUI_FOUND AND COMPILER_USABILITY AND BUILD_RTOSC_EXAMPLES)
     add_executable(simple-example example/simple/ui.cpp example/simple/synth.cpp)
-    target_link_libraries(simple-example m rtosc ${GUI_LIBRARIES} jack)
+    target_link_libraries(simple-example m rtosc ${GUI_LIBRARIES}
+        ${JACK_LDFLAGS})
 
     add_executable(complex-example example/complex/audio.cpp
         example/complex/synth.cpp example/complex/window.cpp
         example/complex/Fl_Osc_Dial.cpp example/complex/Fl_Osc_Slider.cpp
         example/complex/Fl_Osc_Button.cpp)
     target_link_libraries(complex-example m rtosc rtosc-cpp ${GUI_LIBRARIES}
-        jack)
+        ${JACK_LDFLAGS})
     #TODO add complex example (ie klatter (an unplublished project for those reading))
 endif()
 
@@ -119,14 +119,12 @@ maketest(fat-message)
 maketest(empty-strings)
 maketest(message-alignment)
 if(LIBLO_FOUND)
-    link_directories(${LIBLO_LIBRARY_DIRS})
     include_directories(${LIBLO_INCLUDE_DIRS})
     maketest(liblo)
-    target_link_libraries(liblo ${LIBLO_LIBRARIES})
+    target_link_libraries(liblo ${LIBLO_LDFLAGS})
 endif()
 
 if(JACK_FOUND)
-    link_directories(${JACK_LIBRARY_DIRS})
     include_directories(${JACK_INCLUDE_DIRS})
 endif()
 
