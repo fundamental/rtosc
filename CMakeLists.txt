@@ -8,7 +8,9 @@ set(VERSION_PATCH 0)
 SET(BUILD_RTOSC_EXAMPLES FALSE CACHE BOOL
     "Build RTOSC Example Programs")
 
-include(GNUInstallDirs)
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+    include(GNUInstallDirs)
+endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 if(NOT WIN32)
@@ -156,23 +158,25 @@ endif()
 
 
 #Installation
-if(PKG_CONFIG_FOUND)
-    configure_file(librtosc.pc.cmake
-        ${CMAKE_SOURCE_DIR}/librtosc.pc @ONLY)
-    install(FILES ${CMAKE_SOURCE_DIR}/librtosc.pc
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig/")
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+    if(PKG_CONFIG_FOUND)
+        configure_file(librtosc.pc.cmake
+            ${CMAKE_SOURCE_DIR}/librtosc.pc @ONLY)
+        install(FILES ${CMAKE_SOURCE_DIR}/librtosc.pc
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig/")
+    endif()
+    install(FILES include/rtosc/rtosc.h
+        include/rtosc/thread-link.h
+        include/rtosc/ports.h
+        include/rtosc/miditable.h
+        include/rtosc/port-sugar.h
+        include/rtosc/undo-history.h
+        include/rtosc/subtree-serialize.h
+        include/rtosc/typed-message.h
+        DESTINATION include/rtosc)
+    install(TARGETS rtosc rtosc-cpp
+        DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
-install(FILES include/rtosc/rtosc.h
-    include/rtosc/thread-link.h
-    include/rtosc/ports.h
-    include/rtosc/miditable.h
-    include/rtosc/port-sugar.h
-    include/rtosc/undo-history.h
-    include/rtosc/subtree-serialize.h
-    include/rtosc/typed-message.h
-    DESTINATION include/rtosc)
-install(TARGETS rtosc rtosc-cpp
-    DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 
 #Describe overall configuration
