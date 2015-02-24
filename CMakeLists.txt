@@ -40,6 +40,7 @@ add_library(rtosc-cpp SHARED src/cpp/ports.cpp src/cpp/miditable.cpp
     src/cpp/thread-link.cpp
     src/cpp/undo-history.cpp
     src/cpp/subtree-serialize.cpp)
+target_link_libraries(rtosc-cpp rtosc)
 
 # Example Code
 find_package(FLTK)
