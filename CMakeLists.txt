@@ -34,8 +34,8 @@ else()
     set(COMPILER_USABILITY TRUE)
 endif()
 
-add_library(rtosc SHARED src/rtosc.c src/dispatch.c)
-add_library(rtosc-cpp SHARED src/cpp/ports.cpp src/cpp/miditable.cpp
+add_library(rtosc STATIC src/rtosc.c src/dispatch.c)
+add_library(rtosc-cpp STATIC src/cpp/ports.cpp src/cpp/miditable.cpp
     src/cpp/midimapper.cpp
     src/cpp/thread-link.cpp
     src/cpp/undo-history.cpp
