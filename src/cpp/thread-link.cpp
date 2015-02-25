@@ -1,6 +1,11 @@
 #include "../../include/rtosc/thread-link.h"
 
 namespace rtosc {
+#ifdef off_t
+#undef off_t
+#endif
+#define off_t signed long
+
 
 //Ringbuffer internal structure
 //XXX possible undefined behavior depending on future semantics of volatile
