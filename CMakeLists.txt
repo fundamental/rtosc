@@ -159,7 +159,7 @@ endif()
 
 
 #Installation
-if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT DEFINED RTOSC_NO_INSTALL)
     if(PKG_CONFIG_FOUND)
         configure_file(librtosc.pc.cmake
             ${CMAKE_SOURCE_DIR}/librtosc.pc @ONLY)
