@@ -487,13 +487,23 @@ size_t rtosc_message_ring_length(ring_t *ring)
         return bundle_ring_length(ring);
 
     //Proceed for normal messages
+    //Consume path
     unsigned pos = 0;
     while(deref(pos++,ring));
     pos--;
-    pos += 4-pos%4;//get 32 bit alignment
+
+    //Travel through the null word end [1..4] bytes
+    for(int i=0; i<4; ++i)
+        if(deref(++pos, ring))
+            break;
+
+    if(deref(pos, ring) != ',')
+        return 0;
+
+    unsigned aligned_pos = pos;
     int arguments = pos+1;
     while(deref(++pos,ring));
-    pos += 4-pos%4;
+    pos += 4-(pos-aligned_pos)%4;
 
     unsigned toparse = 0;
     {
@@ -507,7 +517,7 @@ size_t rtosc_message_ring_length(ring_t *ring)
     {
         char arg = deref(arguments++,ring);
         assert(arg);
-        int i;
+        uint32_t i;
         switch(arg) {
             case 'h':
             case 't':
@@ -526,7 +536,7 @@ size_t rtosc_message_ring_length(ring_t *ring)
             case 'S':
             case 's':
                 while(deref(++pos,ring));
-                pos += 4-pos%4;
+                pos += 4-(pos-aligned_pos)%4;
                 --toparse;
                 break;
             case 'b':
@@ -536,8 +546,8 @@ size_t rtosc_message_ring_length(ring_t *ring)
                 i |= (deref(pos++,ring) << 8);
                 i |= (deref(pos++,ring));
                 pos += i;
-                if(pos%4)
-                    pos += 4-pos%4;
+                if((pos-aligned_pos)%4)
+                    pos += 4-(pos-aligned_pos)%4;
                 --toparse;
                 break;
             default:
