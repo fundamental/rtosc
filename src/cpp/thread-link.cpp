@@ -74,7 +74,7 @@ static void ring_read_vector(ringbuffer_t *ring, ring_t *r)
     off_t  read      = ring->read;
     r[0].data = ring->buffer+ring->read;
     if(read_size+read > ring->size) { //discontinuous
-        size_t r2 = (read_size+read)%ring->size;
+        size_t r2 = (read_size+1+read)%ring->size;
         size_t r1 = read_size - r2;
         r[0].len  = r1;
         r[1].data = ring->buffer;
