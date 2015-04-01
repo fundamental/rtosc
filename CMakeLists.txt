@@ -49,7 +49,7 @@ find_package(PkgConfig)
 if(PKG_CONFIG_FOUND)
     pkg_check_modules(NTK ntk)
     pkg_check_modules(JACK jack)
-    pkg_check_modules(LIBLO liblo)
+    pkg_check_modules(LIBLO liblo>=0.28)
 endif()
 
 if(FLTK_FOUND)
