@@ -66,7 +66,7 @@ class VarCapture : public RtData
             size_t len = rtosc_message(msg, 128, path, "");
             (void) len;
             assert(len);
-            assert(!index(path, ':'));
+            assert(!strchr(path, ':'));
 
             p->dispatch(msg, *this);
             return success ? buf : NULL;

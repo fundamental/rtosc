@@ -91,19 +91,19 @@ const MidiAddr *MidiTable::get(uint8_t ch, uint8_t ctl) const
 
 bool MidiTable::mash_port(MidiAddr &e, const Port &port)
 {
-    const char *args = index(port.name, ':');
+    const char *args = strchr(port.name, ':');
     if(!args)
         return false;
 
     //Consider a path to be typed based upon the argument restrictors
-    if(index(args, 'f')) {
+    if(strchr(args, 'f')) {
         e.type = 'f';
         e.conversion = port.metadata;
-    } else if(index(args, 'i'))
+    } else if(strchr(args, 'i'))
         e.type = 'i';
-    else if(index(args, 'T'))
+    else if(strchr(args, 'T'))
         e.type = 'T';
-    else if(index(args, 'c'))
+    else if(strchr(args, 'c'))
         e.type = 'c';
     else
         return false;

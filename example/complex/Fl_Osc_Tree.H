@@ -44,7 +44,7 @@ class Fl_Osc_Tree:Fl_Tree
 
 
             if(reason==1) {
-                char *colon = index(pathname, ':');
+                char *colon = strchr(pathname, ':');
                 if(colon) {
                     *colon = 0;
                     t->osc->writeValue("/learn", std::string(pathname));
@@ -64,8 +64,8 @@ class Fl_Osc_Tree:Fl_Tree
                     t->remove(i);
                 for(const Port &port : p) {
                     printf("handling '%s'\n", port.name);
-                    const bool subnodes   = index(port.name, '/');
-                    const bool enumerated = index(port.name, '#');
+                    const bool subnodes   = strchr(port.name, '/');
+                    const bool enumerated = strchr(port.name, '#');
                     const std::string path = std::string(pathname)+"/"+port.name;
                     if(!enumerated) {
                         t->sprout(path);
@@ -73,7 +73,7 @@ class Fl_Osc_Tree:Fl_Tree
                         char tmpa[1024];
                         char tmpb[1024];
                         strncpy(tmpa, path.c_str(), 1024);
-                        char *pound = index(tmpa, '#');
+                        char *pound = strchr(tmpa, '#');
                         int N = atoi(pound+1);
                         *pound = 0;
                         char terminal = subnodes ? '/' : '\0';
@@ -96,8 +96,8 @@ class Fl_Osc_Tree:Fl_Tree
 
             for(const Port &port : *p) {
                 const char *name  = port.name;
-                if(index(name,'/') && s.substr(0,(index(name,'/')-name)+1) == std::string(name).substr(0,strlen(name)-1)){
-                    return subtree_lookup(port.ports, s.substr(index(name,'/')-name));
+                if(strchr(name,'/') && s.substr(0,(strchr(name,'/')-name)+1) == std::string(name).substr(0,strlen(name)-1)){
+                    return subtree_lookup(port.ports, s.substr(strchr(name,'/')-name));
                 }
             }
 

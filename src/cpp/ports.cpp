@@ -389,7 +389,7 @@ void generate_minimal_hash(Ports &p, Port_Matcher &pm)
 
     bool enump = false;
     for(unsigned i=0; i<p.ports.size(); ++i)
-        if(index(p.ports[i].name, '#'))
+        if(strchr(p.ports[i].name, '#'))
             enump = true;
     if(enump)
         return;
@@ -418,7 +418,7 @@ Ports::Ports(std::initializer_list<Port> l)
     generate_minimal_hash(*this, *impl);
     impl->enump = new bool[ports.size()];
     for(int i=0; i<(int)ports.size(); ++i)
-        impl->enump[i] = index(ports[i].name, '#');
+        impl->enump[i] = strchr(ports[i].name, '#');
 
     elms = ports.size();
 }
@@ -464,12 +464,12 @@ void Ports::dispatch(const char *m, rtosc::RtData &d) const
                     d.matches++;
 
                 //Append the path
-                if(index(port.name,'#')) {
+                if(strchr(port.name,'#')) {
                     const char *msg = m;
                     char       *pos = old_end;
                     while(*msg && *msg != '/')
                         *pos++ = *msg++;
-                    if(index(port.name, '/'))
+                    if(strchr(port.name, '/'))
                         *pos++ = '/';
                     *pos = '\0';
                 } else
@@ -517,7 +517,7 @@ void Ports::dispatch(const char *m, rtosc::RtData &d) const
                     char       *pos = old_end;
                     while(*msg && *msg != '/')
                         *pos++ = *msg++;
-                    if(index(port.name, '/'))
+                    if(strchr(port.name, '/'))
                         *pos++ = '/';
                     *pos = '\0';
                 } else
@@ -562,8 +562,8 @@ const Port *Ports::apropos(const char *path) const
         ++path;
 
     for(const Port &port: ports)
-        if(index(port.name,'/') && rtosc_match_path(port.name,path))
-            return (index(path,'/')[1]==0) ? &port :
+        if(strchr(port.name,'/') && rtosc_match_path(port.name,path))
+            return (strchr(path,'/')[1]==0) ? &port :
                 port.ports->apropos(snip(path));
 
     //This is the lowest level, now find the best port
@@ -589,8 +589,8 @@ void rtosc::walk_ports(const Ports *base,
     while(*old_end) ++old_end;
 
     for(const Port &p: *base) {
-        if(index(p.name, '/')) {//it is another tree
-            if(index(p.name,'#')) {
+        if(strchr(p.name, '/')) {//it is another tree
+            if(strchr(p.name,'#')) {
                 const char *name = p.name;
                 char       *pos  = old_end;
                 while(*name != '#') *pos++ = *name++;
@@ -601,7 +601,7 @@ void rtosc::walk_ports(const Ports *base,
                     sprintf(pos,"%d",i);
 
                     //Ensure the result is a path
-                    if(rindex(name_buffer, '/')[1] != '/')
+                    if(strrchr(name_buffer, '/')[1] != '/')
                         strcat(name_buffer, "/");
 
                     //Recurse
@@ -617,7 +617,7 @@ void rtosc::walk_ports(const Ports *base,
                         data, walker);
             }
         } else {
-            if(index(p.name,'#')) {
+            if(strchr(p.name,'#')) {
                 const char *name = p.name;
                 char       *pos  = old_end;
                 while(*name != '#') *pos++ = *name++;
@@ -660,8 +660,8 @@ void walk_ports2(const rtosc::Ports *base,
     while(*old_end) ++old_end;
 
     for(const rtosc::Port &p: *base) {
-        if(index(p.name, '/')) {//it is another tree
-            if(index(p.name,'#')) {
+        if(strchr(p.name, '/')) {//it is another tree
+            if(strchr(p.name,'#')) {
                 const char *name = p.name;
                 char       *pos  = old_end;
                 while(*name != '#') *pos++ = *name++;
@@ -672,7 +672,7 @@ void walk_ports2(const rtosc::Ports *base,
                     sprintf(pos,"[0,%d]",max);
 
                     //Ensure the result is a path
-                    if(rindex(name_buffer, '/')[1] != '/')
+                    if(strrchr(name_buffer, '/')[1] != '/')
                         strcat(name_buffer, "/");
 
                     //Recurse
@@ -688,7 +688,7 @@ void walk_ports2(const rtosc::Ports *base,
                         data, walker);
             }
         } else {
-            if(index(p.name,'#')) {
+            if(strchr(p.name,'#')) {
                 const char *name = p.name;
                 char       *pos  = old_end;
                 while(*name != '#') *pos++ = *name++;
@@ -729,14 +729,14 @@ void dump_ports_cb(const rtosc::Port *p, const char *name, void *v)
     auto meta = p->meta();
     if(meta.find("parameter") != p->meta().end()) {
         char type = 0;
-        const char *foo = index(p->name, ':');
-        if(index(foo, 'f'))
+        const char *foo = strchr(p->name, ':');
+        if(strchr(foo, 'f'))
             type = 'f';
-        else if(index(foo, 'i'))
+        else if(strchr(foo, 'i'))
             type = 'i';
-        else if(index(foo, 'c'))
+        else if(strchr(foo, 'c'))
             type = 'c';
-        else if(index(foo, 'T'))
+        else if(strchr(foo, 'T'))
             type = 't';
         if(!type) {
             fprintf(stderr, "rtosc port dumper: Cannot handle '%s'\n", p->name);
