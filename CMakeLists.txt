@@ -25,14 +25,10 @@ if(CMAKE_COMPILER_IS_GNUCC)
     if (GCC_VERSION VERSION_GREATER 4.7 OR GCC_VERSION VERSION_EQUAL
             4.7)
         message(STATUS "Found GCC Version >= 4.7")
-        set(COMPILER_USABILITY TRUE)
     else()
-        message(WARNING "GCC Version '${GCC_VERSION}' Is Too Old For rtosc/port-sugar.h"
-            "Examples and port sugar test cannot be built on this system")
-        set(COMPILER_USABILITY FALSE)
+        message(WARNING "GCC Version '${GCC_VERSION}' Is Quite Old, Please Consider Upgrading")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -fPIC -std=c++0x -Wall -Wextra -Wno-unused-parameter")
     endif()
-else()
-    set(COMPILER_USABILITY TRUE)
 endif()
 
 add_library(rtosc STATIC src/rtosc.c src/dispatch.c)
@@ -71,7 +67,7 @@ else()
 endif()
 
 
-if(JACK_FOUND AND GUI_FOUND AND COMPILER_USABILITY AND BUILD_RTOSC_EXAMPLES)
+if(JACK_FOUND AND GUI_FOUND AND BUILD_RTOSC_EXAMPLES)
     add_executable(simple-example example/simple/ui.cpp example/simple/synth.cpp)
     target_link_libraries(simple-example m rtosc ${GUI_LIBRARIES}
         ${JACK_LDFLAGS})
@@ -85,7 +81,7 @@ if(JACK_FOUND AND GUI_FOUND AND COMPILER_USABILITY AND BUILD_RTOSC_EXAMPLES)
     #TODO add complex example (ie klatter (an unplublished project for those reading))
 endif()
 
-if(COMPILER_USABILITY AND BUILD_RTOSC_EXAMPLES)
+if(BUILD_RTOSC_EXAMPLES)
     add_executable(modular-example
         example/modular/Echo.cpp
         example/modular/EffectMgr.cpp
@@ -96,7 +92,7 @@ if(COMPILER_USABILITY AND BUILD_RTOSC_EXAMPLES)
         example/modular/util.cpp
         )
     target_link_libraries(modular-example m rtosc rtosc-cpp)
-endif(COMPILER_USABILITY AND BUILD_RTOSC_EXAMPLES)
+endif(BUILD_RTOSC_EXAMPLES)
 
 
 # Testing code
@@ -137,12 +133,10 @@ maketestcpp(headerlib)
 maketestcpp(test-walker)
 maketestcpp(performance)
 
-if(COMPILER_USABILITY)
-    maketestcpp(undo-test)
-    maketestcpp(serializer)
-    maketestcpp(sugar)
-    maketestcpp(typed-template-test)
-endif()
+maketestcpp(undo-test)
+maketestcpp(serializer)
+maketestcpp(sugar)
+maketestcpp(typed-template-test)
 
 # Documentation
 find_package(Doxygen)

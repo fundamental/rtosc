@@ -25,6 +25,19 @@
 #ifndef RTOSC_PORT_SUGAR
 #define RTOSC_PORT_SUGAR
 
+//Hack to workaround old incomplete decltype implementations
+#ifdef __GNUC__
+#if    __GNUC__ < 4 ||  (__GNUC__ == 4 && __GNUC_MINOR__ <= 7)
+template<typename T>
+struct rtosc_hack_decltype_t
+{
+    typedef T type;
+};
+
+#define decltype(expr) rtosc_hack_decltype_t<decltype(expr)>::type
+#endif
+#endif
+
 //General macro utilities
 #define STRINGIFY2(a) #a
 #define STRINGIFY(a) STRINGIFY2(a)
