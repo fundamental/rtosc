@@ -64,9 +64,9 @@ struct RtData
  * Port in rtosc dispatching hierarchy
  */
 struct Port {
-    const char *name;    //< Pattern for messages to match
-    const char *metadata;//< Statically accessable data about port
-    Ports *ports;        //< Pointer to further ports
+    const char  *name;    //< Pattern for messages to match
+    const char  *metadata;//< Statically accessable data about port
+    const Ports *ports;   //< Pointer to further ports
     std::function<void(msg_t, RtData&)> cb;//< Callback for matching functions
 
     class MetaIterator
@@ -205,7 +205,7 @@ void walk_ports(const Ports *base,
 
 struct OscDocFormatter
 {
-    Ports *p;
+    const Ports *p;
     std::string prog_name;
     std::string uri;
     std::string doc_origin;

@@ -49,7 +49,7 @@ static void black_hole1(const char *a)
 
 #define	MAX_UNHANDLED_PATH 128
 
-MidiTable::MidiTable(Ports &_dispatch_root)
+MidiTable::MidiTable(const Ports &_dispatch_root)
 :dispatch_root(_dispatch_root), unhandled_ch(RTOSC_INVALID_MIDI), unhandled_ctl(RTOSC_INVALID_MIDI),
     error_cb(black_hole2), event_cb(black_hole1), modify_cb(black_hole3)
 {

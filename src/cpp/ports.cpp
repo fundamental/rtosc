@@ -550,7 +550,7 @@ const Port *Ports::operator[](const char *name) const
     return NULL;
 }
 
-msg_t snip(msg_t m)
+static msg_t snip(msg_t m)
 {
     while(*m && *m != '/') ++m;
     return m+1;

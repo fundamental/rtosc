@@ -144,7 +144,7 @@ class MidiMappernRT
         std::deque<std::pair<std::string,bool>> learnQueue;
         std::function<void(const char *)> rt_cb;
         MidiMapperStorage *storage;
-        Ports *base_ports;
+        const Ports *base_ports;
 };
 
 class MidiMapperRT
@@ -233,7 +233,7 @@ class MidiTable
 {
     public:
 
-        Ports  &dispatch_root;
+        const Ports  &dispatch_root;
         short  unhandled_ch;
         short  unhandled_ctl;
         char  *unhandled_path;
@@ -242,7 +242,7 @@ class MidiTable
         void (*event_cb)(const char *);
         void (*modify_cb)(const char *, const char *, const char *, int, int);
 
-        MidiTable(Ports &_dispatch_root);
+        MidiTable(const Ports &_dispatch_root);
         ~MidiTable();
 
         bool has(uint8_t ch, uint8_t ctl) const;
