@@ -255,15 +255,15 @@ bool has(T &t, Z&z)
     return false;
 }
 
-int max(int a, int b) { return a<b?b:a;}
+static int int_max(int a, int b) { return a<b?b:a;}
 
-ivec_t find_pos(words_t &strs)
+static ivec_t find_pos(words_t &strs)
 {
     ivec_t pos;
     int current_dups = strs.size();
     int N = 0;
     for(auto w:strs)
-        N = max(N,w.length());
+        N = int_max(N,w.length());
 
     int pos_best = -1;
     int pos_best_val = INT_MAX;
@@ -294,7 +294,7 @@ ivec_t find_pos(words_t &strs)
     return pos;
 }
 
-ivec_t do_hash(const words_t &strs, const ivec_t &pos, const ivec_t &assoc)
+static ivec_t do_hash(const words_t &strs, const ivec_t &pos, const ivec_t &assoc)
 {
     ivec_t ivec;
     ivec.reserve(strs.size());
@@ -308,7 +308,7 @@ ivec_t do_hash(const words_t &strs, const ivec_t &pos, const ivec_t &assoc)
     return ivec;
 }
 
-ivec_t find_assoc(const words_t &strs, const ivec_t &pos)
+static ivec_t find_assoc(const words_t &strs, const ivec_t &pos)
 {
     ivec_t assoc;
     int current_dups = strs.size();
@@ -354,7 +354,7 @@ ivec_t find_assoc(const words_t &strs, const ivec_t &pos)
     return assoc;
 }
 
-ivec_t find_remap(words_t &strs, ivec_t &pos, ivec_t &assoc)
+static ivec_t find_remap(words_t &strs, ivec_t &pos, ivec_t &assoc)
 {
     ivec_t remap;
     auto hashed = do_hash(strs, pos, assoc);
@@ -362,7 +362,7 @@ ivec_t find_remap(words_t &strs, ivec_t &pos, ivec_t &assoc)
     //    printf("%d) '%s'\n", hashed[i], strs[i].c_str());
     int N = 0;
     for(auto h:hashed)
-        N = max(N,h+1);
+        N = int_max(N,h+1);
     for(int i=0; i<N; ++i)
         remap.push_back(0);
     for(int i=0; i<(int)hashed.size(); ++i)
@@ -371,7 +371,7 @@ ivec_t find_remap(words_t &strs, ivec_t &pos, ivec_t &assoc)
     return remap;
 }
 
-void generate_minimal_hash(std::vector<std::string> str, Port_Matcher &pm)
+static void generate_minimal_hash(std::vector<std::string> str, Port_Matcher &pm)
 {
     pm.pos   = find_pos(str);
     if(pm.pos.empty()) {
@@ -382,7 +382,7 @@ void generate_minimal_hash(std::vector<std::string> str, Port_Matcher &pm)
     pm.remap = find_remap(str, pm.pos, pm.assoc);
 }
 
-void generate_minimal_hash(Ports &p, Port_Matcher &pm)
+static void generate_minimal_hash(Ports &p, Port_Matcher &pm)
 {
     svec_t keys;
     cvec_t args;
