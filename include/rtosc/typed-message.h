@@ -1,3 +1,5 @@
+#ifndef RTOSC_TYPED_MESSAGE_H
+#define RTOSC_TYPED_MESSAGE_H
 #include <rtosc/rtosc.h>
 #include <type_traits>
 #include <stdexcept>
@@ -114,3 +116,4 @@ get(rtMsg<Types...>& Tuple)
     return rt_get_impl<T>(Tuple.msg, Index);
 }
 };
+#endif

@@ -21,6 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#ifndef RTOSC_MIDITABLE_H
+#define RTOSC_MIDITABLE_H
 
 #include <rtosc/ports.h>
 #include <string.h>
@@ -275,3 +277,4 @@ class MidiTable
 };
 
 };
+#endif
