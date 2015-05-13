@@ -17,7 +17,6 @@ struct internal_ringbuffer_t {
 };
 
 typedef internal_ringbuffer_t ringbuffer_t;
-#define static
 
 static size_t ring_read_size(ringbuffer_t *ring)
 {
