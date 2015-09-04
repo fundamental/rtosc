@@ -78,6 +78,58 @@ char rtosc_type(const char *msg, unsigned nargument)
     }
 }
 
+static unsigned arg_start(const char *msg_)
+{
+    const uint8_t *msg = (const uint8_t*)msg_;
+    //Iterate to the right position
+    const uint8_t *args = (const uint8_t*) rtosc_argument_string(msg_);
+    const uint8_t *aligned_ptr = args-1;
+    const uint8_t *arg_pos = args;
+
+    while(*++arg_pos);
+    //Alignment
+    arg_pos += 4-(arg_pos-aligned_ptr)%4;
+    return arg_pos-msg;
+}
+
+static unsigned arg_size(const uint8_t *arg_mem, char type)
+{
+    if(!has_reserved(type))
+        return 0;
+    const uint8_t  *arg_pos=arg_mem;
+    uint32_t blob_length = 0;
+    switch(type)
+    {
+        case 'h':
+        case 't':
+        case 'd':
+            return 8;
+        case 'm':
+        case 'r':
+        case 'f':
+        case 'c':
+        case 'i':
+            return 4;
+        case 'S':
+        case 's':
+            while(*++arg_pos);
+            arg_pos += 4-(arg_pos-arg_mem)%4;
+            return arg_pos-arg_mem;
+        case 'b':
+            blob_length |= (*arg_pos++ << 24);
+            blob_length |= (*arg_pos++ << 16);
+            blob_length |= (*arg_pos++ << 8);
+            blob_length |= (*arg_pos++);
+            if(blob_length%4)
+                blob_length += 4-blob_length%4;
+            arg_pos += blob_length;
+            return arg_pos-arg_mem;
+        default:
+            assert("Invalid Type");
+    }
+    return -1;
+}
+
 static unsigned arg_off(const char *msg, unsigned idx)
 {
     if(!has_reserved(rtosc_type(msg,idx)))
@@ -97,45 +149,11 @@ static unsigned arg_off(const char *msg, unsigned idx)
         ++args;
 
     while(idx--) {
-        uint32_t bundle_length = 0;
-        switch(*args++)
-        {
-            case 'h':
-            case 't':
-            case 'd':
-                arg_pos +=8;
-                break;
-            case 'm':
-            case 'r':
-            case 'f':
-            case 'c':
-            case 'i':
-                arg_pos += 4;
-                break;
-            case 'S':
-            case 's':
-                while(*++arg_pos);
-                arg_pos += 4-(arg_pos-((uint8_t*)aligned_ptr))%4;
-                break;
-            case 'b':
-                bundle_length |= (*arg_pos++ << 24);
-                bundle_length |= (*arg_pos++ << 16);
-                bundle_length |= (*arg_pos++ << 8);
-                bundle_length |= (*arg_pos++);
-                if(bundle_length%4)
-                    bundle_length += 4-bundle_length%4;
-                arg_pos += bundle_length;
-                break;
-            case '[':
-            case ']':
-                //completely ignore array chars
-                ++idx;
-                break;
-            case 'T':
-            case 'F':
-            case 'I':
-                ;
-        }
+        char type = *args++;
+        if(type == '[' || type == ']')
+            idx++;//not a valid arg idx
+        else
+            arg_pos += arg_size(arg_pos, type);
     }
     return arg_pos-(uint8_t*)msg;
 }
@@ -385,10 +403,9 @@ size_t rtosc_amessage(char              *buffer,
     return pos;
 }
 
-rtosc_arg_t rtosc_argument(const char *msg, unsigned idx)
+static rtosc_arg_t extract_arg(const uint8_t *arg_pos, char type)
 {
     rtosc_arg_t result = {0};
-    char type = rtosc_type(msg, idx);
     //trivial case
     if(!has_reserved(type)) {
         switch(type)
@@ -403,7 +420,6 @@ rtosc_arg_t rtosc_argument(const char *msg, unsigned idx)
                 ;
         }
     } else {
-        const unsigned char *arg_pos = (const unsigned char*)msg+arg_off(msg,idx);
         switch(type)
         {
             case 'h':
@@ -448,6 +464,52 @@ rtosc_arg_t rtosc_argument(const char *msg, unsigned idx)
     }
 
     return result;
+}
+
+static const char *advance_past_dummy_args(const char *args)
+{
+    while(*args == '[' || *args == ']')
+        args++;
+    return args;
+}
+
+rtosc_arg_itr_t rtosc_itr_begin(const char *msg)
+{
+    rtosc_arg_itr_t itr;
+    itr.type_pos  = advance_past_dummy_args(rtosc_argument_string(msg));
+    itr.value_pos = (uint8_t*)(msg+arg_start(msg));
+
+    return itr;
+}
+
+rtosc_arg_val_t rtosc_itr_next(rtosc_arg_itr_t *itr)
+{
+    //current position provides the value
+    rtosc_arg_val_t result = {0};
+    result.type = *itr->type_pos;
+    if(result.type)
+        result.val = extract_arg(itr->value_pos, result.type);
+
+    //advance
+    itr->type_pos = advance_past_dummy_args(itr->type_pos+1);
+    char type = result.type;
+    int size  = arg_size(itr->value_pos, type);
+    itr->value_pos += size;
+
+
+    return result;
+}
+
+int rtosc_itr_end(rtosc_arg_itr_t itr)
+{
+    return !itr.type_pos  || !*itr.type_pos;
+}
+
+rtosc_arg_t rtosc_argument(const char *msg, unsigned idx)
+{
+    char type = rtosc_type(msg, idx);
+    uint8_t *arg_mem = (uint8_t*)msg + arg_off(msg, idx);
+    return extract_arg(arg_mem, type);
 }
 
 static unsigned char deref(unsigned pos, ring_t *ring)
