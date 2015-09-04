@@ -151,6 +151,8 @@ maketestcpp(serializer)
 maketestcpp(sugar)
 maketestcpp(typed-template-test)
 
+maketestcpp(path-collapse)
+
 # Documentation
 find_package(Doxygen)
 SET(Documentation FALSE CACHE BOOL "Enable building documentation")

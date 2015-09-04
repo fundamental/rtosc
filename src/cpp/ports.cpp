@@ -575,6 +575,71 @@ const Port *Ports::apropos(const char *path) const
     return NULL;
 }
 
+static bool parent_path_p(char *read, char *start)
+{
+    if(read-start<2)
+        return false;
+    return read[0]=='.' && read[-1]=='.' && read[-2]=='/';
+}
+
+static void read_path(char *&r, char *start)
+{
+    while(1)
+    {
+        if(r<start)
+            break;
+        bool doBreak = *r=='/';
+        r--;
+        if(doBreak)
+            break;
+    }
+}
+
+static void move_path(char *&r, char *&w, char *start)
+{
+    while(1)
+    {
+        if(r<start)
+            break;
+        bool doBreak = *r=='/';
+        *w-- = *r--;
+        if(doBreak)
+            break;
+    }
+}
+
+
+char *Ports::collapsePath(char *p)
+{
+    //obtain the pointer to the last non-null char
+    char *p_end = p;
+    while(*p_end) p_end++;
+    p_end--;
+
+    //number of subpaths to consume
+    int consuming = 0;
+
+    char *write_pos = p_end;
+    char *read_pos = p_end;
+    while(read_pos >= p) {
+        //per path chunk either
+        //(1) find a parent ref and inc consuming
+        //(2) find a normal ref and consume
+        //(3) find a normal ref and write through
+        bool ppath = parent_path_p(read_pos, p);
+        if(ppath) {
+            read_path(read_pos, p);
+            consuming++;
+        } else if(consuming) {
+            read_path(read_pos, p);
+            consuming--;
+        } else
+            move_path(read_pos, write_pos, p);
+    }
+    //return last written location, not next to write
+    return write_pos+1;
+};
+
 void rtosc::walk_ports(const Ports *base,
                        char         *name_buffer,
                        size_t        buffer_size,
