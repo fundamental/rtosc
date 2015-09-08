@@ -1,6 +1,5 @@
-#include <stdio.h>
+#include "common.h"
 #include <stdlib.h>
-#include <string.h>
 #include <rtosc/rtosc.h>
 
 char buffer_a[256];
@@ -11,15 +10,6 @@ size_t len_a;
 size_t len_b;
 size_t len_c;
 
-
-void check(int b, const char *msg, int loc)
-{
-    if(!b) {
-        fprintf(stderr, "%s:%d\n", msg, loc);
-        exit(1);
-    }
-}
-
 #define MSG1 "/fly" "ing-" "monk" "ey\0\0" ",s\0\0" "bann" "ana\0"
 #define MSG2 "/foo" "bar-" "mess" "age\0" ",iT\0" "\0\0\0\x2a"
 
@@ -28,48 +18,55 @@ void check(int b, const char *msg, int loc)
                /*size1             size2*/ \
                "\0\0\0\x1c" MSG1 "\0\0\0\x18" MSG2
 
-//TODO nested bundles (though I swore those were already done)
 int main()
 {
-    printf("%d %d %d\n", (int)sizeof(MSG1)-1, (int)sizeof(MSG2)-1, (int)sizeof(RESULT)-1);
-    check((len_a = rtosc_message(buffer_a, 256,
-                    "/flying-monkey", "s", "bannana")) == sizeof(MSG1)-1,
-            "bad message", __LINE__);
-    check((len_b = rtosc_message(buffer_b, 256,
-                    "/foobar-message", "iT", 42)) == sizeof(MSG2)-1,
-            "bad message", __LINE__);
-    check(!rtosc_bundle_p(buffer_a),
-            "False positive bundle_p()", __LINE__);
-    check(!rtosc_bundle_p(buffer_b),
-            "False positive bundle_p()", __LINE__);
-    len_c = rtosc_bundle(buffer_c, 256, 0, 2, buffer_a, buffer_b);
-    printf("len_c => '%d'\n correct is %d\n", (int)len_c,
-            (int)sizeof(RESULT)-1);
-    check((len_c = rtosc_bundle(buffer_c, 256, 0, 2, buffer_a, buffer_b)) == sizeof(RESULT)-1,
-            "bad bundle", __LINE__);
-    check(rtosc_message_length(buffer_c, len_c) == len_c,
-            "bad message length", __LINE__);
+    //Message 1
+    assert_int_eq(sizeof(MSG1)-1, len_a = rtosc_message(buffer_a, 256,
+                    "/flying-monkey", "s", "bannana"),
+            "Creating Simple Message 1", __LINE__);
+    assert_hex_eq(MSG1, buffer_a, sizeof(MSG1)-1, len_a,
+            "Verifying Content of Message 1", __LINE__);
+    assert_int_eq(0, rtosc_bundle_p(buffer_a),
+            "Simple Message 1 Is Not A Bundle", __LINE__);
 
-    check(rtosc_bundle_p(buffer_c),
-            "Bad bundle detection", __LINE__);
-    check(rtosc_bundle_elements(buffer_c, 256)==2,
-            "Bad bundle_elements length", __LINE__);
-    check(!strcmp("/flying-monkey", rtosc_bundle_fetch(buffer_c, 0)),
-            "Bad bundle_fetch", __LINE__);
-    check(!strcmp("/foobar-message", rtosc_bundle_fetch(buffer_c, 1)),
-            "Bad bundle_fetch", __LINE__);
+    //Message 2
+    assert_int_eq(sizeof(MSG2)-1, len_b = rtosc_message(buffer_b, 256,
+                    "/foobar-message", "iT", 42),
+            "Creating Simple Message 2", __LINE__);
+    assert_hex_eq(MSG2, buffer_b, sizeof(MSG2)-1, len_b,
+            "Verifying Content of Message 2", __LINE__);
+    assert_int_eq(0, rtosc_bundle_p(buffer_b),
+            "Simple Message 2 Is Not A Bundle", __LINE__);
+
+    //Bundle 1
+    assert_int_eq(sizeof(RESULT)-1, len_c = rtosc_bundle(buffer_c, 256, 0, 2, buffer_a, buffer_b),
+            "Creating Bundle 1", __LINE__);
+    assert_int_eq(len_c, rtosc_message_length(buffer_c, len_c),
+            "Verifying Bundle 1's Length", __LINE__);
+    assert_hex_eq(RESULT, buffer_c, sizeof(RESULT)-1, len_c,
+            "Verifying Bundle 1's Content", __LINE__);
+
+    assert_int_eq(1, rtosc_bundle_p(buffer_c),
+            "Verifying Bundle 1 Is A Bundle", __LINE__);
+    assert_int_eq(2, rtosc_bundle_elements(buffer_c, 256),
+            "Verifying Bundle 2 Has Two Messages", __LINE__);
+
+    assert_str_eq("/flying-monkey", rtosc_bundle_fetch(buffer_c, 0),
+            "Verifying Message 1 Path", __LINE__);
+    assert_str_eq("/foobar-message", rtosc_bundle_fetch(buffer_c, 1),
+            "Verifying Message 2 Path", __LINE__);
 
     //Check minimum bundle size #bundle + time tag
-    check(rtosc_bundle(buffer_c, 256, 1, 0) == (8+8),
-            "Bad minimum bundle length", __LINE__);
+    assert_int_eq(8+8, rtosc_bundle(buffer_c, 256, 1, 0),
+            "Verify Minimum Legal Bundle Size", __LINE__);
 
     //check message length support
-    check(rtosc_message_length(buffer_c, 256) == (8+8),
-            "Bad message length", __LINE__);
+    assert_int_eq(8+8, rtosc_message_length(buffer_c, 256),
+            "Verify rtosc_message_length() on Minimum Bundle", __LINE__);
 
     //Verify that timetag can be fetched
-    check(rtosc_bundle_timetag(buffer_c)==1,
-            "Bad timetag", __LINE__);
+    assert_int_eq(1, rtosc_bundle_timetag(buffer_c),
+            "Verify rtosc_bundle_timetag() Works", __LINE__);
 
-    return 0;
+    return global_err ? EXIT_FAILURE : EXIT_SUCCESS;
 }

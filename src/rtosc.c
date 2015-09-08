@@ -523,10 +523,10 @@ static size_t bundle_ring_length(ring_t *ring)
     unsigned pos = 8+8;//goto first length field
     uint32_t advance = 0;
     do {
-        advance = deref(pos+0, ring) << (8*0) |
-                  deref(pos+1, ring) << (8*1) |
-                  deref(pos+2, ring) << (8*2) |
-                  deref(pos+3, ring) << (8*3);
+        advance = deref(pos+0, ring) << (8*3) |
+                  deref(pos+1, ring) << (8*2) |
+                  deref(pos+2, ring) << (8*1) |
+                  deref(pos+3, ring) << (8*0);
         if(advance)
             pos += 4+advance;
     } while(advance);
@@ -660,6 +660,49 @@ bool rtosc_valid_message_p(const char *msg, size_t len)
     size_t observed_length = rtosc_message_length(msg, len);
     return observed_length == len;
 }
+static uint64_t extract_uint64(const uint8_t *arg_pos)
+{
+    uint64_t arg = 0;
+    arg |= (((uint64_t)*arg_pos++) << 56);
+    arg |= (((uint64_t)*arg_pos++) << 48);
+    arg |= (((uint64_t)*arg_pos++) << 40);
+    arg |= (((uint64_t)*arg_pos++) << 32);
+    arg |= (((uint64_t)*arg_pos++) << 24);
+    arg |= (((uint64_t)*arg_pos++) << 16);
+    arg |= (((uint64_t)*arg_pos++) << 8);
+    arg |= (((uint64_t)*arg_pos++));
+    return arg;
+}
+
+static uint32_t extract_uint32(const uint8_t *arg_pos)
+{
+    uint32_t arg = 0;
+    arg |= (((uint32_t)*arg_pos++) << 24);
+    arg |= (((uint32_t)*arg_pos++) << 16);
+    arg |= (((uint32_t)*arg_pos++) << 8);
+    arg |= (((uint32_t)*arg_pos++));
+    return arg;
+}
+
+static void emplace_uint64(uint8_t *buffer, uint64_t d)
+{
+    buffer[0] = ((d>>56) & 0xff);
+    buffer[1] = ((d>>48) & 0xff);
+    buffer[2] = ((d>>40) & 0xff);
+    buffer[3] = ((d>>32) & 0xff);
+    buffer[4] = ((d>>24) & 0xff);
+    buffer[5] = ((d>>16) & 0xff);
+    buffer[6] = ((d>>8)  & 0xff);
+    buffer[7] = ((d>>0)  & 0xff);
+}
+
+static void emplace_uint32(uint8_t *buffer, uint32_t d)
+{
+    buffer[0] = ((d>>24) & 0xff);
+    buffer[1] = ((d>>16) & 0xff);
+    buffer[2] = ((d>>8)  & 0xff);
+    buffer[3] = ((d>>0)  & 0xff);
+}
 
 size_t rtosc_bundle(char *buffer, size_t len, uint64_t tt, int elms, ...)
 {
@@ -667,15 +710,15 @@ size_t rtosc_bundle(char *buffer, size_t len, uint64_t tt, int elms, ...)
     memset(buffer, 0, len);
     strcpy(buffer, "#bundle");
     buffer += 8;
-    (*(uint64_t*)buffer) = tt;
-    buffer +=8;
+    emplace_uint64((uint8_t*)buffer, tt);
+    buffer += 8;
     va_list va;
     va_start(va, elms);
     for(int i=0; i<elms; ++i) {
         const char   *msg  = va_arg(va, const char*);
         //It is assumed that any passed message/bundle is valid
         size_t        size = rtosc_message_length(msg, -1);
-        *(uint32_t*)buffer = size;
+        emplace_uint32((uint8_t*)buffer, size);
         buffer += 4;
         memcpy(buffer, msg, size);
         buffer+=size;
@@ -685,14 +728,14 @@ size_t rtosc_bundle(char *buffer, size_t len, uint64_t tt, int elms, ...)
     return buffer-_buffer;
 }
 
+
 #define POS ((size_t)(((const char *)lengths) - buffer))
 size_t rtosc_bundle_elements(const char *buffer, size_t len)
 {
     const uint32_t *lengths = (const uint32_t*) (buffer+16);
     size_t elms = 0;
-    //TODO
-    while(POS < len && *lengths) {
-        lengths += *lengths/4+1;
+    while(POS < len && extract_uint32((const uint8_t*)lengths)) {
+        lengths += extract_uint32((const uint8_t*)lengths)/4+1;
 
         if(POS > len)
             break;
@@ -706,7 +749,10 @@ const char *rtosc_bundle_fetch(const char *buffer, unsigned elm)
 {
     const uint32_t *lengths = (const uint32_t*) (buffer+16);
     size_t elm_pos = 0;
-    while(elm_pos!=elm && *lengths) ++elm_pos, lengths+=*lengths/4+1;
+    while(elm_pos!=elm && extract_uint32((const uint8_t*)lengths)) {
+        ++elm_pos;
+        lengths += extract_uint32((const uint8_t*)lengths)/4+1;
+    }
 
     return (const char*) (elm==elm_pos?lengths+1:NULL);
 }
@@ -716,9 +762,9 @@ size_t rtosc_bundle_size(const char *buffer, unsigned elm)
     const uint32_t *lengths = (const uint32_t*) (buffer+16);
     size_t elm_pos = 0;
     size_t last_len = 0;
-    while(elm_pos!=elm && *lengths) {
-        last_len = *lengths;
-        ++elm_pos, lengths+=*lengths/4+1;
+    while(elm_pos!=elm && extract_uint32((const uint8_t*)lengths)) {
+        last_len = extract_uint32((const uint8_t*)lengths);
+        ++elm_pos, lengths+=extract_uint32((const uint8_t*)lengths)/4+1;
     }
 
     return last_len;
@@ -731,5 +777,5 @@ int rtosc_bundle_p(const char *msg)
 
 uint64_t rtosc_bundle_timetag(const char *msg)
 {
-    return *(uint64_t*)(msg+8);
+    return extract_uint64((const uint8_t*)msg+8);
 }

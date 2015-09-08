@@ -1,6 +1,5 @@
-#include <stdio.h>
+#include "common.h"
 #include <stdlib.h>
-#include <string.h>
 #include <rtosc/rtosc.h>
 
 char buffer_a[256];
@@ -9,122 +8,85 @@ char buffer_c[256];
 char buffer_d[256];
 char buffer_e[256];
 
-int err = 0;
-void check(int b, const char *msg, int loc)
-{
-    if(!b) {
-        fprintf(stderr, "%s:%d\n", msg, loc);
-        err = 1;
-    }
-}
+#define TIMETAG_VALUE ((uint64_t)0xdeadbeefcafebaad)
+#define BUNDLE_ARG "bund" "le\0\0"
+#define POUND_BUNDLE "#bun" "dle\0"
+#define TIMETAG "\xde\xad\xbe\xef" "\xca\xfe\xba\xad"
+#define MSG_A "/bun" "dle\0" ",s\0\0" BUNDLE_ARG
+#define MSG_B "/bun" "dle-" "bund" "le\0\0" ",ss\0" BUNDLE_ARG BUNDLE_ARG
+#define LEN_A "\0\0\0\x14"
+#define LEN_B "\0\0\0\x24"
+#define LEN_C "\0\0\0\x40"
 
-#define VERB_BUNDLE \
-good &= (*msg++ == 'b'); \
-good &= (*msg++ == 'u'); \
-good &= (*msg++ == 'n'); \
-good &= (*msg++ == 'd'); \
-good &= (*msg++ == 'l'); \
-good &= (*msg++ == 'e');
-
-#define POUND_BUNDLE \
-good = 1; \
-good &= (*msg++ == '#'); \
-VERB_BUNDLE \
-good &= (*msg++ == '\0'); \
-check(good, "bad bundle start", __LINE__);
-
-#define TIMETAG msg += 8;
-
-#define SKIP_SIZE msg += 4;
-
-#define MSG_A \
-good = 1; \
-good &= (*msg++ == '/'); \
-VERB_BUNDLE \
-good &= (*msg++ == '\0'); \
-\
-good &= (*msg++ == ','); \
-good &= (*msg++ == 's'); \
-good &= (*msg++ == '\0'); \
-good &= (*msg++ == '\0'); \
-\
-VERB_BUNDLE \
-good &= (*msg++ == '\0'); \
-good &= (*msg++ == '\0'); \
-check(good, "bad message 'A'", __LINE__);
-
-#define MSG_B \
-good = 1; \
-good &= (*msg++ == '/'); \
-VERB_BUNDLE \
-good &= (*msg++ == '-'); \
-VERB_BUNDLE \
-good &= (*msg++ == '\0'); \
-good &= (*msg++ == '\0'); \
-\
-good &= (*msg++ == ','); \
-good &= (*msg++ == 's'); \
-good &= (*msg++ == 's'); \
-good &= (*msg++ == '\0'); \
-\
-VERB_BUNDLE \
-good &= (*msg++ == '\0'); \
-good &= (*msg++ == '\0'); \
-VERB_BUNDLE \
-good &= (*msg++ == '\0'); \
-good &= (*msg++ == '\0'); \
-check(good, "bad message 'B'", __LINE__);
+#define BAD_SIZE "\xba\xad\xca\xfe"
 
 #define BUNDLE_C \
 POUND_BUNDLE \
 TIMETAG \
-SKIP_SIZE \
+LEN_A \
 MSG_A \
-SKIP_SIZE \
+LEN_A \
 MSG_A
+    
+#define BUNDLE_D \
+POUND_BUNDLE \
+TIMETAG \
+LEN_C \
+BUNDLE_C \
+LEN_C \
+BUNDLE_C \
+LEN_B \
+MSG_B
 
+const int La = sizeof(MSG_A)-1;
+const int Lb = sizeof(MSG_B)-1;
+const int Lc = sizeof(BUNDLE_C)-1;
+const int Ld = sizeof(BUNDLE_D)-1;
 
 int main()
 {
-    check(rtosc_message(buffer_a, 256, "/bundle", "s", "bundle"),
-            "bad message", __LINE__);
-    check(rtosc_message(buffer_b, 256, "/bundle-bundle", "ss", "bundle", "bundle"),
-            "bad message", __LINE__);
+    //Message 1
+    assert_int_eq(La, rtosc_message(buffer_a, 256, "/bundle", "s", "bundle"),
+            "Create Message 1", __LINE__);
+    assert_hex_eq(MSG_A, buffer_a, La, La,
+            "Verifying Contents Of Message 1", __LINE__);
+
+    //Message 2
+    assert_int_eq(Lb, rtosc_message(buffer_b, 256, "/bundle-bundle", "ss", "bundle", "bundle"),
+            "Create Message 2", __LINE__);
+    assert_hex_eq(MSG_B, buffer_b, Lb, Lb,
+            "Verifying Contents Of Message 2", __LINE__);
+
     int len;
-    check(rtosc_bundle(buffer_c, 256, 0, 2, buffer_a, buffer_a) == 64,
-            "bad bundle", __LINE__);
-    check(rtosc_message_length(buffer_c, 256) == 64,
-            "bad bundle length", __LINE__);
-    check((len = rtosc_bundle(buffer_d, 256, 0, 3, buffer_c, buffer_c, buffer_b)) == 192,
-            "bad bundle", __LINE__);
-    check(rtosc_message_length(buffer_d, 256) == 192,
-            "bad bundle length", __LINE__);
-    check(rtosc_message_length(buffer_d, len) == 192,
-            "bad bundle length", __LINE__);
+    //Bundle 1
+    assert_int_eq(64, rtosc_bundle(buffer_c, 256, TIMETAG_VALUE, 2, buffer_a, buffer_a),
+            "Create Bundle 1", __LINE__);
+    assert_hex_eq(BUNDLE_C, buffer_c, Lc, Lc,
+            "Verifying Bundle 1's Content", __LINE__);
+    assert_int_eq(64, rtosc_message_length(buffer_c, 256),
+            "Verify Bundle 1's Length", __LINE__);
 
-    //now to verify the bundle
-    const char *msg = buffer_d;
-    int good;
-    POUND_BUNDLE
-    TIMETAG
-    SKIP_SIZE
-    BUNDLE_C
-    SKIP_SIZE
-    BUNDLE_C
-    SKIP_SIZE
-    MSG_B
+    //Bundle 2
+    assert_int_eq(192, len = rtosc_bundle(buffer_d, 256, TIMETAG_VALUE, 3, buffer_c, buffer_c, buffer_b),
+            "Create Bundle 2", __LINE__);
+    assert_hex_eq(BUNDLE_D, buffer_d, Ld, Ld,
+            "Verifying Bundle 2's Content", __LINE__);
+    assert_int_eq(192, rtosc_message_length(buffer_d, 256),
+            "Verify Bundle 2's Length", __LINE__);
+    assert_int_eq(192, rtosc_message_length(buffer_d, len),
+            "Verify Bundle 2's Length With Tight Bounds", __LINE__);
 
-    check(rtosc_bundle_elements(buffer_d, len) == 3,
-            "bad bundle elements", __LINE__);
-    
-    check(!strcmp("bundle",
-                rtosc_argument(rtosc_bundle_fetch(rtosc_bundle_fetch(buffer_d, 1), 1), 0).s),
-            "bad data retreival", __LINE__);
+
+    assert_int_eq(3, rtosc_bundle_elements(buffer_d, len),
+            "Verify Bundle 2's Subelements", __LINE__);
+    assert_str_eq("bundle", rtosc_argument(rtosc_bundle_fetch(rtosc_bundle_fetch(buffer_d, 1), 1), 0).s,
+            "Verify Nested Message's Integrety", __LINE__);
     
     //Verify the failure behavior when a bad length is provided
-    check(rtosc_bundle_elements(buffer_d, len-1) == 2,
-            "bad truncated bundle elements", __LINE__);
-    check(rtosc_message_length(buffer_d, len-1) == 0,
-            "bad truncated bundle length", __LINE__);
-    return err;
+    assert_int_eq(2, rtosc_bundle_elements(buffer_d, len-1),
+            "Verify Aparent Bundles With Truncated Length", __LINE__);
+    assert_int_eq(0, rtosc_message_length(buffer_d, len-1),
+            "Verify Bad Message Is Detected With Truncation", __LINE__);
+
+    return global_err ? EXIT_FAILURE : EXIT_SUCCESS;
 }

@@ -7,6 +7,14 @@
 
 using namespace rtosc;
 
+static void emplace_uint32(uint8_t *buffer, uint32_t d)
+{
+    buffer[0] = ((d>>24) & 0xff);
+    buffer[1] = ((d>>16) & 0xff);
+    buffer[2] = ((d>>8)  & 0xff);
+    buffer[3] = ((d>>0)  & 0xff);
+}
+
 /*
  * Append another message onto a bundle if the space permits it.
  * If insufficient space is available, then zero is returned and the buffer is
@@ -26,7 +34,7 @@ static size_t append_bundle(char *dst, const char *src,
 
     if(max_len < dst_len + src_len + 4 || dst_len == 0 || src_len == 0)
         return 0;
-    *(int32_t*)(dst+dst_len) = (int32_t)src_len;
+    emplace_uint32((uint8_t*)(dst+dst_len), src_len);
 
     memcpy(dst+dst_len+4, src, src_len);
 
