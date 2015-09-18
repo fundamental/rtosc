@@ -20,6 +20,25 @@ int assert_int_eq(int a, int b, const char *testcase, int line)
     return err;
 }
 
+int assert_true(int a, const char *testcase, int line)
+{
+    test_counter++;
+    int err = !a;
+    if(err) {
+        printf("not ok %d - %s...\n", test_counter, testcase);
+        printf("# Failure on line %d\n", line);
+        global_err++;
+    } else
+        printf("ok %d - %s...\n", test_counter, testcase);
+    return err;
+}
+
+int assert_false(int a, const char *testcase, int line)
+{
+    return assert_true(!a, testcase, line);
+}
+
+
 int assert_str_eq(const char *a, const char *b, const char *testcase, int line)
 {
     test_counter++;
@@ -65,7 +84,7 @@ int assert_f32_eq(float a, float b,const char *testcase, int line)
 //0000000: 2369 6e63 6c75 6465 203c 7374 6469 6f2e  #include <stdio.
 //0000010: 683e 0a23 696e 636c 7564 6520 3c73 7472  h>.#include <str
 //0000020: 696e 672e 683e 0a0a 696e 7420 676c 6f62  ing.h>..int glob
-//0000030: 616c 5f65 7272 203d 2030 3b0a 696e 7420  al_err = 0;.int 
+//0000030: 616c 5f65 7272 203d 2030 3b0a 696e 7420  al_err = 0;.int
 //0000040: 7465 7374 5f63 6f75 6e74 6572 203d 2030  test_counter = 0
 //0000050: 3b0a 2f2f 6578 7065 6374 2061 0a2f 2f61  ;.//expect a.//a
 //
@@ -80,16 +99,16 @@ void hexdump(const char *data, const char *mask, size_t len)
         printf("#%07x: ", offset);
 
         int char_covered = 0;
-        
+
         //print hex groups (8)
         for(int i=0; i<8; ++i) {
-        
+
             //print doublet
             for(int j=0; j<2; ++j) {
                 int loffset = offset + 2*i + j;
                 if(loffset >= (int)len)
                     goto escape;
-        
+
                 //print hex
                 {
                     //start highlight
@@ -97,7 +116,7 @@ void hexdump(const char *data, const char *mask, size_t len)
 
                     //print chars
                     printf("%02x", 0xff&data[loffset]);
-                    
+
                     //end highlight
                     if(mask && mask[loffset]){printf("%s", reset);}
                     char_covered += 2;
@@ -121,7 +140,7 @@ escape:
         }
         printf("\n");
         offset += 16;
-        if(offset >= len)
+        if(offset >= (int)len)
             return;
     }
 }
@@ -136,7 +155,7 @@ int assert_hex_eq(const char *a, const char *b, size_t size_a, size_t size_b,
         printf("not ok %d - %s...\n", test_counter, testcase);
         printf("# Error on line %d\n", line);
         //printf("# Expected '%s', but observed '%s' instead (line %d)\n", a, b, line);
-        
+
         //create difference mask
         const int longer  = size_a > size_b ? size_a : size_b;
         const int shorter = size_a < size_b ? size_a : size_b;
@@ -157,4 +176,11 @@ int assert_hex_eq(const char *a, const char *b, size_t size_a, size_t size_b,
     } else
         printf("ok %d - %s...\n", test_counter, testcase);
     return err;
+}
+
+int test_summary(void)
+{
+    printf("# %d test(s) failed out of %d (currently passing %f%% tests)\n",
+            global_err, test_counter, 100.0-global_err*100./test_counter);
+    return global_err ? EXIT_FAILURE : EXIT_SUCCESS;
 }

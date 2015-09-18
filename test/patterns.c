@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <ctype.h>
+#include "common.h"
 
 const char paths[10][32] = {
     "/",
@@ -19,37 +20,60 @@ const char paths[10][32] = {
 
 int error = 0;
 
-#define work(col, val, name, ...) rtosc_message(buffer, 256, name, __VA_ARGS__); \
-    for(int i=0; i<10; ++i) {\
-        int matches = rtosc_match(paths[i], buffer); \
-        if(((col == i) && (matches != val))) {\
-            printf("Failure to match '%s' to '%s'\n", name, paths[i]); \
-            error = 1; \
-        } else if((col != i) && matches) { \
-            printf("False positive match on '%s' to '%s'\n", name, paths[i]); \
-            error = 1; \
-        } \
-    }
+//project_via_rtosc_match
+int64_t prm(const char *path, const char *args, ...)
+{
+    char buffer[256];
+    va_list va;
+    va_start(va, args);
+    rtosc_vmessage(buffer, 256, path, args, va);
+    va_end(va);
+
+    int64_t result = 0;
+    for(int i=0; i<10; ++i)
+        result |= ((bool)rtosc_match(paths[i], buffer)) << i;
+    return result;
+}
+
+#define rmp rtosc_match_partial
+bool rtosc_match_partial(const char *a, const char *b);
 
 int main()
 {
-    char buffer[256];
-    work(0,1,"/",          "");
-    work(1,1,"19",         "");
-    work(2,1,"14",         "ff", 1.0,2.0);
-    work(3,0,"pat",        "");
-    work(3,1,"path",       "");
-    work(3,0,"paths",      "");
-    work(4,1,"path123/",   "ff", 1.0, 2.0);
-    work(5,1,"path0asdf",  "");
-    work(6,1,"foobar23/",  "");
-    work(6,0,"foobar123/", "");
-    work(6,1,"foobar122/", "");
-    work(7,1,"blam/",      "");
-    work(7,1,"blam/blam",  "");
-    work(7,0,"blam",       "");
-    work(9,1,"bfnpar1",    "c");
-    work(9,1,"bfnpar1",    "");
+    //Check the normal path fragment matching used for the C++ layer
+    assert_int_eq(1<<0, prm("/",          ""),             "Check Simple Empty Path",           __LINE__);
+    assert_int_eq(1<<1, prm("19",         ""),             "Check Basic Enum Matching",         __LINE__);
+    assert_int_eq(1<<2, prm("19",         "ff", 1.0, 2.0), "Check Enum+Args Matching",          __LINE__);
+    assert_int_eq(0<<3, prm("pat",        ""),             "Check Partial Path Failure",        __LINE__);
+    assert_int_eq(1<<3, prm("path",       ""),             "Check Full Path Match",             __LINE__);
+    assert_int_eq(0<<3, prm("paths",      ""),             "Check Overfull Path Failure",       __LINE__);
+    assert_int_eq(1<<4, prm("path123/",   "ff", 1.0, 2.0), "Check Composite Path",              __LINE__);
+    assert_int_eq(1<<5, prm("path0asdf",  ""),             "Check Embedded Enum",               __LINE__);
+    assert_int_eq(1<<6, prm("foobar23/",  ""),             "Check Another Enum",                __LINE__);
+    assert_int_eq(0<<6, prm("foobar123/", ""),             "Check Enum Too Large Failure",      __LINE__);
+    assert_int_eq(1<<6, prm("foobar122/", ""),             "Check Enum Edge Case",              __LINE__);
+    assert_int_eq(1<<7, prm("blam/",      ""),             "Check Subpath Match",               __LINE__);
+    assert_int_eq(1<<7, prm("blam/blam",  ""),             "Check Partial Match Of Full Path",  __LINE__);
+    assert_int_eq(0<<7, prm("blam",       ""),             "Check Subpath Missing '/' Failure", __LINE__);
+    assert_int_eq(1<<9, prm("bfnpar1",    "c"),            "Check Optional Arg Case 1",         __LINE__);
+    assert_int_eq(1<<9, prm("bfnpar1",    ""),             "Check Optional Arg Case 2",         __LINE__);
 
-    return error;
+    printf("\n# Suite 2 On Standard Based Matching Alg.\n");
+    //Check the standard path matching algorithm
+    assert_true(rmp("foobar", "foobar"),  "Check Literal Equality",   __LINE__);
+    assert_false(rmp("foocar", "foobar"), "Check Literal Inequality", __LINE__);
+
+    assert_true(rmp("foobar",  "?[A-z]?bar"), "Check Char Pattern Equality", __LINE__);
+    assert_false(rmp("foobar",  "?[!A-z]?bar"), "Check Char Pattern Inequality", __LINE__);
+
+    assert_true(rmp("baz", "*"), "Check Trivial Wildcard", __LINE__);
+    assert_true(rmp("baz", "ba*"), "Check Wildcard Partial Equality", __LINE__);
+    assert_false(rmp("baz", "bb*"), "Check Wildcard Partial Inequality", __LINE__);
+    assert_false(rmp("baz", "ba*z"), "Check Invalid Wildcard Partial Inequality", __LINE__);
+
+    assert_true(rmp("lizard52", "lizard#53"), "Check Enum Equality", __LINE__);
+    assert_false(rmp("lizard99", "lizard#53"), "Check Enum Inequality", __LINE__);
+    assert_false(rmp("lizard", "lizard#53"), "Check Enum Inequality", __LINE__);
+
+    return test_summary();
 }
