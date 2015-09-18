@@ -150,7 +150,9 @@ maketestcpp(performance)
 maketestcpp(undo-test)
 maketestcpp(serializer)
 maketestcpp(sugar)
-maketestcpp(typed-template-test)
+if(CXX11_FLAG STREQUAL "-std=c++11")
+    maketestcpp(typed-template-test)
+endif()
 
 maketestcpp(path-collapse)
 
