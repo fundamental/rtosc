@@ -796,14 +796,16 @@ void dump_ports_cb(const rtosc::Port *p, const char *name, void *v)
     if(meta.find("parameter") != p->meta().end()) {
         char type = 0;
         const char *foo = strchr(p->name, ':');
-        if(strchr(foo, 'f'))
-            type = 'f';
-        else if(strchr(foo, 'i'))
-            type = 'i';
-        else if(strchr(foo, 'c'))
-            type = 'c';
-        else if(strchr(foo, 'T'))
-            type = 't';
+        if(foo) {
+            if(strchr(foo, 'f'))
+                type = 'f';
+            else if(strchr(foo, 'i'))
+                type = 'i';
+            else if(strchr(foo, 'c'))
+                type = 'c';
+            else if(strchr(foo, 'T'))
+                type = 't';
+        }
         if(!type) {
             fprintf(stderr, "rtosc port dumper: Cannot handle '%s'\n", p->name);
             return;
