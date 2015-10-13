@@ -137,7 +137,7 @@ struct rtosc_hack_decltype_t
 //Alias operators
 #define rParams(name, length, ...) \
 rArray(name, length, __VA_ARGS__), \
-{STRINGIFY(name) ":", rProp(alias), NULL, rParamsCb(name, length)}
+{STRINGIFY(name) ":", rProp(alias) rDoc("get all data from aliased array"), NULL, rParamsCb(name, length)}
 
 
 template<class T> constexpr T spice(T*t) {return *t;}
@@ -145,7 +145,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
 //Recursion [two ports in one for pointer manipulation]
 #define rRecur(name, ...) \
     {STRINGIFY(name) "/", DOC(__VA_ARGS__), &decltype(rObject::name)::ports, rRecurCb(name)}, \
-    {STRINGIFY(name) ":", rProp(internal), NULL, rRecurPtrCb(name)}
+    {STRINGIFY(name) ":", rProp(internal) rDoc("get obj pointer"), NULL, rRecurPtrCb(name)}
 
 #define rRecurp(name, ...) \
     {STRINGIFY(name) "/", DOC(__VA_ARGS__), \
@@ -168,7 +168,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
 //Misc
 #define rDummy(name, ...) {STRINIFY(name), rProp(dummy), NULL, [](msg_t, rtosc::RtData &){}}
 #define rString(name, len, ...) \
-    {STRINGIFY(name) "::s", rMap(length, len) DOC(__VA_ARGS__), NULL, rStringCb(name,len)}
+    {STRINGIFY(name) "::s", rMap(length, len) rProp(parameter) DOC(__VA_ARGS__), NULL, rStringCb(name,len)}
 
 //General property operators
 #define rMap(name, value) ":" STRINGIFY(name) "\0=" STRINGIFY(value) "\0"
