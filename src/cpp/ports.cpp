@@ -762,7 +762,7 @@ void walk_ports2(const rtosc::Ports *base,
 
                 //for(unsigned i=0; i<max; ++i)
                 {
-                    sprintf(pos,"[0,%d]",max);
+                    sprintf(pos,"[0,%d]",max-1);
 
                     //Apply walker function
                     walker(&p, name_buffer, data);
