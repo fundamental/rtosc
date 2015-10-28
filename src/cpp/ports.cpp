@@ -16,7 +16,7 @@ static inline void scat(char *dest, const char *src)
 }
 
 RtData::RtData(void)
-    :loc(NULL), loc_size(0), obj(NULL), matches(0)
+    :loc(NULL), loc_size(0), obj(NULL), matches(0), message(NULL)
 {}
 
 void RtData::reply(const char *path, const char *args, ...)
@@ -436,9 +436,19 @@ Ports::~Ports()
 #define __builtin_expect(a,b) a
 #endif
 
-void Ports::dispatch(const char *m, rtosc::RtData &d) const
+void Ports::dispatch(const char *m, rtosc::RtData &d, bool base_dispatch) const
 {
     void *obj = d.obj;
+
+    //handle the first dispatch layer
+    if(base_dispatch) {
+        d.message = m;
+        if(m && *m == '/')
+            m++;
+        if(d.loc)
+            d.loc[0] = 0;
+    }
+
     //simple case
     if(!d.loc || !d.loc_size) {
         for(const Port &port: ports) {

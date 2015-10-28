@@ -52,6 +52,7 @@ struct RtData
     void *obj;
     int  matches;
     const Port *port;
+    const char *message;
 
     virtual void reply(const char *path, const char *args, ...);
     virtual void reply(const char *msg);
@@ -154,7 +155,7 @@ struct Ports
      * @param d The RtData object shall contain a path buffer (or null), the length of
      *          the buffer, a pointer to data.
      */
-    void dispatch(const char *m, RtData &d) const;
+    void dispatch(const char *m, RtData &d, bool base_dispatch=false) const;
 
     /**
      * Retrieve local port by name
