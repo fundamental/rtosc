@@ -42,6 +42,9 @@ void RtData::broadcast(const char *path, const char *args, ...)
 void RtData::broadcast(const char *msg)
 {reply(msg);};
 
+void RtData::forward(const char *rational)
+{}
+
 void metaiterator_advance(const char *&title, const char *&value)
 {
     if(!title || !*title) {

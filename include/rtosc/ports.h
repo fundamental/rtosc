@@ -57,6 +57,8 @@ struct RtData
     virtual void reply(const char *msg);
     virtual void broadcast(const char *path, const char *args, ...);
     virtual void broadcast(const char *msg);
+
+    virtual void forward(const char *rational=NULL);
 };
 
 
