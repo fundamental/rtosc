@@ -126,7 +126,7 @@ struct Port {
 struct Ports
 {
     std::vector<Port> ports;
-
+    std::function<void(msg_t, RtData&)> default_handler;
 
     typedef std::vector<Port>::const_iterator itr_t;
 
@@ -190,10 +190,24 @@ struct Ports
      */
     static char *collapsePath(char *p);
 
+    protected:
+    void refreshMagic(void);
     private:
     //Performance hacks
     class Port_Matcher *impl;
     unsigned elms;
+};
+
+struct ClonePort
+{
+    const char *name;
+    std::function<void(msg_t, RtData&)> cb;
+};
+
+struct ClonePorts:public Ports
+{
+    ClonePorts(const Ports &p,
+            std::initializer_list<ClonePort> c);
 };
 
 

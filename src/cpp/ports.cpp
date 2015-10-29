@@ -376,6 +376,8 @@ static ivec_t find_remap(words_t &strs, ivec_t &pos, ivec_t &assoc)
 
 static void generate_minimal_hash(std::vector<std::string> str, Port_Matcher &pm)
 {
+    if(str.empty())
+        return;
     pm.pos   = find_pos(str);
     if(pm.pos.empty()) {
         fprintf(stderr, "rtosc: Failed to generate minimal hash\n");
@@ -416,14 +418,9 @@ static void generate_minimal_hash(Ports &p, Port_Matcher &pm)
 }
 
 Ports::Ports(std::initializer_list<Port> l)
-    :ports(l), impl(new Port_Matcher)
+    :ports(l), impl(NULL)
 {
-    generate_minimal_hash(*this, *impl);
-    impl->enump = new bool[ports.size()];
-    for(int i=0; i<(int)ports.size(); ++i)
-        impl->enump[i] = strchr(ports[i].name, '#');
-
-    elms = ports.size();
+    refreshMagic();
 }
 
 Ports::~Ports()
@@ -442,6 +439,7 @@ void Ports::dispatch(const char *m, rtosc::RtData &d, bool base_dispatch) const
 
     //handle the first dispatch layer
     if(base_dispatch) {
+        d.matches = 0;
         d.message = m;
         if(m && *m == '/')
             m++;
@@ -514,8 +512,14 @@ void Ports::dispatch(const char *m, rtosc::RtData &d, bool base_dispatch) const
             for(auto p:impl->pos)
                 if(p < (int)len)
                     t += impl->assoc[m[p]];
-            if(t >= (int)impl->remap.size())
+            if(t >= (int)impl->remap.size() && !default_handler)
                 return;
+            else if(t >= (int)impl->remap.size() && default_handler) {
+                d.matches++;
+                default_handler(m,d), d.obj = obj;
+                return;
+            }
+
             int port_num = impl->remap[t];
 
             //Verify the chosen port is correct
@@ -544,6 +548,9 @@ void Ports::dispatch(const char *m, rtosc::RtData &d, bool base_dispatch) const
 
                 //Remove the rest of the path
                 old_end[0] = '\0';
+            } else if(default_handler) {
+                d.matches++;
+                default_handler(m,d), d.obj = obj;
             }
         }
     }
@@ -652,6 +659,43 @@ char *Ports::collapsePath(char *p)
     //return last written location, not next to write
     return write_pos+1;
 };
+
+void Ports::refreshMagic()
+{
+    delete impl;
+    impl = new Port_Matcher;
+    generate_minimal_hash(*this, *impl);
+    impl->enump = new bool[ports.size()];
+    for(int i=0; i<(int)ports.size(); ++i)
+        impl->enump[i] = strchr(ports[i].name, '#');
+
+    elms = ports.size();
+}
+
+ClonePorts::ClonePorts(const Ports &ports_,
+        std::initializer_list<ClonePort> c)
+    :Ports({})
+{
+    for(auto &to_clone:c) {
+        const Port *clone_port = NULL;
+        for(auto &p:ports_.ports)
+            if(!strcmp(p.name, to_clone.name))
+                clone_port = &p;
+        if(!clone_port && strcmp("*", to_clone.name)) {
+            fprintf(stderr, "Cannot find a clone port for '%s'\n",to_clone.name);
+            assert(false);
+        }
+
+        if(clone_port) {
+            ports.push_back({clone_port->name, clone_port->metadata,
+                    clone_port->ports, to_clone.cb});
+        } else {
+            default_handler = to_clone.cb;
+        }
+    }
+
+    refreshMagic();
+}
 
 void rtosc::walk_ports(const Ports *base,
                        char         *name_buffer,
