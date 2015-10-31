@@ -696,6 +696,26 @@ ClonePorts::ClonePorts(const Ports &ports_,
 
     refreshMagic();
 }
+MergePorts::MergePorts(std::initializer_list<const rtosc::Ports*> c)
+    :Ports({})
+{
+    //XXX TODO remove duplicates in some sane and documented way
+    //e.g. repeated ports override and remove older ones
+    for(auto *to_clone:c) {
+        assert(to_clone);
+        for(auto &p:to_clone->ports) {
+            bool already_there = false;
+            for(auto &pp:ports)
+                if(!strcmp(pp.name, p.name))
+                    already_there = true;
+
+            if(!already_there)
+                ports.push_back(p);
+        }
+    }
+
+    refreshMagic();
+}
 
 void rtosc::walk_ports(const Ports *base,
                        char         *name_buffer,

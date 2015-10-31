@@ -210,6 +210,11 @@ struct ClonePorts:public Ports
             std::initializer_list<ClonePort> c);
 };
 
+struct MergePorts:public Ports
+{
+    MergePorts(std::initializer_list<const Ports*> c);
+};
+
 
 /*********************
  * Port walking code *
