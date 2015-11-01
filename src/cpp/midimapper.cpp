@@ -146,6 +146,13 @@ void MidiMappernRT::map(const char *addr, bool coarse)
 MidiMapperStorage *MidiMappernRT::generateNewBijection(const Port &port, std::string addr)
 {
     MidiBijection bi;
+    const auto &meta = port.meta();
+    if(meta.find("min") == meta.end() ||
+            meta.find("max") == meta.end()) {
+        printf("Rtosc-MIDI: Cannot Learn address = <%s>\n", addr.c_str());
+        printf("Rtosc-MIDI: There are no min/max fields\n");
+        return NULL;
+    }
     bi.mode = 0;
     bi.min = atof(port.meta()["min"]);
     bi.max = atof(port.meta()["max"]);
