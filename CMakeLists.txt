@@ -5,6 +5,8 @@ set(VERSION_MAJOR 0)
 set(VERSION_MINOR 1)
 set(VERSION_PATCH 0)
 
+option(PERF_TEST "Run Performance Timing Tests" OFF)
+
 include("cmake/ColorMessage.cmake")
 SET(BUILD_RTOSC_EXAMPLES FALSE CACHE BOOL
     "Build RTOSC Example Programs")
@@ -145,10 +147,13 @@ endif()
 maketestcpp(metadata)
 maketestcpp(headerlib)
 maketestcpp(test-walker)
-maketestcpp(performance)
+
+if(PERF_TEST)
+    maketestcpp(performance)
+    maketestcpp(serializer)
+endif(PERF_TEST)
 
 maketestcpp(undo-test)
-maketestcpp(serializer)
 maketestcpp(sugar)
 if(CXX11_FLAG STREQUAL "-std=c++11")
     maketestcpp(typed-template-test)
@@ -218,6 +223,12 @@ if(NTK_FOUND)
     message(STATUS "NTK enabled        -- ${Green}package found${ColorReset}")
 else()
     message(STATUS "NTK disabled       -- ${Yellow}package NOT found${ColorReset}")
+endif()
+
+if(PERF_TEST)
+    message(STATUS "Perf Test(s) enabled")
+else()
+    message(STATUS "Perf Test(s) disabled")
 endif()
 
 if(FLTK_FOUND)
