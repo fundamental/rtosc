@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <rtosc/rtosc.h>
+#include "common.h"
 
 char buffer[256];
 
@@ -29,14 +30,6 @@ const unsigned char message_two[4*10] = {
     0x40, 0xb5, 0xb2, 0x2d,
 };
 
-void check(int b, const char *msg, int loc)
-{
-    if(!b) {
-        fprintf(stderr, "%s:%d\n", msg, loc);
-        exit(1);
-    }
-}
-
 /*
  * The OSC 1.0 spec provides two example messages at
  * http://opensoundcontrol.org/spec-1_0-examples
@@ -45,15 +38,17 @@ void check(int b, const char *msg, int loc)
  */
 int main()
 {
-    check(rtosc_message(buffer, 256, "/oscillator/4/frequency", "f", 440.0f),
-            "Failed message creation", __LINE__);
-    check(!memcmp(buffer, message_one, sizeof(message_one)),
-            "Message does not meet spec", __LINE__);
+    int sz = rtosc_message(buffer, 256, "/oscillator/4/frequency", "f", 440.0f);
+    assert_int_eq(sizeof(message_one), sz,
+            "Creating Single Argument Message From OSC Spec", __LINE__);
+    assert_hex_eq((char*)message_one, buffer, sizeof(message_one), sz,
+            "Validating Binary Representation of Message 1", __LINE__);
 
-    check(rtosc_message(buffer, 256, "/foo", "iisff",
-                1000, -1, "hello", 1.234f, 5.678f),
-            "Failed message creation", __LINE__);
-    check(!memcmp(buffer, message_two, sizeof(message_two)),
-            "Message does not meet spec", __LINE__);
+    sz = rtosc_message(buffer, 256, "/foo", "iisff",
+                1000, -1, "hello", 1.234f, 5.678f);
+    assert_int_eq(sizeof(message_two), sz,
+            "Creating Multi Argument Message From OSC Spec", __LINE__);
+    assert_hex_eq((char*)message_two, buffer, sizeof(message_two), sz,
+            "Validating Binary Representation of Message 2", __LINE__);
     return 0;
 }

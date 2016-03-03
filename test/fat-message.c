@@ -1,14 +1,15 @@
 #include <rtosc/rtosc.h>
 #include <stdio.h>
 #include <string.h>
+#include "common.h"
 
 typedef uint8_t midi_t[4];
 char buffer[1024];
-int err = 0;
-#define CHECK(x) \
-    if(!(x)) {\
-        fprintf(stderr, "failure at line %d (" #x ")\n", __LINE__); \
-        ++err;}
+
+#define CHECK(a, b, o) \
+    arg = rtosc_argument(buffer, o); \
+    assert_hex_eq((char*)&a, (char*)&(arg.b), sizeof(a), sizeof(a), \
+            "Checking '"#a"' Argument", __LINE__);
 
 //verifies a message with all types included serializes and deserializes
 int main()
@@ -31,30 +32,40 @@ int main()
     //nil
     //inf
 
-    CHECK(message_len = rtosc_message(buffer, 1024, "/dest",
-                "[ifsbhtdScrmTFNI]",
-                i,f,s,b.len,b.data,h,t,d,S,c,r,m));
+    message_len = rtosc_message(buffer, 1024, "/dest",
+                "[ifsbhtdScrmTFNI]", i,f,s,b.len,b.data,h,t,d,S,c,r,m);
 
-    CHECK(rtosc_argument(buffer, 0).i == i);
-    CHECK(rtosc_argument(buffer, 1).f == f);
-    CHECK(!strcmp(rtosc_argument(buffer, 2).s,s));
-    CHECK(rtosc_argument(buffer, 3).b.len == 3);
-    CHECK(!strcmp((char*)rtosc_argument(buffer, 3).b.data, "str"));
-    CHECK(rtosc_argument(buffer, 4).h == h);
-    CHECK(rtosc_argument(buffer, 5).t == t);
-    CHECK(rtosc_argument(buffer, 6).d == d);
-    CHECK(!strcmp(rtosc_argument(buffer, 7).s,S));
-    CHECK(rtosc_argument(buffer, 8).i == c);
-    CHECK(rtosc_argument(buffer, 9).i == r);
-    CHECK(rtosc_argument(buffer, 10).m[0] == m[0])
-    CHECK(rtosc_argument(buffer, 10).m[1] == m[1])
-    CHECK(rtosc_argument(buffer, 10).m[2] == m[2])
-    CHECK(rtosc_argument(buffer, 10).m[3] == m[3])
-    CHECK(rtosc_type(buffer,11) == 'T');
-    CHECK(rtosc_type(buffer,12) == 'F');
-    CHECK(rtosc_type(buffer,13) == 'N');
-    CHECK(rtosc_type(buffer,14) == 'I');
-    CHECK(rtosc_valid_message_p(buffer, message_len));
+    assert_int_eq(96, message_len,
+            "Generating A Message With All Arg Types", __LINE__);
 
-    return err;
+
+    rtosc_arg_t arg;
+    assert_int_eq(i, rtosc_argument(buffer, 0).i,
+            "Checking 'i' Argument", __LINE__);
+    CHECK(f,f,1);
+    assert_str_eq(s, rtosc_argument(buffer, 2).s,
+            "Checking 's' Argument", __LINE__);
+    CHECK(b.len,b.len,3);
+    assert_hex_eq((char*)b.data, (char*)arg.b.data, 3, b.len, 
+            "Checking 'b.data' Argument", __LINE__);
+    CHECK(h,h,4);
+    CHECK(t,t,5);
+    CHECK(d,d,6);
+    assert_str_eq(S,rtosc_argument(buffer, 7).s,
+            "Checking 'S' Argument", __LINE__);
+    CHECK(c,i,8);
+    CHECK(r,i,9);
+    CHECK(m,m,10);
+    assert_char_eq('T', rtosc_type(buffer,11),
+            "Checking 'T' Argument", __LINE__);
+    assert_char_eq('F', rtosc_type(buffer,12),
+            "Checking 'F' Argument", __LINE__);
+    assert_char_eq('N', rtosc_type(buffer,13),
+            "Checking 'N' Argument", __LINE__);
+    assert_char_eq('I', rtosc_type(buffer,14),
+            "Checking 'I' Argument", __LINE__);
+    assert_true(rtosc_valid_message_p(buffer, message_len),
+            "Verifying Message Is Valid", __LINE__);
+
+    return test_summary();
 }

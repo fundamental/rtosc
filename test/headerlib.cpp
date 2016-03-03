@@ -2,7 +2,7 @@
 #include <rtosc/thread-link.h>
 #include <rtosc/ports.h>
 #include <string>
-#include <iostream>
+#include "common.h"
 
 using namespace rtosc;
 
@@ -35,5 +35,9 @@ int main()
     }
     tlink.write("echo", "ss", "hello", "rtosc");
 
-    return !(resultB==123 && resultA=="testing");
+    assert_str_eq("testing", resultA.c_str(),
+            "Check String Dispatch Field", __LINE__);
+    assert_int_eq(123,       resultB, "Check Integer Dispatch Field", __LINE__);
+
+    return test_summary();
 }

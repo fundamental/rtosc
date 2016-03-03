@@ -1,9 +1,5 @@
 #include "rtosc/ports.h"
-
-#define CHECK(x) \
-    if(!(x)) {\
-        fprintf(stderr, "failure at line %d (" #x ")\n", __LINE__); \
-        ++err;}
+#include "common.h"
 
 int main()
 {
@@ -13,8 +9,9 @@ int main()
     char *p2 = rtosc::Ports::collapsePath(strdup(P2));
     const char *P3 = "/foo/path/bam/blaz/asdfasdf/../../..";
     char *p3 = rtosc::Ports::collapsePath(strdup(P3));
-    printf(" '%s' = '%s'\n", P1, p1);
-    printf(" '%s' = '%s'\n", P2, p2);
-    printf(" '%s' = '%s'\n", P3, p3);
-    return 0;
+    assert_str_eq("/foo/baz",  p1, "Check Single Level Collapse", __LINE__);
+    assert_str_eq("/baz",      p2, "Check Dual   Level Collapse", __LINE__);
+    assert_str_eq("/foo/path", p3, "Check Triple Level Collapse", __LINE__);
+    return test_summary();
 }
+

@@ -1,6 +1,7 @@
 #include <rtosc/rtosc.h>
 #include <stdio.h>
 #include <string.h>
+#include "common.h"
 
 typedef uint8_t midi_t[4];
 char buffer[1024];
@@ -39,7 +40,8 @@ int main()
     //while(!rtosc_itr_end(itr))
     //    printf("rtosc_itr_next->'%c'\n", rtosc_itr_next(&itr).type);
     rtosc_arg_val_t val = rtosc_itr_next(&itr);
-    CHECK(!rtosc_itr_end(itr));
+    assert_false(rtosc_itr_end(itr),
+            "Create A Valid Iterator", __LINE__);
     CHECK(val.type == 'i');
     CHECK(val.val.i == i);
 
@@ -147,5 +149,5 @@ int main()
 
 
 
-    return err;
+    return err || test_summary();
 }

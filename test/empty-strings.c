@@ -1,6 +1,5 @@
 #include <rtosc/rtosc.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include "common.h"
 
 char buffer[1024];
 
@@ -9,21 +8,9 @@ int main()
 {
     size_t length = rtosc_message(buffer, 1024, "/path", "sss", "", "", "");
     // /pat h000 ,sss 0000 0000 0000 0000
-    if(length != 28)
-    {
-        fprintf(stderr, "Bad length for empty strings...");
-        exit(1);
-    }
-    if(!rtosc_argument(buffer, 0).s ||
-            !rtosc_argument(buffer, 1).s ||
-            !rtosc_argument(buffer, 2).s)
-    {
-        fprintf(stderr, "Failure to retreive string pointer...");
-        exit(1);
-    }
-    printf("%p %p %p\n",
-            rtosc_argument(buffer, 0).s,
-            rtosc_argument(buffer, 1).s,
-            rtosc_argument(buffer, 2).s);
-    return 0;
+    assert_int_eq(28, length, "Build Empty String Based Message", __LINE__);
+    assert_non_null(rtosc_argument(buffer, 0).s, "Check Arg 1", __LINE__);
+    assert_non_null(rtosc_argument(buffer, 1).s, "Check Arg 2", __LINE__);
+    assert_non_null(rtosc_argument(buffer, 2).s, "Check Arg 3", __LINE__);
+    return test_summary();
 }

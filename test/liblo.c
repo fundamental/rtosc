@@ -73,5 +73,5 @@ int main()
             "Verify Liblo Style Bundles", __LINE__);
 
 
-    return global_err ? EXIT_FAILURE : EXIT_SUCCESS;
+    return test_summary();
 }

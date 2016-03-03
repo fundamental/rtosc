@@ -20,6 +20,19 @@ int assert_int_eq(int a, int b, const char *testcase, int line)
     return err;
 }
 
+int assert_char_eq(char a, char b, const char *testcase, int line)
+{
+    test_counter++;
+    int err = a!=b;
+    if(err) {
+        printf("not ok %d - %s...\n", test_counter, testcase);
+        printf("# Expected %c, but observed %c instead (line %d)\n", a, b, line);
+        global_err++;
+    } else
+        printf("ok %d - %s...\n", test_counter, testcase);
+    return err;
+}
+
 int assert_true(int a, const char *testcase, int line)
 {
     test_counter++;
@@ -52,7 +65,7 @@ int assert_str_eq(const char *a, const char *b, const char *testcase, int line)
     return err;
 }
 
-int assert_non_null(void *v, const char *testcase, int line)
+int assert_non_null(const void *v, const char *testcase, int line)
 {
     test_counter++;
     int err = !v;
@@ -176,6 +189,12 @@ int assert_hex_eq(const char *a, const char *b, size_t size_a, size_t size_b,
     } else
         printf("ok %d - %s...\n", test_counter, testcase);
     return err;
+}
+
+int assert_flt_eq(float a, float b, const char *testcase, int line)
+{
+    return assert_hex_eq((char*)&a, (char*)&b, sizeof(float), sizeof(float),
+            testcase, line);
 }
 
 int test_summary(void)

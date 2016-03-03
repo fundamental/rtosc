@@ -3,7 +3,7 @@
 #include <rtosc/undo-history.h>
 #include <cstdarg>
 
-#include <cassert>
+#include "common.h"
 
 using namespace rtosc;
 
@@ -57,6 +57,7 @@ struct Rt:public RtData
     UndoHistory *uh;
 };
 
+char ref[] = "b\0\0\0,c\0\0\0\0\0\7";
 
 char message_buff[256];
 int main()
@@ -68,27 +69,31 @@ int main()
     Rt rt(&o, &hist);
     hist.setCallback([&rt](const char*msg) {ports.dispatch(msg+1, rt);});
 
-    assert(o.b == 0);
+    assert_int_eq(0, o.b, "Verify Zero Based Initialization", __LINE__);
 
     rt.matches = 0;
     int len = rtosc_message(message_buff, 128, "b", "c", 7);
-    for(int i=0; i<len; ++i)
-        printf("%hhx",message_buff[i]);
-    printf("\n");
+    assert_hex_eq(ref, message_buff, sizeof(ref)-1, len,
+            "Build Param Change Message", __LINE__);
+
     ports.dispatch(message_buff, rt);
-    assert(rt.matches == 1);
-    printf("rt.matches == '%d'\n", rt.matches);
-    assert(o.b == 7);
+    assert_int_eq(1, rt.matches,
+            "Verify A Single Leaf Dispatch Has Occured", __LINE__);
+    assert_int_eq(7, o.b, "Verify State Change Has Been Applied", __LINE__);
 
     rt.enable = false;
+
+    printf("#Current History:\n");
     hist.showHistory();
     hist.seekHistory(-1);
-    assert(o.b == 0);
+    assert_int_eq(0, o.b,
+            "Verify Undo Has Returned To Zero-Init State", __LINE__);
+    printf("#Current History:\n");
     hist.showHistory();
 
     hist.seekHistory(+1);
-    printf("the result is '%d'\n", o.b);
-    assert(o.b == 7);
+    assert_int_eq(7, o.b,
+            "Verify Redo Has Returned To Altered State", __LINE__);
 
     return 0;
 }
