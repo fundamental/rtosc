@@ -212,7 +212,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
 #define rOptions(...) OPTIONS(__VA_ARGS__)
 
 //Zest Metadata
-#define rShort(name) ":shortname\0=" name
+#define rShort(name) ":shortname\0=" name "\0"
 
 
 //Callback Implementations
