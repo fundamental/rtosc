@@ -799,6 +799,9 @@ void walk_ports2(const rtosc::Ports *base,
                  void         *data,
                  rtosc::port_walker_t walker)
 {
+    if(!base)
+        return;
+
     assert(name_buffer);
     //XXX buffer_size is not properly handled yet
     if(name_buffer[0] == 0)
