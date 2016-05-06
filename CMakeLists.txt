@@ -144,6 +144,7 @@ if(JACK_FOUND)
     include_directories(${JACK_INCLUDE_DIRS})
 endif()
 
+maketestcpp(test-midi-mapper)
 maketestcpp(metadata)
 maketestcpp(headerlib)
 maketestcpp(test-walker)
