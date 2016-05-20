@@ -40,6 +40,10 @@ struct Rt:public RtData
         uh       = uh_;
         enable   = true;
     }
+    ~Rt(void)
+    {
+        delete [] loc;
+    }
     void reply(const char *path, const char *args, ...)
     {
         if(strcmp(path, "undo_change") || !enable)

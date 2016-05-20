@@ -27,7 +27,6 @@ int main()
     lo_message_add_float(message, 24.0);
     lo_message_add_int32(message, 42);
     lo_message_serialise(message, "/path", buffer1, &len);
-    //lo_message_free(message);
 
     assert_str_eq("/path", buffer1, "Verifying Path From Message 1", __LINE__);
     assert_f32_eq(24.0f, rtosc_argument(buffer1, 0).f,
@@ -72,6 +71,11 @@ int main()
     assert_hex_eq(buffer5, buffer4, len5, len4,
             "Verify Liblo Style Bundles", __LINE__);
 
+    //Cleanup
+    lo_message_free(message);
+    lo_message_free(msg2);
+    lo_message_free(msg3);
+    lo_bundle_free(ms4);
 
     return test_summary();
 }

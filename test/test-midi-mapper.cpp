@@ -14,7 +14,13 @@ rtosc::Ports p = {
 };
 
 
-void non_rt_to_rt(const char *){};
+rtosc::MidiMapperStorage *storage = NULL;
+
+void non_rt_to_rt(const char *msg)
+{
+    delete storage;
+    storage = *(decltype(storage)*)rtosc_argument(msg, 0).b.data;
+};
 void rt_to_non_rt(const char *){};
 void rt_to_rt(const char *) {};
 
@@ -39,5 +45,6 @@ int main()
     non_rt.clear();
     assert_int_eq(0, non_rt.inv_map.size(), "Mapping can be cleared", __LINE__);
 
+    delete storage;
     return test_summary();
 }
