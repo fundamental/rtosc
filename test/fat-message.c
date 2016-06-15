@@ -46,14 +46,15 @@ int main()
     assert_str_eq(s, rtosc_argument(buffer, 2).s,
             "Checking 's' Argument", __LINE__);
     CHECK(b.len,b.len,3);
-    assert_hex_eq((char*)b.data, (char*)arg.b.data, 3, b.len, 
+    assert_hex_eq((char*)b.data, (char*)arg.b.data, 3, b.len,
             "Checking 'b.data' Argument", __LINE__);
     CHECK(h,h,4);
     CHECK(t,t,5);
     CHECK(d,d,6);
     assert_str_eq(S,rtosc_argument(buffer, 7).s,
             "Checking 'S' Argument", __LINE__);
-    CHECK(c,i,8);
+    assert_char_eq(c,rtosc_argument(buffer, 8).i,
+            "Checking 'c' Argument", __LINE__);
     CHECK(r,i,9);
     CHECK(m,m,10);
     assert_char_eq('T', rtosc_type(buffer,11),
