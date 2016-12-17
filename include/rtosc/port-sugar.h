@@ -207,6 +207,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
 //Special values
 #define rSpecial(doc) ":special\0" STRINGIFY(doc) "\0"
 #define rCentered ":centered\0"
+#define rDefault(default_value_) ":default\0=" STRINGIFY(default_value_) "\0"
 
 //Misc properties
 #define rDoc(doc) ":documentation\0=" doc "\0"
