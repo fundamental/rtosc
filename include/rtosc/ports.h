@@ -223,6 +223,19 @@ struct MergePorts:public Ports
     MergePorts(std::initializer_list<const Ports*> c);
 };
 
+/**
+ * @brief get_default_value
+ *
+ * Returns the default value of a given port, if any exists
+ * @param portname the port's OSC path.
+ * @param ports the ports where @a portname is to be searched
+ * @param runtime object holding @a ports . Optional. Helps finding
+ *        default values dependent on others, such as presets.
+ * @param recursive number of recursions allowed. must be greater than zero.
+ * @return the value as a string
+ */
+const char* get_default_value(const char* portname, const Ports& ports,
+                              void* runtime, int recursive = 1);
 
 /*********************
  * Port walking code *

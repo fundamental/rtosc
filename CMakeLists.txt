@@ -148,6 +148,7 @@ endif()
 
 maketestcpp(test-midi-mapper)
 maketestcpp(metadata)
+maketestcpp(default-values)
 maketestcpp(headerlib)
 maketestcpp(test-walker)
 

@@ -4,6 +4,7 @@
 #include <climits>
 #include <cstring>
 #include <string>
+#include <stdexcept>
 
 using namespace rtosc;
 
@@ -34,9 +35,9 @@ void RtData::reply(const char *path, const char *args, ...)
     rtosc_vmessage(buffer,1024,path,args,va);
     reply(buffer);
     va_end(va);
-};
+}
 void RtData::reply(const char *msg)
-{(void)msg;};
+{(void)msg;}
 void RtData::chain(const char *path, const char *args, ...)
 {
     (void) path;
@@ -46,7 +47,7 @@ void RtData::chain(const char *path, const char *args, ...)
 void RtData::chain(const char *msg)
 {
     (void) msg;
-};
+}
 void RtData::chainArray(const char *path, const char *args,
         rtosc_arg_t *vals)
 {
@@ -587,6 +588,127 @@ void Ports::dispatch(const char *m, rtosc::RtData &d, bool base_dispatch) const
             }
         }
     }
+}
+
+class CaptureDepValue : public RtData
+{
+    int dependent_value;
+
+    void reply(const char *msg) override {
+        throw std::logic_error("not expected");
+    }
+
+    void reply(const char *path, const char *args, ...) override
+    {
+        va_list va;
+        va_start(va,args);
+        if(strcmp(args,"i"))
+            throw std::logic_error("dependent values must be integers");
+        dependent_value = va_arg(va, int);
+//      printf("captured default dependent value %d\n", dependent_value);
+        va_end(va);
+    }
+public:
+    int value() const { return dependent_value; }
+};
+
+constexpr std::size_t tmp_buffer_size = 1024;
+
+// internal use only!
+int get_default_value_from_runtime(void* runtime,
+                                   const Ports& ports,
+                                   char* dependent_port)
+{
+    CaptureDepValue d;
+    d.obj = runtime;
+
+    // append type
+    std::size_t pos = strlen(dependent_port);
+    memset(dependent_port + pos, 0, 4);
+    strcpy(dependent_port + pos + 4-pos%4, ";i");
+
+    /* dependent_port is actually a message now... */
+    ports.dispatch(dependent_port, d, true);
+
+//  printf("captured default dependent value %d\n", d.value());
+    return d.value();
+}
+
+const char* rtosc::get_default_value(const char* portname, const Ports& ports,
+                              void* runtime, int recursive)
+{
+    char buffer[tmp_buffer_size];
+
+    if(recursive < 0)
+        throw std::logic_error("double recursion in get_default_value()");
+
+    const char* const default_annotation = "default";
+    const char* const dependent_annotation = "default depends";
+
+    const Port* port = ports.apropos(portname);
+    if(!port)
+        throw std::logic_error("port with name <portname> not found");
+    const Port::MetaContainer metadata = port->meta();
+
+    // Allow metadata to handle properties of a port rather than parsing
+    // the documentation section
+    {
+        const char* result = metadata[default_annotation];
+        if(result)
+            return result;
+    }
+
+    // Let complex cases depend upon a marker variable
+    // If the runtime is available the exact preset number can be found
+    // This generalizes to envelope types nicely if envelopes have a read
+    // only port which indicates if they're amplitude/frequency/etc
+    const char* dependent = metadata[dependent_annotation];
+    if(dependent)
+    {
+        char* dependent_port = buffer;
+        *dependent_port = 0;
+        strcat(dependent_port, portname);
+        strcat(dependent_port, "/../");
+        strcat(dependent_port, dependent);
+        dependent_port = Ports::collapsePath(dependent_port);
+
+        union {
+            int val;
+            const char* str;
+        } dep;
+
+        if(runtime)
+            dep.val = get_default_value_from_runtime(runtime,
+                                                     ports,
+                                                     dependent_port);
+        else
+            dep.str = get_default_value(dependent_port, ports,
+                                        runtime, recursive-1);
+
+        char* default_variant = buffer;
+        *default_variant = 0;
+        strcat(default_variant, default_annotation);
+        strcat(default_variant, " ");
+
+        if(runtime)
+            sprintf(default_variant + strlen(default_variant), "%d", dep.val);
+        else
+            strcat(default_variant, dep.str);
+
+        const char* value_of_default_variant = metadata[default_variant];
+        if(value_of_default_variant)
+            return value_of_default_variant;
+        else
+            // If the metadata indicates that the value depends upon
+            // another variable, but that variable is out-of-range then
+            // it is very likely an easy to overlook error in the metadata
+            throw std::logic_error("get_default_value(): "
+                                   "value depends on a variable which is "
+                                   "out of range of the port's values ");
+            // TODO: this error should include portname and metadata
+    }
+
+    return nullptr;
 }
 
 const Port *Ports::operator[](const char *name) const
