@@ -22,6 +22,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file ports.h
+ */
+
 #ifndef RTOSC_PORTS
 #define RTOSC_PORTS
 
@@ -224,18 +228,32 @@ struct MergePorts:public Ports
 };
 
 /**
- * @brief get_default_value
+ * @brief Returns a port's default value
  *
  * Returns the default value of a given port, if any exists
  * @param portname the port's OSC path.
  * @param ports the ports where @a portname is to be searched
  * @param runtime object holding @a ports . Optional. Helps finding
  *        default values dependent on others, such as presets.
+ * @param port_hint The port itself corresponding to portname
  * @param recursive number of recursions allowed. must be greater than zero.
- * @return the value as a string
+ * @return the value as a string, or NULL if there is no default
  */
 const char* get_default_value(const char* portname, const Ports& ports,
-                              void* runtime, int recursive = 1);
+                              void* runtime, const Port* port_hint = NULL,
+                              int recursive = 1);
+
+/**
+ * @brief Returns a string list of all changed values
+ *
+ * Returns a human readable list of the value that changed
+ * corresponding to the rDefault macro.
+ * @param ports The static ports structure
+ * @param runtime The runtime object
+ * @return The list of ports and their changed values, linewise
+ */
+std::string get_changed_values(const Ports& ports, void* runtime);
+
 
 /*********************
  * Port walking code *
@@ -243,6 +261,15 @@ const char* get_default_value(const char* portname, const Ports& ports,
 //typedef std::function<void(const Port*,const char*)> port_walker_t;
 typedef void(*port_walker_t)(const Port*,const char*,void*);
 
+/**
+ * @brief Call a function on all ports and subports
+ * @param base The base port of traversing
+ * @param name_buffer Buffer which will be filled with the port name. Must be
+ *   reset to zero over the full length!
+ * @param buffer_size Size of name_buffer
+ * @param data Data that should be available in the callback
+ * @param walker Callback function
+ */
 void walk_ports(const Ports *base,
         char          *name_buffer,
         size_t         buffer_size,

@@ -1,10 +1,32 @@
 #include "../../include/rtosc/ports.h"
+#include "../../include/rtosc/rtosc.h"
+
 #include <ostream>
 #include <cassert>
 #include <climits>
 #include <cstring>
 #include <string>
-#include <stdexcept>
+
+/* Compatibility with non-clang compilers */
+#ifndef __has_feature
+# define __has_feature(x) 0
+#endif
+#ifndef __has_extension
+# define __has_extension __has_feature
+#endif
+
+/* Check for C++11 support */
+#if defined(HAVE_CPP11_SUPPORT)
+# if HAVE_CPP11_SUPPORT
+#  define DISTRHO_PROPER_CPP11_SUPPORT
+# endif
+#elif __cplusplus >= 201103L || (defined(__GNUC__) && defined(__GXX_EXPERIMENTAL_CXX0X__) && (__GNUC__ * 100 + __GNUC_MINOR__) >= 405) || __has_extension(cxx_noexcept)
+# define DISTRHO_PROPER_CPP11_SUPPORT
+# if (defined(__GNUC__) && (__GNUC__ * 100 + __GNUC_MINOR__) < 407 && ! defined(__clang__)) || (defined(__clang__) && ! __has_extension(cxx_override_control))
+#  define override // gcc4.7+ only
+#  define final    // gcc4.7+ only
+# endif
+#endif
 
 using namespace rtosc;
 
@@ -590,64 +612,78 @@ void Ports::dispatch(const char *m, rtosc::RtData &d, bool base_dispatch) const
     }
 }
 
-class CaptureDepValue : public RtData
+class Capture : public RtData
 {
-    int dependent_value;
+    char* buffer;
+    std::size_t buffersize;
 
-    void reply(const char *msg) override {
-        throw std::logic_error("not expected");
-    }
-
-    void reply(const char *path, const char *args, ...) override
-    {
+    void reply(const char *) override { assert(false); }
+    void reply(const char *, const char *args, ...) override
+    {        
         va_list va;
         va_start(va,args);
-        if(strcmp(args,"i"))
-            throw std::logic_error("dependent values must be integers");
-        dependent_value = va_arg(va, int);
-//      printf("captured default dependent value %d\n", dependent_value);
+
+        size_t nargs = strlen(args);
+        rtosc_arg_val_t arg_vals[nargs];
+
+        rtosc_v2argvals(arg_vals, nargs, args, va);
+
+        size_t wrt = rtosc_print_arg_vals(arg_vals, nargs,
+                                          buffer, buffersize, NULL);
         va_end(va);
+        assert(wrt);
     }
+
 public:
-    int value() const { return dependent_value; }
+    const char* value() const { return buffer; }
+    Capture(char* buffer, std::size_t size) :
+        buffer(buffer), buffersize(size) {}
 };
 
-constexpr std::size_t tmp_buffer_size = 1024;
-
-// internal use only!
-int get_default_value_from_runtime(void* runtime,
-                                   const Ports& ports,
-                                   char* dependent_port)
+/**
+ * @brief Returns a port's value pretty-printed from a runtime object
+ * @param runtime The runtime object
+ * @param ports The runtime's Ports object
+ * @param buffer_with_port A buffer which already contains the port.
+ *   This buffer can be modified.
+ * @param buffersize size of buffer, including port name
+ * @return The value, pretty-printed
+ */
+static const char* get_value_from_runtime(void* runtime,
+                                          const Ports& ports,
+                                          char* buffer_with_port,
+                                          std::size_t buffersize)
 {
-    CaptureDepValue d;
+    std::size_t addr_len = strlen(buffer_with_port);
+
+    Capture d(buffer_with_port + addr_len, buffersize - addr_len);
     d.obj = runtime;
 
+    // does the message at least fit the arguments?
+    assert(buffersize - addr_len >= 8);
     // append type
-    std::size_t pos = strlen(dependent_port);
-    memset(dependent_port + pos, 0, 4);
-    strcpy(dependent_port + pos + 4-pos%4, ";i");
+    memset(buffer_with_port + addr_len, 0, 8); // cover string end and arguments
+    buffer_with_port[addr_len + (4-addr_len%4)] = ',';
 
-    /* dependent_port is actually a message now... */
-    ports.dispatch(dependent_port, d, true);
+    // dependent_port is a message in this call:
+    ports.dispatch(buffer_with_port, d, true);
 
-//  printf("captured default dependent value %d\n", d.value());
     return d.value();
 }
 
 const char* rtosc::get_default_value(const char* portname, const Ports& ports,
-                              void* runtime, int recursive)
+                                     void* runtime, const Port* port_hint, int recursive)
 {
-    char buffer[tmp_buffer_size];
+    constexpr std::size_t buffersize = 1024;
+    char buffer[buffersize];
 
-    if(recursive < 0)
-        throw std::logic_error("double recursion in get_default_value()");
+    assert(recursive >= 0); // forbid recursing twice
 
     const char* const default_annotation = "default";
     const char* const dependent_annotation = "default depends";
 
-    const Port* port = ports.apropos(portname);
-    if(!port)
-        throw std::logic_error("port with name <portname> not found");
+    const Port* port = port_hint ? port_hint : ports.apropos(portname);
+    assert(port); // port must be found
     const Port::MetaContainer metadata = port->meta();
 
     // Allow metadata to handle properties of a port rather than parsing
@@ -667,48 +703,82 @@ const char* rtosc::get_default_value(const char* portname, const Ports& ports,
     {
         char* dependent_port = buffer;
         *dependent_port = 0;
+
+        assert(strlen(portname) + strlen(dependent_port) + 4 < buffersize);
         strcat(dependent_port, portname);
         strcat(dependent_port, "/../");
         strcat(dependent_port, dependent);
         dependent_port = Ports::collapsePath(dependent_port);
 
-        union {
-            int val;
-            const char* str;
-        } dep;
+        const char* dep_val =
+            runtime
+            ? get_value_from_runtime(runtime,
+                                     ports,
+                                     dependent_port,
+                                     buffersize)
+            : get_default_value(dependent_port, ports,
+                                runtime, NULL, recursive-1);
 
-        if(runtime)
-            dep.val = get_default_value_from_runtime(runtime,
-                                                     ports,
-                                                     dependent_port);
-        else
-            dep.str = get_default_value(dependent_port, ports,
-                                        runtime, recursive-1);
+        assert(strlen(dep_val) < 16); // must be an int
 
         char* default_variant = buffer;
         *default_variant = 0;
+        assert(strlen(default_annotation) + 1 + 16 < buffersize);
         strcat(default_variant, default_annotation);
         strcat(default_variant, " ");
-
-        if(runtime)
-            sprintf(default_variant + strlen(default_variant), "%d", dep.val);
-        else
-            strcat(default_variant, dep.str);
+        strcat(default_variant, dep_val);
 
         const char* value_of_default_variant = metadata[default_variant];
-        if(value_of_default_variant)
-            return value_of_default_variant;
-        else
-            // If the metadata indicates that the value depends upon
-            // another variable, but that variable is out-of-range then
-            // it is very likely an easy to overlook error in the metadata
-            throw std::logic_error("get_default_value(): "
-                                   "value depends on a variable which is "
-                                   "out of range of the port's values ");
-            // TODO: this error should include portname and metadata
+        // If the metadata indicates that the value depends upon
+        // another variable, but that variable is out-of-range then
+        // it is very likely an easy to overlook error in the metadata
+        assert(value_of_default_variant); // see comment above
+        return value_of_default_variant;
     }
 
     return nullptr;
+}
+
+std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
+{
+    std::string res;
+    constexpr std::size_t _buffersize = 1024;
+    char buffer[_buffersize];
+    memset(buffer, 0 , _buffersize);
+
+    struct params_t
+    {
+        const Ports& ports;
+        void* runtime;
+        std::string res;
+        std::size_t buffersize;
+        char tmp_buffer[_buffersize];
+    } params { ports, runtime, res, _buffersize, "" };
+
+    auto on_reach_port =
+            [](const Port* p, const char* buffer, void* data)
+    {
+        params_t* params = (params_t*)data;
+        strcpy(params->tmp_buffer, buffer);
+
+        const char* def = get_default_value(buffer, params->ports, params->runtime, p);
+        const char* cur = get_value_from_runtime(params->runtime,
+                                                 params->ports,
+                                                 params->tmp_buffer,
+                                                 params->buffersize);
+        if(strcmp(def, cur)) {
+            params->res += buffer;
+            params->res += " ";
+            params->res += cur;
+            params->res += "\n";
+        }
+    };
+
+    walk_ports(&ports, buffer, _buffersize, &params, on_reach_port);
+
+    if(params.res.length()) // remove trailing newline
+        params.res.resize(params.res.length()-1);
+    return params.res;
 }
 
 const Port *Ports::operator[](const char *name) const
@@ -872,7 +942,7 @@ MergePorts::MergePorts(std::initializer_list<const rtosc::Ports*> c)
     refreshMagic();
 }
 
-void rtosc::walk_ports(const Ports *base,
+void rtosc::walk_ports(const Ports  *base,
                        char         *name_buffer,
                        size_t        buffer_size,
                        void         *data,

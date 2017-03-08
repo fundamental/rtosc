@@ -127,6 +127,7 @@ macro(maketestcpp fname)
 endmacro(maketestcpp)
 
 maketest(osc-spec)
+maketest(pretty-printer)
 maketest(simple-messages)
 maketest(null-messages)
 maketest(bundles)
@@ -169,7 +170,7 @@ maketestcpp(path-collapse)
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
     # configuration variables
-    set(CMAKE_DOXYGEN_INPUT_LIST ${CMAKE_SOURCE_DIR}/include/)
+    set(CMAKE_DOXYGEN_INPUT_LIST ${CMAKE_CURRENT_SOURCE_DIR}/include/rtosc/)
     set(DOXYGEN_OUTPUT_DIR html)
     
     configure_file(Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)

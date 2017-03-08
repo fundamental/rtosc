@@ -20,9 +20,12 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
  * @file rtosc.h
  */
+
 #ifndef RTOSC_H
 #define RTOSC_H
 #include <stdarg.h>
@@ -44,7 +47,7 @@ typedef union {
     char          T;   //I,T,F,N
     float         f;   //f
     double        d;   //d
-    int64_t       h;   //h
+    int64_t       h;   //h-
     uint64_t      t;   //t
     uint8_t       m[4];//m
     const char   *s;   //s,S
@@ -124,6 +127,63 @@ typedef struct {
     char type;
     rtosc_arg_t val;
 } rtosc_arg_val_t;
+
+//! va_list container, required for passing va_list as pointers to functions
+typedef struct { va_list a; } va_list_t;
+
+/**
+ * @brief Packs arguments into pre-allocated rtosc_arg_t array
+ * @param args Pre-allocated array. Size must be greater or equal @p nargs
+ * @param nargs Size of elements to pack.
+ * @param arg_str rtosc string specifying the arguments' types.
+ * @param ap The parameters that shall be packed.
+ */
+void rtosc_v2args(rtosc_arg_t* args, size_t nargs,
+                  const char* arg_str, const va_list_t* ap);
+
+/**
+ * @brief Packs parameters into pre-allocated rtosc_arg_val-t array.
+ * @see rtosc_v2args
+ */
+void rtosc_v2argvals(rtosc_arg_val_t* args, size_t nargs,
+                     const char* arg_str, va_list ap);
+
+/**
+ * @brief Packs parameters into pre-allocated rtosc_arg_val-t array.
+ * @see rtosc_v2args
+ */
+void rtosc_2argvals(rtosc_arg_val_t* args, size_t nargs,
+                    const char* arg_str, ...);
+
+typedef struct
+{
+    bool lossless; //!< will add hex notation behind floats
+    int floating_point_precision;
+    const char* sep; //!< separator for multiple argument values
+} rtosc_print_options;
+
+/**
+ * @brief pretty-prints rtosct_arg_val_t structure into buffer
+ * @param arg Pointer to the structure that shall be printed
+ * @param buffer The buffer to write to
+ * @param buffersize The maximum size to write to, includin a trailing 0 byte
+ * @param opt Printer options. NULL for default options.
+ * @return The number of bytes written, excluding the null byte
+ */
+size_t rtosc_print_arg_val(const rtosc_arg_val_t* arg, char* buffer,
+                           size_t buffersize, const rtosc_print_options* opt);
+
+/**
+ * @brief pretty-prints rtosct_arg_val_t array into buffer
+ * @param arg The array to print
+ * @param buffer The buffer to write to
+ * @param buffersize The maximum size to write to, includin a trailing 0 byte
+ * @param opt Printer options. NULL for default options.
+ * @return The number of bytes written, excluding the null byte
+ */
+size_t rtosc_print_arg_vals(const rtosc_arg_val_t *arg, size_t n,
+                            char *buffer, size_t bs,
+                            const rtosc_print_options* opt);
 
 /**
  * Create an argument iterator for a message

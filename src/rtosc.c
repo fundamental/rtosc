@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include <assert.h>
+#include <inttypes.h>
 
 #include <rtosc/rtosc.h>
 
@@ -231,6 +232,85 @@ static size_t vsosc_null(const char        *address,
 
     return pos;
 }
+
+void rtosc_v2args(rtosc_arg_t* args, size_t nargs, const char* arg_str, const va_list_t* ap)
+{
+    unsigned arg_pos = 0;
+    uint8_t *midi_tmp;
+
+    while(arg_pos < nargs)
+    {
+        switch(*arg_str++) {
+            case 'h':
+            case 't':
+                args[arg_pos++].h = va_arg(ap->a, int64_t);
+                break;
+            case 'd':
+                args[arg_pos++].d = va_arg(ap->a, double);
+                break;
+            case 'c':
+            case 'i':
+            case 'r':
+                args[arg_pos++].i = va_arg(ap->a, int);
+                break;
+            case 'm':
+                midi_tmp = va_arg(ap->a, uint8_t *);
+                args[arg_pos].m[0] = midi_tmp[0];
+                args[arg_pos].m[1] = midi_tmp[1];
+                args[arg_pos].m[2] = midi_tmp[2];
+                args[arg_pos++].m[3] = midi_tmp[3];
+                break;
+            case 'S':
+            case 's':
+                args[arg_pos++].s = va_arg(ap->a, const char *);
+                break;
+            case 'b':
+                args[arg_pos].b.len = va_arg(ap->a, int);
+                args[arg_pos].b.data = va_arg(ap->a, unsigned char *);
+                arg_pos++;
+                break;
+            case 'f':
+                args[arg_pos++].f = va_arg(ap->a, double);
+                break;
+            case 'T':
+            case 'F':
+            case 'N':
+            case 'I':
+                args[arg_pos++].T = arg_str[-1];
+                break;
+            default:
+                ;
+        }
+    }
+}
+
+void rtosc_2args(rtosc_arg_t* args, size_t nargs, const char* arg_str, ...)
+{
+    va_list_t va;
+    va_start(va.a, arg_str);
+    rtosc_v2args(args, nargs, arg_str, &va);
+    va_end(va.a);
+}
+
+void rtosc_v2argvals(rtosc_arg_val_t* args, size_t nargs, const char* arg_str, va_list ap)
+{
+    va_list_t ap2;
+    va_copy(ap2.a, ap);
+    for(size_t i=0; i<nargs; ++i, ++arg_str, ++args)
+    {
+        args->type = *arg_str;
+        rtosc_v2args(&args->val, 1, arg_str, &ap2);
+    }
+}
+
+void rtosc_2argvals(rtosc_arg_val_t* args, size_t nargs, const char* arg_str, ...)
+{
+    va_list va;
+    va_start(va, arg_str);
+    rtosc_v2argvals(args, nargs, arg_str, va);
+    va_end(va);
+}
+
 size_t rtosc_vmessage(char   *buffer,
                       size_t      len,
                       const char *address,
@@ -242,48 +322,9 @@ size_t rtosc_vmessage(char   *buffer,
         return rtosc_amessage(buffer,len,address,arguments,NULL);
 
     rtosc_arg_t args[nargs];
-
-    unsigned arg_pos = 0;
-    const char *arg_str = arguments;
-    uint8_t *midi_tmp;
-    while(arg_pos < nargs)
-    {
-        switch(*arg_str++) {
-            case 'h':
-            case 't':
-                args[arg_pos++].h = va_arg(ap, int64_t);
-                break;
-            case 'd':
-                args[arg_pos++].d = va_arg(ap, double);
-                break;
-            case 'c':
-            case 'i':
-            case 'r':
-                args[arg_pos++].i = va_arg(ap, int);
-                break;
-            case 'm':
-                midi_tmp = va_arg(ap, uint8_t *);
-                args[arg_pos].m[0] = midi_tmp[0];
-                args[arg_pos].m[1] = midi_tmp[1];
-                args[arg_pos].m[2] = midi_tmp[2];
-                args[arg_pos++].m[3] = midi_tmp[3];
-                break;
-            case 'S':
-            case 's':
-                args[arg_pos++].s = va_arg(ap, const char *);
-                break;
-            case 'b':
-                args[arg_pos].b.len = va_arg(ap, int);
-                args[arg_pos].b.data = va_arg(ap, unsigned char *);
-                arg_pos++;
-                break;
-            case 'f':
-                args[arg_pos++].f = va_arg(ap, double);
-                break;
-            default:
-                ;
-        }
-    }
+    va_list_t ap2;
+    va_copy(ap2.a, ap);
+    rtosc_v2args(args, nargs, arguments, &ap2);
 
     return rtosc_amessage(buffer,len,address,arguments,args);
 }
@@ -471,6 +512,137 @@ static const char *advance_past_dummy_args(const char *args)
     while(*args == '[' || *args == ']')
         args++;
     return args;
+}
+
+static int asnprintf(char* str, size_t size, const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int written = vsnprintf(str, size, format, args);
+    assert((size_t)written < size);
+    va_end(args);
+    return written;
+}
+
+static const rtosc_print_options* default_print_options
+ = &((rtosc_print_options) { true, 2, " "});
+
+size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
+                           char *buffer, size_t bs,
+                           const rtosc_print_options* opt)
+{
+    size_t wrt = 0;
+    if(!opt)
+        opt = default_print_options;
+    assert(arg);
+    const rtosc_arg_t* val = &arg->val;
+
+    switch(arg->type) {
+        case 'T':
+            assert(bs>=4);
+            strcpy(buffer, "true");
+            wrt = 4;
+            break;
+        case 'F':
+            assert(bs>=5);
+            strcpy(buffer, "false");
+            wrt = 5;
+            break;
+        case 'N':
+            assert(bs>=3);
+            strcpy(buffer, "nil");
+            wrt = 3;
+            break;
+        case 'I':
+            assert(bs>=3);
+            strcpy(buffer, "inf");
+            wrt = 3;
+            break;
+        case 'h':
+            wrt = asnprintf(buffer, bs, "%"PRId64, val->h) ;
+            break;
+        case 't':
+            wrt = asnprintf(buffer, bs, "%"PRIu64, val->t);
+            break;
+        case 'd':
+            wrt = asnprintf(buffer, bs, "%lf", val->d);
+            break;
+        case 'r':
+            wrt = asnprintf(buffer, bs, "#%02x%02x%02x%02x",
+                      (val->i >> 24) & 0xff,
+                      (val->i >> 16) & 0xff,
+                      (val->i >>  8) & 0xff,
+                       val->i        & 0xff
+                      );
+            break;
+        case 'f':
+        {
+            int prec = opt->floating_point_precision;
+            assert(prec>=0);
+            assert(prec<100);
+            char fmtstr[7];
+            // assure the float contains a '.', so it's not misread as an int
+            const char* lastchar = prec ? "" : ".";
+            asnprintf(fmtstr, 6, "%%.%df%s", prec, lastchar); // e.g. %.2f
+            wrt = asnprintf(buffer, bs, fmtstr, val->f);
+            if(opt->lossless)
+                wrt += asnprintf(buffer + wrt, bs - wrt, " (%a)", val->f);
+            break;
+        }
+        case 'c':
+            wrt = asnprintf(buffer, bs, "'%c'", val->i & 0xff);
+            break;
+        case 'i':
+            wrt = asnprintf(buffer, bs, "%"PRId32, val->i);
+            break;
+        case 'm':
+            wrt = asnprintf(buffer, bs, "MIDI [%#02x %#02x %#02x %#02x]",
+                            val->m[0], val->m[1], val->m[2], val->m[3]);
+            break;
+        case 'S':
+        case 's':
+            wrt = asnprintf(buffer, bs, "\"%s\"", val->s);
+            break;
+        case 'b':
+            wrt += asnprintf(buffer, bs, "[%d ", val->b.len);
+            buffer += wrt;
+            for(int32_t i = 0; i < val->b.len; ++i) {
+                wrt += asnprintf(buffer, bs, "0x%02x ", val->b.data[i]);
+                bs -= 5;
+                buffer += 5;
+            }
+            buffer[-1] = ']';
+            break;
+        default:
+            ;
+    }
+    return wrt;
+}
+
+size_t rtosc_print_arg_vals(const rtosc_arg_val_t *arg, size_t n,
+                            char *buffer, size_t bs,
+                            const rtosc_print_options *opt)
+{
+    size_t wrt=0;
+    if(!opt)
+        opt = default_print_options;
+    size_t sep_len = strlen(opt->sep);
+    for(size_t i = 0; i < n; ++i)
+    {
+        size_t tmp = rtosc_print_arg_val(arg++, buffer, bs, opt);
+        wrt += tmp;
+        buffer += tmp;
+        bs -= tmp;
+        if(i<n-1)
+        {
+            assert(sep_len < bs);
+            strcpy(buffer, opt->sep);
+            wrt += sep_len;
+            buffer += sep_len;
+            bs -= sep_len;
+        }
+    }
+    return wrt;
 }
 
 rtosc_arg_itr_t rtosc_itr_begin(const char *msg)
@@ -779,3 +951,4 @@ uint64_t rtosc_bundle_timetag(const char *msg)
 {
     return extract_uint64((const uint8_t*)msg+8);
 }
+

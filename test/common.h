@@ -65,6 +65,19 @@ int assert_str_eq(const char *a, const char *b, const char *testcase, int line)
     return err;
 }
 
+int assert_null(const void *v, const char *testcase, int line)
+{
+    test_counter++;
+    int err = !!v;
+    if(err) {
+        printf("not ok %d - %s...\n", test_counter, testcase);
+        printf("# Expected NULL value, but observed Non-NULL instead (line %d)\n", line);
+        global_err++;
+    } else
+        printf("ok %d - %s...\n", test_counter, testcase);
+    return err;
+}
+
 int assert_non_null(const void *v, const char *testcase, int line)
 {
     test_counter++;
