@@ -616,6 +616,7 @@ class Capture : public RtData
 {
     char* buffer;
     std::size_t buffersize;
+    int cols_used;
 
     void reply(const char *) override { assert(false); }
     void reply(const char *, const char *args, ...) override
@@ -629,15 +630,16 @@ class Capture : public RtData
         rtosc_v2argvals(arg_vals, nargs, args, va);
 
         size_t wrt = rtosc_print_arg_vals(arg_vals, nargs,
-                                          buffer, buffersize, NULL);
+                                          buffer, buffersize, NULL,
+                                          cols_used);
         va_end(va);
         assert(wrt);
     }
 
 public:
     const char* value() const { return buffer; }
-    Capture(char* buffer, std::size_t size) :
-        buffer(buffer), buffersize(size) {}
+    Capture(char* buffer, std::size_t size, int cols_used) :
+        buffer(buffer), buffersize(size), cols_used(cols_used) {}
 };
 
 /**
@@ -652,11 +654,12 @@ public:
 static const char* get_value_from_runtime(void* runtime,
                                           const Ports& ports,
                                           char* buffer_with_port,
-                                          std::size_t buffersize)
+                                          std::size_t buffersize,
+                                          int cols_used)
 {
     std::size_t addr_len = strlen(buffer_with_port);
 
-    Capture d(buffer_with_port + addr_len, buffersize - addr_len);
+    Capture d(buffer_with_port + addr_len, buffersize - addr_len, cols_used);
     d.obj = runtime;
 
     // does the message at least fit the arguments?
@@ -672,7 +675,8 @@ static const char* get_value_from_runtime(void* runtime,
 }
 
 const char* rtosc::get_default_value(const char* portname, const Ports& ports,
-                                     void* runtime, const Port* port_hint, int recursive)
+                                     void* runtime, const Port* port_hint,
+                                     int recursive)
 {
     constexpr std::size_t buffersize = 1024;
     char buffer[buffersize];
@@ -705,9 +709,9 @@ const char* rtosc::get_default_value(const char* portname, const Ports& ports,
         *dependent_port = 0;
 
         assert(strlen(portname) + strlen(dependent_port) + 4 < buffersize);
-        strcat(dependent_port, portname);
-        strcat(dependent_port, "/../");
-        strcat(dependent_port, dependent);
+        strncat(dependent_port, portname, buffersize - strlen(dependent_port));
+        strncat(dependent_port, "/../", buffersize - strlen(dependent_port));
+        strncat(dependent_port, dependent, buffersize - strlen(dependent_port));
         dependent_port = Ports::collapsePath(dependent_port);
 
         const char* dep_val =
@@ -715,7 +719,7 @@ const char* rtosc::get_default_value(const char* portname, const Ports& ports,
             ? get_value_from_runtime(runtime,
                                      ports,
                                      dependent_port,
-                                     buffersize)
+                                     buffersize, 0)
             : get_default_value(dependent_port, ports,
                                 runtime, NULL, recursive-1);
 
@@ -724,9 +728,10 @@ const char* rtosc::get_default_value(const char* portname, const Ports& ports,
         char* default_variant = buffer;
         *default_variant = 0;
         assert(strlen(default_annotation) + 1 + 16 < buffersize);
-        strcat(default_variant, default_annotation);
-        strcat(default_variant, " ");
-        strcat(default_variant, dep_val);
+        strncat(default_variant, default_annotation,
+                buffersize - strlen(default_variant));
+        strncat(default_variant, " ", buffersize - strlen(default_variant));
+        strncat(default_variant, dep_val, buffersize - strlen(default_variant));
 
         const char* value_of_default_variant = metadata[default_variant];
         // If the metadata indicates that the value depends upon
@@ -759,13 +764,16 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
             [](const Port* p, const char* buffer, void* data)
     {
         params_t* params = (params_t*)data;
-        strcpy(params->tmp_buffer, buffer);
+        assert(strlen(buffer) + 1 < _buffersize);
+        strncpy(params->tmp_buffer, buffer, _buffersize);
 
-        const char* def = get_default_value(buffer, params->ports, params->runtime, p);
+        const char* def = get_default_value(buffer,
+                                            params->ports, params->runtime, p);
         const char* cur = get_value_from_runtime(params->runtime,
                                                  params->ports,
                                                  params->tmp_buffer,
-                                                 params->buffersize);
+                                                 params->buffersize,
+                                                 strlen(buffer));
         if(strcmp(def, cur)) {
             params->res += buffer;
             params->res += " ";
@@ -780,6 +788,52 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
         params.res.resize(params.res.length()-1);
     return params.res;
 }
+
+int rtosc::dispatch_printed_messages(const char* messages,
+                                     const Ports& ports, void* runtime)
+{
+    constexpr std::size_t _buffersize = 1024;
+    char portname[_buffersize], message[_buffersize], strbuf[_buffersize];
+    int msgs_read = 0;
+    int rd, rd_total = 0;
+    int nargs;
+
+    do
+    {
+        nargs = rtosc_count_printed_arg_vals_of_msg(messages);
+        if(nargs > 0)
+        {
+            rtosc_arg_val_t arg_vals[nargs];
+
+            rd = rtosc_scan_message(messages, portname, _buffersize,
+                                    arg_vals, nargs, strbuf, _buffersize);
+            rd_total += rd;
+
+            rtosc_arg_t vals[nargs];
+            char argstr[nargs+1];
+            for(int i = 0; i < nargs; ++i) {
+                vals[i] = arg_vals[i].val;
+                argstr[i] = arg_vals[i].type;
+            }
+            argstr[nargs] = 0;
+
+            rtosc_amessage(message, _buffersize, portname, argstr, vals);
+
+            RtData d;
+            d.obj = runtime;
+            ports.dispatch(message, d, true);
+
+            messages += rd;
+            ++msgs_read;
+        }
+        else
+            // overwrite meaning of msgs_read in order to
+            // inform the user where the issue occured
+            msgs_read = -rd-1;
+    } while(*messages && (msgs_read > 0));
+    return msgs_read;
+}
+
 
 const Port *Ports::operator[](const char *name) const
 {

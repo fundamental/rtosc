@@ -353,6 +353,107 @@ As with most things with this library, this feature is still experimental.
 
 NOTE:: Problems may exist with array fields
 
+Pretty-printing messages
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+rtosc comes with a human readable format for messages. Transforming a "raw"
+message into a human readable one is called "pretty-printing", the adverse is
+called "pretty-scanning". Both transformations are reversible.
+
+The format for these messages is:
+
+-------------------------------
+<portname> <argument_values...>
+-------------------------------
+
+Note that no argument types are specified, since they can be inferred from the
+argument values. The following depicts the different types of argument values.
+Whitespace can be added and removed at sane places. Comments are introduced
+with a percent sign ('%') and end on the current line's end. The following
+examples show the preferred whitespace layout.
+
+* For argument types without argument values, there are still argument values
+  being printed:
+-----
+true
+false
+nil
+inf
+-----
+* For accepting numeric literals, rtosc first calculates the end of the
+  literal by searching for an end of the string, a space character or a
+  closing paranthesis (')'). Then, it behaves like trying out a number of
+  scanf format strings in the order shown below.
+  The first format string that matched exactly from the beginning to the
+  previously calculated end is being used for scanning, and the corresponding
+  type is being assumed. Except for the integer suffixes, the behaviour should
+  be identical to the behaviour of a C99 parser. For the exact meanings of the
+  format strings, consider your fscanf(3p) man page.
+  One extension to C99 is that the user can specify the exact value of a float
+  or double inside parantheses using the hex notation.
+---------------
+"%*"PRIi32"i%n"  % assume 'i' (4 byte int)
+"%*"PRIi64"h%n"  % assume 'h' (8 byte int)
+"%*"PRIi32"%n"   % assume 'i'
+"%*lfd%n"        % assume 'd' (double)
+"%*ff%n"         % assume 'f' (float)
+"%*f%n"          % assume 'f'
+---------------
+-------------
+42                    % 'i'
+0xdeadbeef            % 'i'
+077                   % 'i'
+123i                  % 'i'
+0xffffffffffh         % 'h'
+1.                    % 'f'
+1e10                  % 'f'
+1e-10                 % 'f'
+10f                   % 'f'
+10d                   % 'd'
+0xf                   % 'i' (no float!, value is 15)
+0xfp+0                % 'f' (if you wanted the above to be a float, =15.0f)
+0x1f                  % 'i' (no float!, value is 31)
+1f                    % 'f' (1.0f)
+0.000061 (0x0.1p-10)  % 'f' (the exact value is inside of parantheses)
+-------------
+* ANSII strings and characters are also used like in C99, which includes
+escape sequences. Strings can also be concatenated by appending a backslash
+after the first string's ending quote.
+----------
+"\"Hello\nworld!\""
+"this is..."\
+  "...one string"
+'#'
+'\''
+----------
+* MIDI messages are printed as four hex numbers:
+----------
+MIDI [0xff 0xff 0xff 0xff]
+----------
+* Blobs are being printed as an integer "n" folled by "n" hex numbers:
+----------
+[6 0x72 0x74 0x6f 0x73 0x63 0x00]
+[0]
+----------
+* Colors are 8 hex bytes, preceded by a '#' sign:
+----------
+#8badf00d
+----------
+* Timestamps are written as the UTC date in the ISO 8601
+  standard (the conversions are equal to using localtime(3p) and mktime(3p) )
+  with an optional, appended time, which contains an optional 'seconds' part
+  and an optional appended fractional part separated by a period. There are
+  two special timestamps called 'now' and 'immediatelly' with the same
+  meaning. TODO: check lsb or msb
+----------
+2017-22-03 20:29:59.125
+2016-11-16 19:44:06
+2000-01-01 00:00         % beginning of the day 2000-01-01
+2000-01-01               % same date as above
+now
+immediatelly
+----------
+
 Undo Support
 ~~~~~~~~~~~~
 

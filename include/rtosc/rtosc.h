@@ -47,7 +47,7 @@ typedef union {
     char          T;   //I,T,F,N
     float         f;   //f
     double        d;   //d
-    int64_t       h;   //h-
+    int64_t       h;   //h
     uint64_t      t;   //t
     uint8_t       m[4];//m
     const char   *s;   //s,S
@@ -132,24 +132,27 @@ typedef struct {
 typedef struct { va_list a; } va_list_t;
 
 /**
- * @brief Packs arguments into pre-allocated rtosc_arg_t array
- * @param args Pre-allocated array. Size must be greater or equal @p nargs
- * @param nargs Size of elements to pack.
- * @param arg_str rtosc string specifying the arguments' types.
- * @param ap The parameters that shall be packed.
+ * Pack arguments into pre-allocated rtosc_arg_t array
+ *
+ * @param args Pre-allocated array; size must be greater or equal @p nargs
+ * @param nargs Size of elements to pack
+ * @param arg_str Rtosc string specifying the arguments' types
+ * @param ap The parameters that shall be packed
  */
 void rtosc_v2args(rtosc_arg_t* args, size_t nargs,
-                  const char* arg_str, const va_list_t* ap);
+                  const char* arg_str, va_list_t* ap);
 
 /**
- * @brief Packs parameters into pre-allocated rtosc_arg_val-t array.
+ * Pack parameters into pre-allocated rtosc_arg_val-t array
+ *
  * @see rtosc_v2args
  */
 void rtosc_v2argvals(rtosc_arg_val_t* args, size_t nargs,
                      const char* arg_str, va_list ap);
 
 /**
- * @brief Packs parameters into pre-allocated rtosc_arg_val-t array.
+ * Pack parameters into pre-allocated rtosc_arg_val-t array
+ *
  * @see rtosc_v2args
  */
 void rtosc_2argvals(rtosc_arg_val_t* args, size_t nargs,
@@ -160,30 +163,134 @@ typedef struct
     bool lossless; //!< will add hex notation behind floats
     int floating_point_precision;
     const char* sep; //!< separator for multiple argument values
+    int linelength;
 } rtosc_print_options;
 
 /**
- * @brief pretty-prints rtosct_arg_val_t structure into buffer
+ * Pretty-print rtosct_arg_val_t structure into buffer
+ *
  * @param arg Pointer to the structure that shall be printed
  * @param buffer The buffer to write to
  * @param buffersize The maximum size to write to, includin a trailing 0 byte
- * @param opt Printer options. NULL for default options.
+ * @param opt Printer options, NULL for default options
+ * @param cols_used How many columns have been used for writing in this line
+ *   (will be updated by this function)
  * @return The number of bytes written, excluding the null byte
  */
 size_t rtosc_print_arg_val(const rtosc_arg_val_t* arg, char* buffer,
-                           size_t buffersize, const rtosc_print_options* opt);
+                           size_t buffersize, const rtosc_print_options* opt,
+                           int* cols_used);
 
 /**
- * @brief pretty-prints rtosct_arg_val_t array into buffer
- * @param arg The array to print
+ * Pretty-print rtosct_arg_val_t array into buffer
+ *
+ * @see rtosc_print_message
+ */
+size_t rtosc_print_arg_vals(const rtosc_arg_val_t *args, size_t n,
+                            char *buffer, size_t bs,
+                            const rtosc_print_options* opt,
+                            int cols_used);
+
+/**
+ * Pretty-print OSC message into string buffer
+ *
+ * A newline will be appended.
+ *
+ * @param address OSC pattern to send message to
+ * @param args The array to print
+ * @param n Number of args from the array that should be printed
  * @param buffer The buffer to write to
- * @param buffersize The maximum size to write to, includin a trailing 0 byte
- * @param opt Printer options. NULL for default options.
+ * @param bs The maximum size to write to, includin a trailing 0 byte
+ * @param opt Printer options, NULL for default options
+ * @param cols_used How many columns have been used for writing in this line
  * @return The number of bytes written, excluding the null byte
  */
-size_t rtosc_print_arg_vals(const rtosc_arg_val_t *arg, size_t n,
-                            char *buffer, size_t bs,
-                            const rtosc_print_options* opt);
+size_t rtosc_print_message(const char* address,
+                           const rtosc_arg_val_t *args, size_t n,
+                           char *buffer, size_t bs,
+                           const rtosc_print_options* opt,
+                           int cols_used);
+
+/**
+ * Skip characters from a string until one argument value
+ *   would have been scanned
+ * @param src The string
+ * @return The first character after that argument value
+ */
+const char* rtosc_skip_next_printed_arg(const char* src);
+
+/**
+ * Count arguments that would be scanned and do a complete syntax check
+ *
+ * This functions should be run before rtosc_scan_arg_vals() in order
+ * to know the number of argument values. Also, rtosc_scan_arg_vals() does
+ * no complete syntax check.
+ *
+ * @param src The string to scan from
+ * @return The number of arguments that can be scanned, or if the nth arg
+ *   (range 1...) can not be scanned, -n. Never returns 0
+ */
+int rtosc_count_printed_arg_vals(const char* src);
+
+/**
+ * Count arguments of a message that would be scanned and
+ * do a complete syntax check
+ *
+ * @param msg The message to scan from
+ * @return 0 if the address could not be scanned,
+ *   otherwise @see rtosc_count_printed_arg_vals
+ */
+int rtosc_count_printed_arg_vals_of_msg(const char* msg);
+
+/**
+ * Scans one argument value from a string
+ *
+ * This function does no complete syntaxcheck. Call
+ * rtosc_count_printed_arg_vals() before.
+ *
+ * @param src The string
+ * @param arg Pointer to where to store the argument value; must be allocated
+ * @param buffer_for_strings A buffer with enough space for scanned
+ *   strings and blobs
+ * @param bufsize Size of @p buffer_for_strings , will be shrinked to the
+ *   bufferbytes left after the scan
+ * @return The number of bytes scanned
+ */
+size_t rtosc_scan_arg_val(const char* src,
+                          rtosc_arg_val_t *arg,
+                          char* buffer_for_strings, size_t* bufsize);
+
+/**
+ * Scan a fixed number of argument values from a string.
+ * This function does no complete syntaxcheck. Call
+ * rtosc_count_printed_arg_vals() before. This will also give you the @p n
+ * parameter.
+ *
+ * @see rtosc_scan_message
+ */
+size_t rtosc_scan_arg_vals(const char* src,
+                           rtosc_arg_val_t *args, size_t n,
+                           char* buffer_for_strings, size_t bufsize);
+
+/**
+ * Scan an OSC message from a string.
+ * This function does no complete syntaxcheck. Call
+ * rtosc_count_printed_arg_vals() before. This will also give you the @p n
+ * parameter. Preceding and trailing whitespace will be consumed.
+ *
+ * @param src The string
+ * @param arg Pointer to an array of argument values; the output will be
+ *    written here
+ * @param n The amount of argument values to scan
+ * @param buffer_for_strings A buffer with enough space for scanned
+ *   strings and blobs
+ * @param bufsize Size of @p buffer_for_strings
+ * @return The number of bytes scanned
+ */
+size_t rtosc_scan_message(const char* src,
+                          char* msgbuf, size_t msgsize,
+                          rtosc_arg_val_t *args, size_t n,
+                          char* buffer_for_strings, size_t bufsize);
 
 /**
  * Create an argument iterator for a message
@@ -257,7 +364,7 @@ const char *rtosc_argument_string(const char *msg);
  * @param tt     OSC time tag
  * @param elms   Number of sub messages
  * @param ...    Messages
- * @returns legnth of generated bundle or zero on failure
+ * @returns length of generated bundle or zero on failure
  */
 size_t rtosc_bundle(char *buffer, size_t len, uint64_t tt, int elms, ...);
 

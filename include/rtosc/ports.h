@@ -244,16 +244,27 @@ const char* get_default_value(const char* portname, const Ports& ports,
                               int recursive = 1);
 
 /**
- * @brief Returns a string list of all changed values
+ * Return a string list of all changed values
  *
- * Returns a human readable list of the value that changed
- * corresponding to the rDefault macro.
+ * Return a human readable list of the value that changed
+ * corresponding to the rDefault macro
  * @param ports The static ports structure
  * @param runtime The runtime object
  * @return The list of ports and their changed values, linewise
  */
 std::string get_changed_values(const Ports& ports, void* runtime);
 
+/**
+ * Scan OSC messages from human readable format and dispatch them
+ *
+ * @param messages The OSC messages, whitespace-separated
+ * @param ports The static ports structure
+ * @param runtime The runtime object
+ * @return The number of messages read, or, if there was a read error,
+ *   the number of bytes read until the read error occured minus one.
+ */
+int dispatch_printed_messages(const char* messages,
+                              const Ports& ports, void* runtime);
 
 /*********************
  * Port walking code *
@@ -264,7 +275,7 @@ typedef void(*port_walker_t)(const Port*,const char*,void*);
 /**
  * @brief Call a function on all ports and subports
  * @param base The base port of traversing
- * @param name_buffer Buffer which will be filled with the port name. Must be
+ * @param name_buffer Buffer which will be filled with the port name; must be
  *   reset to zero over the full length!
  * @param buffer_size Size of name_buffer
  * @param data Data that should be available in the callback
