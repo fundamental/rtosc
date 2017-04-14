@@ -3,6 +3,7 @@
 #include <rtosc/rtosc.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 
 char buffer1[128];
 
@@ -13,6 +14,96 @@ char buffer3[2048];
 char buffer4[2048];
 char buffer5[2048];
 
+#define DO_PERF 1
+#define PERF_TRIALS 200000000
+void speed_liblo_write(void)
+{
+    char buffer6[2048];
+
+    int repeats = PERF_TRIALS;
+    int t_on = clock(); // timer before calling func
+    for(int i=0; i<repeats; ++i) {
+        lo_message lo = lo_message_new();
+        lo_message_add_string(lo, "This is a string");
+        lo_message_add_int32(lo, 123);
+        lo_message_add_float(lo, 3.14);
+        size_t len = sizeof(buffer6);
+        lo_message_serialise(lo, "/methodname", buffer6, &len);
+        lo_message_free(lo);
+    }
+
+    int t_off = clock(); // timer when func returns
+
+    double seconds = (t_off - t_on) * 1.0 / CLOCKS_PER_SEC;
+    printf("Liblo Write Performance: %f seconds for the test\n", seconds);
+    printf("Liblo Write Performace:  %f ns per message\n", seconds*1e9/repeats);
+}
+
+void speed_liblo_read(void)
+{
+    char buffer6[2048];
+    lo_message lo = lo_message_new();
+    lo_message_add_string(lo, "This is a string");
+    lo_message_add_int32(lo, 123);
+    lo_message_add_float(lo, 3.14);
+    size_t len = sizeof(buffer6);
+    lo_message_serialise(lo, "/methodname", buffer6, &len);
+    lo_message_free(lo);
+
+    int repeats = PERF_TRIALS;
+    int t_on = clock(); // timer before calling func
+    for(int i=0; i<repeats; ++i) {
+        int result_var = 0;
+        lo_message lo = lo_message_deserialise(buffer6, len, &result_var);
+        lo_message_get_argv(lo);
+        lo_message_free(lo);
+    }
+
+    int t_off = clock(); // timer when func returns
+
+    double seconds = (t_off - t_on) * 1.0 / CLOCKS_PER_SEC;
+    printf("Liblo Read Performance: %f seconds for the test\n", seconds);
+    printf("Liblo Read Performace:  %f ns per message\n", seconds*1e9/repeats);
+}
+
+void speed_rtosc_write(void)
+{
+    char buffer6[2048];
+
+    int repeats = PERF_TRIALS;
+    int t_on = clock(); // timer before calling func
+    for(int i=0; i<repeats; ++i)
+        rtosc_message(buffer6, sizeof(buffer6), 
+                "/methodname", "sif", "This is a string", 123, 3.14);
+
+    int t_off = clock(); // timer when func returns
+
+    double seconds = (t_off - t_on) * 1.0 / CLOCKS_PER_SEC;
+    printf("RTOSC Write Performance: %f seconds for the test\n", seconds);
+    printf("RTOSC Write Performace:  %f ns per message\n", seconds*1e9/repeats);
+}
+
+void speed_rtosc_read(void)
+{
+    char buffer6[2048];
+
+    rtosc_message(buffer6, sizeof(buffer6), 
+            "/methodname", "sif", "This is a string", 123, 3.14);
+
+    int repeats = PERF_TRIALS;
+    int t_on = clock(); // timer before calling func
+    for(int i=0; i<repeats; ++i) {
+        rtosc_arg_itr_t itr = rtosc_itr_begin(buffer6);
+        while(!rtosc_itr_end(itr))
+            rtosc_itr_next(&itr);
+    }
+
+    int t_off = clock(); // timer when func returns
+
+    double seconds = (t_off - t_on) * 1.0 / CLOCKS_PER_SEC;
+    printf("RTOSC Read Performance: %f seconds for the test\n", seconds);
+    printf("RTOSC Read Performace:  %f ns per message\n", seconds*1e9/repeats);
+}
 
 int result_var = 0;
 int main()
@@ -76,6 +167,11 @@ int main()
     lo_message_free(msg2);
     lo_message_free(msg3);
     lo_bundle_free(ms4);
+
+    speed_liblo_read();
+    speed_rtosc_read();
+    speed_liblo_write();
+    speed_rtosc_write();
 
     return test_summary();
 }
