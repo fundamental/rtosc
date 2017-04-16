@@ -11,9 +11,7 @@ include("cmake/ColorMessage.cmake")
 SET(BUILD_RTOSC_EXAMPLES FALSE CACHE BOOL
     "Build RTOSC Example Programs")
 
-if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-    include(GNUInstallDirs)
-endif()
+include(GNUInstallDirs)
 
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -182,7 +180,7 @@ endif()
 
 
 #Installation
-if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT DEFINED RTOSC_NO_INSTALL)
+if(NOT DEFINED RTOSC_NO_INSTALL)
     if(PKG_CONFIG_FOUND)
         configure_file(librtosc.pc.cmake
             ${CMAKE_BINARY_DIR}/librtosc.pc @ONLY)
