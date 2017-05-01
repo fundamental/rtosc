@@ -47,15 +47,24 @@ typedef const char *msg_t;
 struct Port;
 struct Ports;
 
+//! data object for the dispatch routine
 struct RtData
 {
     RtData(void);
 
+    /**
+     * @brief location of where the dispatch routine is currently being called
+     *
+     * If non-NULL, the dispatch routine will update the port name here while
+     * walking through the Ports tree
+     */
     char *loc;
     size_t loc_size;
-    void *obj;
-    int  matches;
-    const Port *port;
+    void *obj;        //!< runtime object to dispatch this object to
+    int  matches;     //!< number of matches returned from dispatch routine
+    const Port *port; //!< dispatch will write the matching port's pointer here
+    //! @brief Will be set to point to the full OSC message in case of
+    //!   a base dispatch
     const char *message;
 
     virtual void replyArray(const char *path, const char *args,
@@ -79,10 +88,10 @@ struct RtData
  * Port in rtosc dispatching hierarchy
  */
 struct Port {
-    const char  *name;    //< Pattern for messages to match
-    const char  *metadata;//< Statically accessable data about port
-    const Ports *ports;   //< Pointer to further ports
-    std::function<void(msg_t, RtData&)> cb;//< Callback for matching functions
+    const char  *name;    //!< Pattern for messages to match
+    const char  *metadata;//!< Statically accessable data about port
+    const Ports *ports;   //!< Pointer to further ports
+    std::function<void(msg_t, RtData&)> cb;//!< Callback for matching functions
 
     class MetaIterator
     {
@@ -165,7 +174,10 @@ struct Ports
      *
      * @param m a valid OSC message
      * @param d The RtData object shall contain a path buffer (or null), the length of
-     *          the buffer, a pointer to data.
+     *          the buffer, a pointer to data. It must also contain the location
+     *          if an answer is being expected.
+     * @param base_dispatch Whether the OSC path is to be interpreted as a full
+     *                      OSC path beginning at the root
      */
     void dispatch(const char *m, RtData &d, bool base_dispatch=false) const;
 
@@ -230,21 +242,44 @@ struct MergePorts:public Ports
 /**
  * @brief Returns a port's default value
  *
- * Returns the default value of a given port, if any exists
- * @param portname the port's OSC path.
- * @param ports the ports where @a portname is to be searched
- * @param runtime object holding @a ports . Optional. Helps finding
- *        default values dependent on others, such as presets.
- * @param port_hint The port itself corresponding to portname
- * @param recursive number of recursions allowed. must be greater than zero.
- * @return the value as a string, or NULL if there is no default
+ * Returns the default value of a given port, if any exists, as a string.
+ * For the parameters, see the overloaded function.
+ * @note The recursive parameter should never be specified.
  */
-const char* get_default_value(const char* portname, const Ports& ports,
+const char* get_default_value(const char* port_name, const Ports& ports,
                               void* runtime, const Port* port_hint = NULL,
                               int recursive = 1);
 
 /**
- * Return a string list of all changed values
+ * @brief Returns a port's default value
+ *
+ * Returns the default value of a given port, if any exists, as an array of
+ * rtosc_arg_vals
+ *
+ * @param port_name the port's OSC path.
+ * @param port_args the port's arguments, e.g. '::i:c:S'
+ * @param ports the ports where @a portname is to be searched
+ * @param runtime object holding @a ports . Optional. Helps finding
+ *        default values dependent on others, such as presets.
+ * @param port_hint The port itself corresponding to portname (including
+ *        the args). If not specified, will be found using @p portname .
+ * @param n Size of the output parameter @res . This size can not be known,
+ *        so you should provide a large enough array.
+ * @param res The output parameter for the argument values.
+ * @param strbuf String buffer for storing pretty printed strings and blobs.
+ * @param strbufsize Size of @p strbuf
+ * @return The actual number of aruments written to @p res. Can be smaller
+ *         than @p n
+ */
+size_t get_default_value(const char* port_name, const char *port_args,
+                         const Ports& ports,
+                         void* runtime, const Port* port_hint,
+                         size_t n, rtosc_arg_val_t* res,
+                         char *strbuf, size_t strbufsize);
+
+
+/**
+ * @brief Return a string list of all changed values
  *
  * Return a human readable list of the value that changed
  * corresponding to the rDefault macro
@@ -255,7 +290,7 @@ const char* get_default_value(const char* portname, const Ports& ports,
 std::string get_changed_values(const Ports& ports, void* runtime);
 
 /**
- * Scan OSC messages from human readable format and dispatch them
+ * @brief Scan OSC messages from human readable format and dispatch them
  *
  * @param messages The OSC messages, whitespace-separated
  * @param ports The static ports structure
@@ -265,6 +300,24 @@ std::string get_changed_values(const Ports& ports, void* runtime);
  */
 int dispatch_printed_messages(const char* messages,
                               const Ports& ports, void* runtime);
+
+/**
+ * @brief Convert given argument values to their canonical representation, e.g.
+ * to the ports first (or-wise) argument types.
+ *
+ * E.g. if passing two 'S' argument values, the
+ * port could be `portname::ii:cc:SS` or `portname::ii:t`.
+ *
+ * @param av The input and output argument values
+ * @param n The size of @p av
+ * @param port_args The port arguments string, e.g. `::i:c:s`. The first
+ *   non-colon letter sequence marks the canonical types
+ * @param meta
+ * @return The number of argument values that should have need conversion,
+ *   but failed, e.g. because of values missing in rMap.
+ */
+int canonicalize_arg_vals(rtosc_arg_val_t* av, size_t n,
+                          const char* port_args, Port::MetaContainer meta);
 
 /*********************
  * Port walking code *
@@ -286,6 +339,15 @@ void walk_ports(const Ports *base,
         size_t         buffer_size,
         void          *data,
         port_walker_t  walker);
+
+/**
+ * @brief Return the index with value @p value from the metadata's enumeration
+ * @param meta The metadata
+ * @param value The value to search the key for
+ * @return The first key holding value, or `std::numeric_limits<int>::min()`
+ *   if none was found
+ */
+int enum_key(Port::MetaContainer meta, const char* value);
 
 /*********************
  * Port Dumping code *

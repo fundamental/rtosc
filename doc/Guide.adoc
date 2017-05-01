@@ -353,7 +353,7 @@ As with most things with this library, this feature is still experimental.
 
 NOTE:: Problems may exist with array fields
 
-Pretty-printing messages
+Pretty-printing Messages
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 rtosc comes with a human readable format for messages. Transforming a "raw"
@@ -443,16 +443,41 @@ MIDI [0xff 0xff 0xff 0xff]
   standard (the conversions are equal to using localtime(3p) and mktime(3p) )
   with an optional, appended time, which contains an optional 'seconds' part
   and an optional appended fractional part separated by a period. There are
-  two special timestamps called 'now' and 'immediatelly' with the same
-  meaning. TODO: check lsb or msb
+  two special timestamps called 'now' and 'immediately' with the same
+  meaning.
 ----------
 2017-22-03 20:29:59.125
 2016-11-16 19:44:06
 2000-01-01 00:00         % beginning of the day 2000-01-01
 2000-01-01               % same date as above
 now
-immediatelly
+immediately
 ----------
+* Identifiers (aka. Symbols, they have the capital 'S' as type letter) follow
+  the C convention, i.e. "[A-Za-z_][A-Za-z0-9_]*". Unlike strings, identifiers
+  are not surrounded by quotes. A typical use are enumerations like in combo
+  boxes.
+----------
+An_Identifier_with_a_Number_12345
+frequency_modulation
+----------
+
+Here are a few examples of full messages:
+----------
+% expects three ints: channel, note and volume
+/noteOn 0 60 64
+% expects side lengths, fill color, text inside the rectangle, and
+% whether a line should be drawn around the rectangle
+/drawRectangle 5f 2.4 #ff0000ff "I am a\nrectangle" true
+----------
+
+Default Values
+~~~~~~~~~~~~~~
+
+Default values usually describe what an app can answer best if it currently has
+no valid data, or if it is in an initial or resetted state. The datatypes and
+the values which the ports reply as such a default response should be passed to
+the rDefault macro in the <<Pretty-printing Messages, "pretty format">>.
 
 Undo Support
 ~~~~~~~~~~~~

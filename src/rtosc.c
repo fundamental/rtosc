@@ -234,8 +234,187 @@ static size_t vsosc_null(const char        *address,
     return pos;
 }
 
+static const rtosc_cmp_options* default_cmp_options
+ = &((rtosc_cmp_options) { 0.0 });
+
+int rtosc_arg_vals_eq(rtosc_arg_val_t* lhs, rtosc_arg_val_t* rhs,
+                      size_t lsize, size_t rsize,
+                      const rtosc_cmp_options* opt)
+{
+#define mfabs(val) (((val) >= 0) ? (val) : -(val))
+
+    if(!opt)
+        opt = default_cmp_options;
+    if(rsize != rsize)
+        return 0;
+
+    int rval = 1;
+    for(size_t i = 0; i < lsize && rval; ++i, ++lhs, ++rhs)
+    {
+        if(lhs->type == rhs->type)
+        switch(lhs->type)
+        {
+            case 'i':
+            case 'c':
+            case 'r':
+                rval = lhs->val.i == rhs->val.i;
+                break;
+            case 'I':
+            case 'T':
+            case 'F':
+            case 'N':
+                rval = 1;
+                break;
+            case 'f':
+                rval = (opt->float_tolerance == 0.0)
+                       ? lhs->val.f == rhs->val.f
+                       : mfabs(lhs->val.f - rhs->val.f) <=
+                       (float)opt->float_tolerance;
+                break;
+            case 'd':
+                rval = (opt->float_tolerance == 0.0)
+                       ? lhs->val.d == rhs->val.d
+                       : mfabs(lhs->val.d - rhs->val.d) <=
+                       opt->float_tolerance;
+                break;
+            case 'h':
+                rval = lhs->val.h == rhs->val.h;
+                break;
+            case 't':
+                rval = lhs->val.t == rhs->val.t;
+                break;
+            case 'm':
+                rval = 0 == memcmp(lhs->val.m, rhs->val.m, 4);
+                break;
+            case 's':
+            case 'S':
+                rval = 0 == strcmp(lhs->val.s, rhs->val.s);
+                break;
+            case 'b':
+            {
+                int32_t lbs = lhs->val.b.len,
+                        rbs = rhs->val.b.len;
+                rval = lbs == rbs;
+                if(rval)
+                    rval = 0 == memcmp(lhs->val.b.data, rhs->val.b.data, lbs);
+                break;
+            }
+        }
+        else
+        {
+            rval = 0;
+        }
+    }
+    return rval;
+#undef mfabs
+}
+
+int rtosc_arg_vals_cmp(rtosc_arg_val_t* lhs, rtosc_arg_val_t* rhs,
+                       size_t lsize, size_t rsize,
+                       const rtosc_cmp_options* opt)
+{
+#define cmp_3way(val1,val2) (((val1) == (val2)) \
+                            ? 0 \
+                            : (((val1) > (val2)) ? 1 : -1))
+#define mfabs(val) (((val) >= 0) ? (val) : -(val))
+
+    if(!opt)
+        opt = default_cmp_options;
+
+    size_t rval = 0;
+    for(size_t i = 0; i < lsize && !rval; ++i, ++lhs, ++rhs)
+    {
+        if(lhs->type == rhs->type)
+        switch(lhs->type)
+        {
+            case 'i':
+            case 'c':
+            case 'r':
+                rval = cmp_3way(lhs->val.i, rhs->val.i);
+                break;
+            case 'I':
+            case 'T':
+            case 'F':
+            case 'N':
+                rval = 0;
+                break;
+            case 'f':
+                rval = (opt->float_tolerance == 0.0)
+                       ? cmp_3way(lhs->val.f, rhs->val.f)
+                       : (mfabs(lhs->val.f - rhs->val.f)
+                          <= (float)opt->float_tolerance)
+                          ? 0
+                          : ((lhs->val.f > rhs->val.f) ? 1 : -1);
+                break;
+            case 'd':
+                rval = (opt->float_tolerance == 0.0)
+                       ? cmp_3way(lhs->val.d, rhs->val.d)
+                       : (mfabs(lhs->val.d - rhs->val.d)
+                          <= opt->float_tolerance)
+                          ? 0
+                          : ((lhs->val.d > rhs->val.d) ? 1 : -1);
+                break;
+            case 'h':
+                rval = cmp_3way(lhs->val.h, rhs->val.h);
+                break;
+            case 't':
+                // immediately is considered lower than everything else
+                // this means if you send two events to a client,
+                // one being "immediately" and one being different, the
+                // immediately-event has the higher priority, event if the
+                // other one is in the past
+                rval = (lhs->val.t == 1)
+                       ? (rhs->val.t == 1)
+                         ? 0
+                         : -1 // lhs has higher priority => lhs < rhs
+                       : (rhs->val.t == 1)
+                         ? 1
+                         : cmp_3way(lhs->val.t, rhs->val.t);
+                break;
+            case 'm':
+                rval = memcmp(lhs->val.m, rhs->val.m, 4);
+                break;
+            case 's':
+            case 'S':
+                rval = strcmp(lhs->val.s, rhs->val.s);
+                break;
+            case 'b':
+            {
+                int32_t lbs = lhs->val.b.len,
+                        rbs = rhs->val.b.len;
+                int32_t minlen = (lbs < rbs) ? lbs : rbs;
+                rval = memcmp(lhs->val.b.data, rhs->val.b.data, minlen);
+                if(lbs != rbs && !rval)
+                {
+                    // both equal until here
+                    // the string that ends here is lexicographically smaller
+                    rval = (lbs > rbs)
+                           ? lhs->val.b.data[minlen]
+                           : -rhs->val.b.data[minlen];
+                }
+                else
+                    return rval;
+                break;
+            }
+        }
+        else
+        {
+            rval = (lhs->type > rhs->type) ? 1 : -1;
+        }
+    }
+
+    if(rval == 0 && lsize != rsize)
+    {
+        return (lsize > rsize) ? 1 : -1;
+    }
+    return rval;
+
+#undef mfabs
+#undef cmp_3way
+}
+
 void rtosc_v2args(rtosc_arg_t* args, size_t nargs, const char* arg_str,
-                  va_list_t* ap)
+                  rtosc_va_list_t* ap)
 {
     unsigned arg_pos = 0;
     uint8_t *midi_tmp;
@@ -288,7 +467,7 @@ void rtosc_v2args(rtosc_arg_t* args, size_t nargs, const char* arg_str,
 
 void rtosc_2args(rtosc_arg_t* args, size_t nargs, const char* arg_str, ...)
 {
-    va_list_t va;
+    rtosc_va_list_t va;
     va_start(va.a, arg_str);
     rtosc_v2args(args, nargs, arg_str, &va);
     va_end(va.a);
@@ -296,7 +475,7 @@ void rtosc_2args(rtosc_arg_t* args, size_t nargs, const char* arg_str, ...)
 
 void rtosc_v2argvals(rtosc_arg_val_t* args, size_t nargs, const char* arg_str, va_list ap)
 {
-    va_list_t ap2;
+    rtosc_va_list_t ap2;
     va_copy(ap2.a, ap);
     for(size_t i=0; i<nargs; ++i, ++arg_str, ++args)
     {
@@ -324,7 +503,7 @@ size_t rtosc_vmessage(char   *buffer,
         return rtosc_amessage(buffer,len,address,arguments,NULL);
 
     rtosc_arg_t args[nargs];
-    va_list_t ap2;
+    rtosc_va_list_t ap2;
     va_copy(ap2.a, ap);
     rtosc_v2args(args, nargs, arguments, &ap2);
 
@@ -611,7 +790,7 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
         case 't': // write to ISO 8601 date
         {
             if(val->t == 1)
-                wrt = asnprintf(buffer, bs, "immediatelly");
+                wrt = asnprintf(buffer, bs, "immediately");
             else
             {
                 time_t t = (time_t)(val->t >> 32);
@@ -711,7 +890,6 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
             wrt = asnprintf(buffer, bs, "MIDI [0x%02x 0x%02x 0x%02x 0x%02x]",
                             val->m[0], val->m[1], val->m[2], val->m[3]);
             break;
-        case 'S':
         case 's':
         {
             char* b = buffer;
@@ -740,6 +918,9 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
             wrt += (b-buffer);
             break;
         }
+        case 'S':
+            wrt = asnprintf(buffer, bs, "%s", val->s);
+            break;
         case 'b':
             wrt = asnprintf(buffer, bs, "[%d ", val->b.len);
             *cols_used += wrt;
@@ -767,7 +948,6 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
     switch(arg->type)
     {
         case 's':
-        case 'S':
         case 'b':
             // these can break the line, so they compute *cols_used themselves
             break;
@@ -1000,23 +1180,66 @@ static const char* end_of_printed_string(const char* src)
     return ++src;
 }
 
+/**
+ * Skips string @p exp at the current string pointed to by @p str,
+ * but only if it's a separated word, i.e. if there's a char after the string,
+ * it mus be a slash or whitespace.
+ *
+ * @return The position after the word, or NULL if the word was not present
+ *   at @p str .
+ */
+static const char* skip_word(const char* exp, const char** str)
+{
+    size_t explen = strlen(exp);
+    const char* cur = *str;
+    int match = (!strncmp(exp, cur, explen) &&
+            (!cur[explen] || cur[explen] == '/' || isspace(cur[explen])));
+    if(match) {
+        *str += explen;
+        return *str;
+    }
+    else return NULL;
+}
+
+/**
+ * Tries to skip the next identifier beginning at @p str
+ *
+ * @return The position after the identifier, or NULL if there's no identifier
+ *   at @p str .
+ */
+static const char* skip_identifier(const char* str)
+{
+    if(!isalpha(*str) && *str != '_')
+        return NULL;
+    else
+    {
+        ++str;
+        for(; isalnum(*str) || *str == '_'; ++str) ;
+        return str;
+    }
+}
+
 const char* rtosc_skip_next_printed_arg(const char* src)
 {
     switch(*src)
     {
-        case 't': skip_fmt_null(&src, "true%n"); break;
-        case 'f': skip_fmt_null(&src, "false%n"); break;
+        case 't':
+            if(!skip_word("true", &src))
+                src = skip_identifier(src);
+            break;
+        case 'f':
+            if(!skip_word("false", &src))
+                src = skip_identifier(src);
+            break;
         case 'n':
-            if(src[1] == 'o')
-                skip_fmt_null(&src, "now%n");
-            else
-                skip_fmt_null(&src, "nil%n");
+            if(!skip_word("nil", &src))
+            if(!skip_word("now", &src))
+                src = skip_identifier(src);
             break;
         case 'i':
-            if(src[1] == 'n')
-                skip_fmt_null(&src, "inf%n");
-            else
-                skip_fmt_null(&src, "immediatelly%n");
+            if(!skip_word("inf", &src))
+            if(!skip_word("immediately", &src))
+                src = skip_identifier(src);
             break;
         case '#':
             for(size_t i = 0; i<8; ++i)
@@ -1060,7 +1283,10 @@ const char* rtosc_skip_next_printed_arg(const char* src)
             src = end_of_printed_string(src);
             break;
         case 'M':
-            skip_fmt_null(&src, "MIDI [ 0x%*x 0x%*x 0x%*x 0x%*x ]%n");
+            if(!strncmp("MIDI", src, 4) && (isspace(src[4]) || src[4] == '['))
+                skip_fmt_null(&src, "MIDI [ 0x%*x 0x%*x 0x%*x 0x%*x ]%n");
+            else
+                src = skip_identifier(src);
             break;
         case '[':
         {
@@ -1080,8 +1306,13 @@ const char* rtosc_skip_next_printed_arg(const char* src)
         }
         default:
         {
+            // is it an identifier?
+            if(*src == '_' || isalpha(*src))
+            {
+                for(; *src == '_' || isalnum(*src); ++src) ;
+            }
             // is it a date? (vs a numeric)
-            if(skip_fmt(&src, "%*4d-%*1d%*1d-%*1d%*1d%n"))
+            else if(skip_fmt(&src, "%*4d-%*1d%*1d-%*1d%*1d%n"))
             {
                 if(skip_fmt(&src, " %*2d:%*1d%*1d%n"))
                 if(skip_fmt(&src, ":%*1d%*1d%n"))
@@ -1180,6 +1411,28 @@ int rtosc_count_printed_arg_vals_of_msg(const char* msg)
         return 0;
 }
 
+//! Tries to parse an identifier at @p src and stores it in @p arg
+const char* parse_identifier(const char* src, rtosc_arg_val_t *arg,
+                             char* buffer_for_strings,
+                             size_t* bufsize)
+{
+    if(*src == '_' || isalpha(*src))
+    {
+        arg->type = 'S';
+        arg->val.s = buffer_for_strings;
+        for(; *src == '_' || isalnum(*src); ++src)
+        {
+            assert((*bufsize)--);
+            *buffer_for_strings = *src;
+            ++buffer_for_strings;
+        }
+        assert((*bufsize)--);
+        *buffer_for_strings = 0;
+        ++buffer_for_strings;
+    }
+    return src;
+}
+
 size_t rtosc_scan_arg_val(const char* src,
                           rtosc_arg_val_t *arg,
                           char* buffer_for_strings, size_t* bufsize)
@@ -1192,25 +1445,28 @@ size_t rtosc_scan_arg_val(const char* src,
         case 'f':
         case 'n':
         case 'i':
-            // timestamps "immediatelly" or "now"?
-            if(src[1] == 'm' || src[1] == 'o')
+        {
+            const char* src_backup = src;
+            // timestamps "immediately" or "now"?
+            if(skip_word("immediately", &src) || skip_word("now", &src))
             {
                 arg->type = 't';
                 arg->val.t = 1;
-                src += (src[1] == 'm') ? 12 : 3;
+            }
+            else if(skip_word("nil", &src)   ||
+                    skip_word("inf", &src)   ||
+                    skip_word("true", &src)  ||
+                    skip_word("false", &src) )
+            {
+                arg->type = arg->val.T = toupper(*src_backup);
             }
             else
             {
-                arg->type = arg->val.T = toupper(*src);
-                switch(*src)
-                {
-                    case 'n':
-                    case 'i': src += 3; break;
-                    case 't': src += 4; break;
-                    case 'f': src += 5; break;
-                }
+                // no reserved keyword => identifier
+                src = parse_identifier(src, arg, buffer_for_strings, bufsize);
             }
             break;
+        }
         case '#':
         {
             arg->type = 'r';
@@ -1270,13 +1526,18 @@ size_t rtosc_scan_arg_val(const char* src,
         }
         case 'M':
         {
-            arg->type = 'm';
-            int32_t tmp[4];
-            sscanf(src, "MIDI [ 0x%"PRIx32" 0x%"PRIx32
-                              " 0x%"PRIx32" 0x%"PRIx32" ]%n",
-                   tmp, tmp + 1, tmp + 2, tmp + 3, &rd); src+=rd;
-            for(size_t i = 0; i < 4; ++i)
-                arg->val.m[i] = tmp[i]; // copy to 8 bit array
+            if(!strncmp("MIDI", src, 4) && (isspace(src[4]) || src[4] == '['))
+            {
+                arg->type = 'm';
+                int32_t tmp[4];
+                sscanf(src, "MIDI [ 0x%"PRIx32" 0x%"PRIx32
+                                  " 0x%"PRIx32" 0x%"PRIx32" ]%n",
+                       tmp, tmp + 1, tmp + 2, tmp + 3, &rd); src+=rd;
+                for(size_t i = 0; i < 4; ++i)
+                    arg->val.m[i] = tmp[i]; // copy to 8 bit array
+            }
+            else
+                src = parse_identifier(src, arg, buffer_for_strings, bufsize);
             break;
         }
         case '[': // blob
@@ -1294,7 +1555,7 @@ size_t rtosc_scan_arg_val(const char* src,
             {
                 int32_t tmp;
                 int rd;
-                sscanf(src, "0x%x %n", &tmp,&rd);
+                sscanf(src, "0x%x %n", &tmp, &rd);
                 arg->val.b.data[i] = tmp;
                 src+=rd;
             }
@@ -1303,8 +1564,23 @@ size_t rtosc_scan_arg_val(const char* src,
             break;
         }
         default:
+            // is it an identifier?
+            if(*src == '_' || isalpha(*src))
+            {
+                arg->type = 'S';
+                arg->val.s = buffer_for_strings;
+                for(; *src == '_' || isalnum(*src); ++src)
+                {
+                    assert((*bufsize)--);
+                    *buffer_for_strings = *src;
+                    ++buffer_for_strings;
+                }
+                assert((*bufsize)--);
+                *buffer_for_strings = 0;
+                ++buffer_for_strings;
+            }
             // "YYYY-" => it's a date
-            if(src[0] && src[1] && src[2] && src[3] && src[4] == '-')
+            else if(src[0] && src[1] && src[2] && src[3] && src[4] == '-')
             {
                 arg->val.t = 0;
 
@@ -1784,4 +2060,3 @@ uint64_t rtosc_bundle_timetag(const char *msg)
 {
     return extract_uint64((const uint8_t*)msg+8);
 }
-

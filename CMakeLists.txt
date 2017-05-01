@@ -127,6 +127,7 @@ macro(maketestcpp fname)
 endmacro(maketestcpp)
 
 maketest(osc-spec)
+maketest(cmp-arg-vals)
 maketest(pretty-printer)
 maketest(simple-messages)
 maketest(null-messages)

@@ -3,7 +3,7 @@
 
 #include <ostream>
 #include <cassert>
-#include <climits>
+#include <limits>
 #include <cstring>
 #include <string>
 
@@ -33,7 +33,6 @@ using namespace rtosc;
 static inline void scat(char *dest, const char *src)
 {
     while(*dest) dest++;
-    if(*dest) dest++;
     while(*src && *src!=':') *dest++ = *src++;
     *dest = 0;
 }
@@ -325,7 +324,7 @@ static ivec_t find_pos(words_t &strs)
         N = int_max(N,w.length());
 
     int pos_best = -1;
-    int pos_best_val = INT_MAX;
+    int pos_best_val = std::numeric_limits<int>::max();
     while(true)
     {
         for(int i=0; i<N; ++i) {
@@ -382,11 +381,11 @@ static ivec_t find_assoc(const words_t &strs, const ivec_t &pos)
         assoc.push_back(0);
 
     int assoc_best = -1;
-    int assoc_best_val = INT_MAX;
+    int assoc_best_val = std::numeric_limits<int>::max();;
     for(int k=0; k<4; ++k)
     {
         for(int i:useful_chars) {
-            assoc_best_val = INT_MAX;
+            assoc_best_val = std::numeric_limits<int>::max();
             for(int j=0; j<100; ++j) {
                 //printf(".");
                 assoc[i] = j;
@@ -612,7 +611,13 @@ void Ports::dispatch(const char *m, rtosc::RtData &d, bool base_dispatch) const
     }
 }
 
-class Capture : public RtData
+/*
+ * Returning values from runtime
+ */
+
+//! RtData subclass to capture argument values pretty-printed from
+//! a runtime object
+class CapturePretty : public RtData
 {
     char* buffer;
     std::size_t buffersize;
@@ -637,30 +642,33 @@ class Capture : public RtData
     }
 
 public:
+    //! Return the argument values, pretty-printed
     const char* value() const { return buffer; }
-    Capture(char* buffer, std::size_t size, int cols_used) :
+    CapturePretty(char* buffer, std::size_t size, int cols_used) :
         buffer(buffer), buffersize(size), cols_used(cols_used) {}
 };
 
 /**
  * @brief Returns a port's value pretty-printed from a runtime object
- * @param runtime The runtime object
- * @param ports The runtime's Ports object
- * @param buffer_with_port A buffer which already contains the port.
- *   This buffer can be modified.
- * @param buffersize size of buffer, including port name
- * @return The value, pretty-printed
+ *
+ * For the parameters, see the overloaded function
+ * @return The argument values, pretty-printed
  */
 static const char* get_value_from_runtime(void* runtime,
                                           const Ports& ports,
+                                          size_t loc_size,
+                                          char* loc,
                                           char* buffer_with_port,
                                           std::size_t buffersize,
                                           int cols_used)
 {
     std::size_t addr_len = strlen(buffer_with_port);
 
-    Capture d(buffer_with_port + addr_len, buffersize - addr_len, cols_used);
+    CapturePretty d(buffer_with_port + addr_len, buffersize - addr_len,
+                    cols_used);
     d.obj = runtime;
+    d.loc_size = loc_size;
+    d.loc = loc;
 
     // does the message at least fit the arguments?
     assert(buffersize - addr_len >= 8);
@@ -674,29 +682,98 @@ static const char* get_value_from_runtime(void* runtime,
     return d.value();
 }
 
-const char* rtosc::get_default_value(const char* portname, const Ports& ports,
+//! RtData subclass to capture argument values from a runtime object
+class Capture : public RtData
+{
+    size_t max_args;
+    rtosc_arg_val_t* arg_vals;
+    size_t nargs = 0;
+
+    void reply(const char *) override { assert(false); }
+    void reply(const char *, const char *args, ...) override
+    {
+        va_list va;
+        va_start(va,args);
+
+        nargs = strlen(args);
+        assert(nargs <= max_args);
+
+        rtosc_v2argvals(arg_vals, nargs, args, va);
+
+        va_end(va);
+    }
+public:
+    //! Return the number of argument values stored
+    size_t size() const { return nargs; }
+    Capture(std::size_t max_args, rtosc_arg_val_t* arg_vals) :
+        max_args(max_args), arg_vals(arg_vals) {}
+};
+
+/**
+ * @brief Returns a port's value(s) from a runtime object
+ * @param runtime The runtime object
+ * @param ports The runtime's Ports object
+ * @param loc A buffer where dispatch can write down the currently dispatched
+ *   path
+ * @param loc_size Size of loc
+ * @param buffer_with_port A buffer which already contains the port.
+ *   This buffer will be modified and must at least have space for 8 more bytes.
+ * @param buffersize Size of @p buffer_with_port
+ * @param max_args Maximum capacity of @p arg_vals
+ * @param arg_vals Argument buffer for returned argument values
+ * @return The number of argument values stored in @p arg_vals
+ */
+static size_t get_value_from_runtime(void* runtime,
+                                     const Ports& ports,
+                                     size_t loc_size,
+                                     char* loc,
+                                     char* buffer_with_port,
+                                     std::size_t buffersize,
+                                     std::size_t max_args,
+                                     rtosc_arg_val_t* arg_vals)
+{
+    std::size_t addr_len = strlen(buffer_with_port);
+
+    Capture d(max_args, arg_vals);
+    d.obj = runtime;
+    d.loc_size = loc_size;
+    d.loc = loc;
+
+    // does the message at least fit the arguments?
+    assert(buffersize - addr_len >= 8);
+    // append type
+    memset(buffer_with_port + addr_len, 0, 8); // cover string end and arguments
+    buffer_with_port[addr_len + (4-addr_len%4)] = ',';
+
+    // buffer_with_port is a message in this call:
+    ports.dispatch(buffer_with_port, d, true);
+
+    assert(d.size() > 0);
+    return d.size();
+}
+
+/*
+ * default values
+ */
+
+const char* rtosc::get_default_value(const char* port_name, const Ports& ports,
                                      void* runtime, const Port* port_hint,
                                      int recursive)
 {
     constexpr std::size_t buffersize = 1024;
     char buffer[buffersize];
+    char loc[buffersize] = "";
 
     assert(recursive >= 0); // forbid recursing twice
 
     const char* const default_annotation = "default";
     const char* const dependent_annotation = "default depends";
+    const char* return_value = nullptr;
 
-    const Port* port = port_hint ? port_hint : ports.apropos(portname);
-    assert(port); // port must be found
-    const Port::MetaContainer metadata = port->meta();
-
-    // Allow metadata to handle properties of a port rather than parsing
-    // the documentation section
-    {
-        const char* result = metadata[default_annotation];
-        if(result)
-            return result;
-    }
+    if(!port_hint)
+        port_hint = ports.apropos(port_name);
+    assert(port_hint); // port must be found
+    const Port::MetaContainer metadata = port_hint->meta();
 
     // Let complex cases depend upon a marker variable
     // If the runtime is available the exact preset number can be found
@@ -708,22 +785,22 @@ const char* rtosc::get_default_value(const char* portname, const Ports& ports,
         char* dependent_port = buffer;
         *dependent_port = 0;
 
-        assert(strlen(portname) + strlen(dependent_port) + 4 < buffersize);
-        strncat(dependent_port, portname, buffersize - strlen(dependent_port));
+        assert(strlen(port_name) + strlen(dependent_port) + 4 < buffersize);
+        strncat(dependent_port, port_name, buffersize - strlen(dependent_port));
         strncat(dependent_port, "/../", buffersize - strlen(dependent_port));
         strncat(dependent_port, dependent, buffersize - strlen(dependent_port));
         dependent_port = Ports::collapsePath(dependent_port);
 
-        const char* dep_val =
+        const char* dependent_value =
             runtime
-            ? get_value_from_runtime(runtime,
-                                     ports,
+            ? get_value_from_runtime(runtime, ports,
+                                     buffersize, loc,
                                      dependent_port,
                                      buffersize, 0)
             : get_default_value(dependent_port, ports,
                                 runtime, NULL, recursive-1);
 
-        assert(strlen(dep_val) < 16); // must be an int
+        assert(strlen(dependent_value) < 16); // must be an int
 
         char* default_variant = buffer;
         *default_variant = 0;
@@ -731,58 +808,172 @@ const char* rtosc::get_default_value(const char* portname, const Ports& ports,
         strncat(default_variant, default_annotation,
                 buffersize - strlen(default_variant));
         strncat(default_variant, " ", buffersize - strlen(default_variant));
-        strncat(default_variant, dep_val, buffersize - strlen(default_variant));
+        strncat(default_variant, dependent_value,
+                buffersize - strlen(default_variant));
 
-        const char* value_of_default_variant = metadata[default_variant];
-        // If the metadata indicates that the value depends upon
-        // another variable, but that variable is out-of-range then
-        // it is very likely an easy to overlook error in the metadata
-        assert(value_of_default_variant); // see comment above
-        return value_of_default_variant;
+        return_value = metadata[default_variant];
     }
 
-    return nullptr;
+    // If return_value is NULL, this can have two meanings:
+    //   1. there was no depedent annotation
+    //     => check for a direct (non-dependent) default value
+    //        (a non existing direct default value is OK)
+    //   2. there was a dependent annotation, but the dependent value has no
+    //      mapping (mapping for default_variant was NULL)
+    //     => check for the direct default value, which acts as a default
+    //        mapping for all presets; a missing default value indicates an
+    //        error in the metadata
+    if(!return_value)
+    {
+        return_value = metadata[default_annotation];
+        assert(!dependent || return_value);
+    }
+
+    return return_value;
+}
+
+int rtosc::canonicalize_arg_vals(rtosc_arg_val_t* av, size_t n,
+                                 const char* port_args,
+                                 Port::MetaContainer meta)
+{
+    const char* first = port_args;
+    int errors_found = 0;
+
+    for( ; *first && (*first == ':' || *first == '[' || *first == ']');
+           ++first) ;
+
+    for(size_t i = 0; i < n; ++i, ++first, ++av)
+    {
+        for( ; *first && (*first == '[' || *first == ']'); ++first) ;
+
+        if(!*first || *first == ':')
+        {
+            // (n-i) arguments left, but we have no recipe to convert them
+            return n-i;
+        }
+
+        if(av->type == 'S' && *first == 'i')
+        {
+            int val = enum_key(meta, av->val.s);
+            if(val == std::numeric_limits<int>::min())
+                ++errors_found;
+            else
+            {
+                av->type = 'i';
+                av->val.i = val;
+            }
+        }
+    }
+    return errors_found;
+}
+
+size_t rtosc::get_default_value(const char* port_name, const char* port_args,
+                                const Ports& ports,
+                                void* runtime, const Port* port_hint,
+                                size_t n, rtosc_arg_val_t* res,
+                                char* strbuf, size_t strbufsize)
+{
+    const char* pretty = get_default_value(port_name, ports, runtime, port_hint,
+                                           0);
+
+    int nargs = rtosc_count_printed_arg_vals(pretty);
+    assert(nargs > 0); // parse error => error in the metadata?
+    assert((size_t)nargs < n);
+
+    rtosc_scan_arg_vals(pretty, res, nargs, strbuf, strbufsize);
+
+    {
+        int errs_found = canonicalize_arg_vals(res,
+                                               nargs,
+                                               port_args,
+                                               port_hint->meta());
+        assert(!errs_found); // error in the metadata?
+    }
+
+    return nargs;
 }
 
 std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
 {
     std::string res;
-    constexpr std::size_t _buffersize = 1024;
-    char buffer[_buffersize];
-    memset(buffer, 0 , _buffersize);
+    constexpr std::size_t buffersize = 1024;
+    char port_buffer[buffersize];
+    memset(port_buffer, 0, buffersize); // requirement for walk_ports
+
+    const size_t max_arg_vals = 16;
 
     struct params_t
     {
         const Ports& ports;
         void* runtime;
-        std::string res;
-        std::size_t buffersize;
-        char tmp_buffer[_buffersize];
-    } params { ports, runtime, res, _buffersize, "" };
+        std::string res; // result of this function (all values concatenated)
+    } params { ports, runtime, res };
 
     auto on_reach_port =
-            [](const Port* p, const char* buffer, void* data)
+            [](const Port* p, const char* port_buffer, void* data)
     {
-        params_t* params = (params_t*)data;
-        assert(strlen(buffer) + 1 < _buffersize);
-        strncpy(params->tmp_buffer, buffer, _buffersize);
+        char loc[buffersize] = "";
+        rtosc_arg_val_t arg_vals_default[max_arg_vals];
+        rtosc_arg_val_t arg_vals_runtime[max_arg_vals];
+        char buffer_with_port[buffersize];
+        char cur_value_pretty[buffersize]; // "map " + current value
+        char strbuf[buffersize]; // temporary string buffer for pretty-printing
 
-        const char* def = get_default_value(buffer,
-                                            params->ports, params->runtime, p);
-        const char* cur = get_value_from_runtime(params->runtime,
+        params_t* params = (params_t*)data;
+        assert(strlen(port_buffer) + 1 < buffersize);
+        strncpy(buffer_with_port, port_buffer, buffersize);
+
+        strcpy(cur_value_pretty, "map ");
+
+        const char* portargs = strchr(p->name, ':');
+        if(!portargs)
+            portargs = p->name + strlen(p->name);
+
+        size_t nargs_default = get_default_value(port_buffer,
+                                                 portargs,
                                                  params->ports,
-                                                 params->tmp_buffer,
-                                                 params->buffersize,
-                                                 strlen(buffer));
-        if(strcmp(def, cur)) {
-            params->res += buffer;
-            params->res += " ";
-            params->res += cur;
-            params->res += "\n";
+                                                 params->runtime,
+                                                 p,
+                                                 max_arg_vals,
+                                                 arg_vals_default,
+                                                 strbuf,
+                                                 buffersize);
+        size_t nargs_runtime = get_value_from_runtime(params->runtime,
+                                                      params->ports,
+                                                      buffersize, loc,
+                                                      buffer_with_port,
+                                                      buffersize,
+                                                      max_arg_vals,
+                                                      arg_vals_runtime);
+
+        if(nargs_default == nargs_runtime)
+        {
+            canonicalize_arg_vals(arg_vals_default, nargs_default,
+                                  strchr(p->name, ':'), p->meta());
+            if(!rtosc_arg_vals_eq(arg_vals_default,
+                                  arg_vals_runtime,
+                                  nargs_default,
+                                  nargs_runtime,
+                                  NULL))
+            {
+                rtosc_print_arg_vals(arg_vals_runtime, nargs_runtime,
+                                     cur_value_pretty + 4,
+                                     buffersize - 4,
+                                     NULL, strlen(port_buffer) + 1);
+
+                // *try* to map the value according to the ports metadata
+                const char* map = p->meta()[cur_value_pretty];
+                map = map ? map : cur_value_pretty + 4;
+
+                params->res += port_buffer;
+                params->res += " ";
+                params->res += map;
+                params->res += "\n";
+            }
         }
     };
 
-    walk_ports(&ports, buffer, _buffersize, &params, on_reach_port);
+    walk_ports(&ports, port_buffer, buffersize, &params, on_reach_port);
 
     if(params.res.length()) // remove trailing newline
         params.res.resize(params.res.length()-1);
@@ -792,8 +983,9 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
 int rtosc::dispatch_printed_messages(const char* messages,
                                      const Ports& ports, void* runtime)
 {
-    constexpr std::size_t _buffersize = 1024;
-    char portname[_buffersize], message[_buffersize], strbuf[_buffersize];
+    constexpr std::size_t buffersize = 1024;
+    char portname[buffersize], message[buffersize], strbuf[buffersize],
+            loc[buffersize] = "";
     int msgs_read = 0;
     int rd, rd_total = 0;
     int nargs;
@@ -805,8 +997,8 @@ int rtosc::dispatch_printed_messages(const char* messages,
         {
             rtosc_arg_val_t arg_vals[nargs];
 
-            rd = rtosc_scan_message(messages, portname, _buffersize,
-                                    arg_vals, nargs, strbuf, _buffersize);
+            rd = rtosc_scan_message(messages, portname, buffersize,
+                                    arg_vals, nargs, strbuf, buffersize);
             rd_total += rd;
 
             rtosc_arg_t vals[nargs];
@@ -817,10 +1009,11 @@ int rtosc::dispatch_printed_messages(const char* messages,
             }
             argstr[nargs] = 0;
 
-            rtosc_amessage(message, _buffersize, portname, argstr, vals);
+            rtosc_amessage(message, buffersize, portname, argstr, vals);
 
             RtData d;
             d.obj = runtime;
+            d.loc = loc; // we're always dispatching at the base
             ports.dispatch(message, d, true);
 
             messages += rd;
@@ -834,6 +1027,9 @@ int rtosc::dispatch_printed_messages(const char* messages,
     return msgs_read;
 }
 
+/*
+ * Miscellaneous
+ */
 
 const Port *Ports::operator[](const char *name) const
 {
@@ -1181,6 +1377,21 @@ static int enum_max(Port::MetaContainer meta)
             max = max<atoi(m.title+4) ? atoi(m.title+4) : max;
 
     return max;
+}
+
+int rtosc::enum_key(Port::MetaContainer meta, const char* value)
+{
+    int result = std::numeric_limits<int>::min();
+
+    for(auto m:meta)
+    if(strstr(m.title, "map "))
+    if(!strcmp(m.value, value))
+    {
+        result = atoi(m.title+4);
+        break;
+    }
+
+    return result;
 }
 
 static ostream &add_options(ostream &o, Port::MetaContainer meta)

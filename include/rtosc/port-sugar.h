@@ -22,6 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <assert.h>
+
 #ifndef RTOSC_PORT_SUGAR
 #define RTOSC_PORT_SUGAR
 
@@ -140,7 +142,7 @@ struct rtosc_hack_decltype_t
 #define rToggle(name, ...) \
   {STRINGIFY(name) "::T:F",rProp(parameter) DOC(__VA_ARGS__), NULL, rToggleCb(name)}
 #define rOption(name, ...) \
-  {STRINGIFY(name) "::i:c",rProp(parameter) rProp(enumerated) DOC(__VA_ARGS__), NULL, rOptionCb(name)}
+  {STRINGIFY(name) "::i:c:S",rProp(parameter) rProp(enumerated) DOC(__VA_ARGS__), NULL, rOptionCb(name)}
 
 //Array operators
 #define rArrayF(name, length, ...) \
@@ -272,17 +274,29 @@ template<class T> constexpr T spice(T*t) {return *t;}
             rChangeCb \
         } rBOIL_END
 
-//TODO finish me (include string mapper action?)
 #define rOptionCb(name) rBOIL_BEGIN \
-        if(!strcmp("", args)) {\
-            data.reply(loc, "i", obj->name); \
-        } else { \
-            rTYPE(name) var = rtosc_argument(msg, 0).i; \
-            rLIMIT(var, atoi) \
-            rAPPLY(name, i) \
-            data.broadcast(loc, rtosc_argument_string(msg), obj->name);\
-            rChangeCb \
-        } rBOIL_END
+        { \
+            if(!strcmp("", args)) {\
+                data.reply(loc, "i", obj->name); \
+            } else if(!strcmp("s", args) || !strcmp("S", args)) { \
+                int var = enum_key(prop, rtosc_argument(msg, 0).s); \
+                /* make sure we have no out-of-bound options */ \
+                assert(!prop["min"] || \
+                       var >= (decltype(var))atoi(prop["min"])); \
+                assert(!prop["max"] || \
+                       var <= (decltype(var))atoi(prop["max"])); \
+                rAPPLY(name, i) \
+                data.broadcast(loc, "i", obj->name); \
+                rChangeCb \
+            } else {\
+                rTYPE(name) var = rtosc_argument(msg, 0).i; \
+                rLIMIT(var, atoi) \
+                rAPPLY(name, i) \
+                data.broadcast(loc, rtosc_argument_string(msg), obj->name);\
+                rChangeCb \
+            } \
+        } \
+        rBOIL_END
 
 #define rToggleCb(name) rBOIL_BEGIN \
         if(!strcmp("", args)) {\

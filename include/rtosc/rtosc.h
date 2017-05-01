@@ -128,11 +128,45 @@ typedef struct {
     rtosc_arg_t val;
 } rtosc_arg_val_t;
 
-//! va_list container, required for passing va_list as pointers to functions
-typedef struct { va_list a; } va_list_t;
+typedef struct
+{
+    //!< tolerance to when two floats or doubles are equal
+    double float_tolerance;
+} rtosc_cmp_options;
 
 /**
- * Pack arguments into pre-allocated rtosc_arg_t array
+ * @brief Check if two arrays of rtosc_arg_val_t are equal
+ *
+ * @param opt Comparison options or NULL for default options
+ * @return One if they are equal, zero if not
+ */
+int rtosc_arg_vals_eq(rtosc_arg_val_t* lhs, rtosc_arg_val_t* rhs,
+                      size_t lsize, size_t rsize,
+                      const rtosc_cmp_options* opt);
+
+/**
+ * @brief Compare two arrays of rtosc_arg_val_t.
+ *
+ * Whether an argument value is less or greater than another is computed
+ * - using memcmp for blobs
+ * - using strcmp for strings and identifiers
+ * - using numerical comparison for all other types.
+ * As an exception, the timestamp "immediately" is defined to be smaller than
+ * every other timestamp.
+ *
+ * @param opt Comparison options or NULL for default options
+ * @return An integer less than, equal to, or greater than zero if lhs is found,
+ *         respectively, to be less than, to match, or be greater than rhs.
+ */
+int rtosc_arg_vals_cmp(rtosc_arg_val_t* lhs, rtosc_arg_val_t* rhs,
+                       size_t lsize, size_t rsize,
+                       const rtosc_cmp_options* opt);
+
+//! va_list container, required for passing va_list as pointers to functions
+typedef struct { va_list a; } rtosc_va_list_t;
+
+/**
+ * @brief Pack arguments into pre-allocated rtosc_arg_t array
  *
  * @param args Pre-allocated array; size must be greater or equal @p nargs
  * @param nargs Size of elements to pack
@@ -140,10 +174,10 @@ typedef struct { va_list a; } va_list_t;
  * @param ap The parameters that shall be packed
  */
 void rtosc_v2args(rtosc_arg_t* args, size_t nargs,
-                  const char* arg_str, va_list_t* ap);
+                  const char* arg_str, rtosc_va_list_t* ap);
 
 /**
- * Pack parameters into pre-allocated rtosc_arg_val-t array
+ * @brief Pack parameters into pre-allocated rtosc_arg_val-t array
  *
  * @see rtosc_v2args
  */
@@ -151,7 +185,7 @@ void rtosc_v2argvals(rtosc_arg_val_t* args, size_t nargs,
                      const char* arg_str, va_list ap);
 
 /**
- * Pack parameters into pre-allocated rtosc_arg_val-t array
+ * @brief Pack parameters into pre-allocated rtosc_arg_val-t array
  *
  * @see rtosc_v2args
  */
@@ -167,7 +201,7 @@ typedef struct
 } rtosc_print_options;
 
 /**
- * Pretty-print rtosct_arg_val_t structure into buffer
+ * @brief Pretty-print rtosct_arg_val_t structure into buffer
  *
  * @param arg Pointer to the structure that shall be printed
  * @param buffer The buffer to write to
@@ -182,7 +216,7 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t* arg, char* buffer,
                            int* cols_used);
 
 /**
- * Pretty-print rtosct_arg_val_t array into buffer
+ * @brief Pretty-print rtosct_arg_val_t array into buffer
  *
  * @see rtosc_print_message
  */
@@ -192,7 +226,7 @@ size_t rtosc_print_arg_vals(const rtosc_arg_val_t *args, size_t n,
                             int cols_used);
 
 /**
- * Pretty-print OSC message into string buffer
+ * @brief Pretty-print OSC message into string buffer
  *
  * A newline will be appended.
  *
@@ -212,7 +246,7 @@ size_t rtosc_print_message(const char* address,
                            int cols_used);
 
 /**
- * Skip characters from a string until one argument value
+ * @brief Skip characters from a string until one argument value
  *   would have been scanned
  * @param src The string
  * @return The first character after that argument value
@@ -220,7 +254,7 @@ size_t rtosc_print_message(const char* address,
 const char* rtosc_skip_next_printed_arg(const char* src);
 
 /**
- * Count arguments that would be scanned and do a complete syntax check
+ * @brief Count arguments that would be scanned and do a complete syntax check
  *
  * This functions should be run before rtosc_scan_arg_vals() in order
  * to know the number of argument values. Also, rtosc_scan_arg_vals() does
@@ -233,8 +267,8 @@ const char* rtosc_skip_next_printed_arg(const char* src);
 int rtosc_count_printed_arg_vals(const char* src);
 
 /**
- * Count arguments of a message that would be scanned and
- * do a complete syntax check
+ * @brief Count arguments of a message that would be scanned and
+ *   do a complete syntax check
  *
  * @param msg The message to scan from
  * @return 0 if the address could not be scanned,
@@ -243,7 +277,7 @@ int rtosc_count_printed_arg_vals(const char* src);
 int rtosc_count_printed_arg_vals_of_msg(const char* msg);
 
 /**
- * Scans one argument value from a string
+ * @brief Scans one argument value from a string
  *
  * This function does no complete syntaxcheck. Call
  * rtosc_count_printed_arg_vals() before.
@@ -261,7 +295,8 @@ size_t rtosc_scan_arg_val(const char* src,
                           char* buffer_for_strings, size_t* bufsize);
 
 /**
- * Scan a fixed number of argument values from a string.
+ * @brief Scan a fixed number of argument values from a string.
+ *
  * This function does no complete syntaxcheck. Call
  * rtosc_count_printed_arg_vals() before. This will also give you the @p n
  * parameter.
@@ -273,7 +308,8 @@ size_t rtosc_scan_arg_vals(const char* src,
                            char* buffer_for_strings, size_t bufsize);
 
 /**
- * Scan an OSC message from a string.
+ * @brief Scan an OSC message from a string.
+ *
  * This function does no complete syntaxcheck. Call
  * rtosc_count_printed_arg_vals() before. This will also give you the @p n
  * parameter. Preceding and trailing whitespace will be consumed.

@@ -89,8 +89,8 @@ void scan_and_print_single()
           "a timestamp with second fractions", __LINE__);
     check("2016-11-16 19:44", NULL, "a timestamp with 0 seconds", __LINE__);
     check("2016-11-16", NULL, "a timestamp without clocktime", __LINE__);
-    check("immediatelly", NULL, "the timestamp \"immediatelly\"", __LINE__);
-    check_alt("now", NULL, "the timestamp \"now\"", __LINE__, "immediatelly");
+    check("immediately", NULL, "the timestamp \"immediately\"", __LINE__);
+    check_alt("now", NULL, "the timestamp \"now\"", __LINE__, "immediately");
 
     // must be printed lossless, but second fractions are zero => no parantheses
     check_alt("2016-11-16 00:00:00.123 (...+0x0p-32s)", NULL,
@@ -168,6 +168,15 @@ void scan_and_print_single()
               "a string with all escape sequences", __LINE__,
               "\"\\\"\\a\\b\\t\\n\"\\\n"
               "    \"\\v\\f\\r\\\\\"");
+
+    /*
+        identifiers aka symbols
+    */
+    check("an_identifier_42", NULL, "a simple identifier", __LINE__);
+    check("_", NULL, "the identifier \"_\"", __LINE__);
+    check("truely falseeee infinite nilpferd immediatelyly nowhere MIDINOTE",
+          NULL,
+          "reserved keywords with letters appended are identifiers", __LINE__);
 
     /*
         blobs
@@ -267,10 +276,8 @@ void scan_invalid()
     /*
         simple types
     */
-    BAD("niL");
-    fail_at_arg("infinite", 2, __LINE__);
-    BAD("tru");
-    BAD("flase");
+    // not testable: mistyped keywords like "tru" are considered
+    // valid identifiers
 
     /*
         colors
@@ -284,10 +291,6 @@ void scan_invalid()
     */
     BAD("2016:11:16");
     BAD("16.11.2016");
-    BAD("imediatelly");
-    BAD("iediatelly");
-    BAD("nw"); // now?
-    BAD("not"); // now?
 #if 0
     BAD("2016-11-16 00"); // correct: date + int
 #endif
@@ -341,7 +344,8 @@ void scan_invalid()
     /*
         MIDI
     */
-    BAD("MI [ 0xff 0xff 0xff 0xff ]");
+    // valid identifier + invalid blob
+    fail_at_arg("MI [ 0xff 0xff 0xff 0xff ]", 2, __LINE__);
     BAD("MIDI x");
     BAD("MIDI 0xff 0xff 0xff 0xff ]");
     fail_at_arg("2 MIDI [ 0xff ]", 2, __LINE__);
@@ -355,6 +359,11 @@ void scan_invalid()
     BAD("\"\\\"no endquote 2");
     BAD("\\u");
     BAD("\\\\\\"); // 3 backslashes
+
+    /*
+        identifier aka symbols
+    */
+    fail_at_arg("identifier_with-minus-sign", 2, __LINE__);
 
     /*
         blobs
