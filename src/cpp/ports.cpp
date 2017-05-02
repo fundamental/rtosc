@@ -1,5 +1,6 @@
 #include "../../include/rtosc/ports.h"
 #include "../../include/rtosc/rtosc.h"
+#include "../../include/rtosc/pretty-format.h"
 
 #include <ostream>
 #include <cassert>
@@ -687,7 +688,7 @@ class Capture : public RtData
 {
     size_t max_args;
     rtosc_arg_val_t* arg_vals;
-    size_t nargs = 0;
+    size_t nargs;
 
     void reply(const char *) override { assert(false); }
     void reply(const char *, const char *args, ...) override
@@ -706,7 +707,7 @@ public:
     //! Return the number of argument values stored
     size_t size() const { return nargs; }
     Capture(std::size_t max_args, rtosc_arg_val_t* arg_vals) :
-        max_args(max_args), arg_vals(arg_vals) {}
+        max_args(max_args), arg_vals(arg_vals), nargs(0) {}
 };
 
 /**
