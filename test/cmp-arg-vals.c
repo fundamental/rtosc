@@ -234,6 +234,14 @@ void multiple_args()
     cmp_gt(l, r, 2, 2, NULL, "multiple args 3", "multiple args 4", __LINE__);
 }
 
+void different_sizes()
+{
+    l[0].type = l[1].type = 'i';
+    l[0].val.i = l[1].val.i = 42;
+
+    cmp_gt(l, l, 2, 1, NULL, "size-2-array", "size-1-array", __LINE__);
+}
+
 int main()
 {
     ints();
@@ -246,6 +254,7 @@ int main()
     blobs();
     different_types();
     multiple_args();
+    different_sizes();
 
     return test_summary();
 }

@@ -320,7 +320,8 @@ int rtosc_arg_vals_cmp(rtosc_arg_val_t* lhs, rtosc_arg_val_t* rhs,
         opt = default_cmp_options;
 
     size_t rval = 0;
-    for(size_t i = 0; i < lsize && !rval; ++i, ++lhs, ++rhs)
+    size_t min = lsize > rsize ? rsize : lsize;
+    for(size_t i = 0; i < min && !rval; ++i, ++lhs, ++rhs)
     {
         if(lhs->type == rhs->type)
         switch(lhs->type)
