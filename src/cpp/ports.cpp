@@ -268,6 +268,7 @@ class Port_Matcher
                 return true;
         }
 };
+
 }
 
 
@@ -981,51 +982,193 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
     return params.res;
 }
 
+void rtosc::savefile_dispatcher_t::operator()(const char* msg)
+{
+    *loc = 0;
+    RtData d;
+    d.obj = runtime;
+    d.loc = loc; // we're always dispatching at the base
+    ports->dispatch(msg, d, true);
+}
+
+int savefile_dispatcher_t::default_response(size_t nargs,
+                                            bool first_round,
+                                            savefile_dispatcher_t::dependency_t
+                                            dependency)
+{
+    // default implementation:
+    // no dependencies  => round 0,
+    // has dependencies => round 1,
+    // not specified    => both rounds
+    return (dependency == not_specified
+            || !(dependency ^ first_round))
+           ? nargs // argument number is not changed
+           : (int)discard;
+}
+
+int savefile_dispatcher_t::on_dispatch(size_t, char *,
+                                       size_t, size_t nargs,
+                                       rtosc_arg_val_t *,
+                                       bool round2,
+                                       dependency_t dependency)
+{
+    return default_response(nargs, round2, dependency);
+}
+
 int rtosc::dispatch_printed_messages(const char* messages,
-                                     const Ports& ports, void* runtime)
+                                     const Ports& ports, void* runtime,
+                                     savefile_dispatcher_t* dispatcher)
 {
     constexpr std::size_t buffersize = 1024;
-    char portname[buffersize], message[buffersize], strbuf[buffersize],
-            loc[buffersize] = "";
-    int msgs_read = 0;
+    char portname[buffersize], message[buffersize], strbuf[buffersize];
     int rd, rd_total = 0;
     int nargs;
+    int msgs_read = 0;
 
-    do
+    savefile_dispatcher_t dummy_dispatcher;
+    if(!dispatcher)
+        dispatcher = &dummy_dispatcher;
+    dispatcher->ports = &ports;
+    dispatcher->runtime = runtime;
+
+    // scan all messages twice:
+    //  * in the second round, only dispatch those with ports that depend on
+    //    other ports
+    //  * in the first round, only dispatch all others
+    for(int round = 0; round < 2 && msgs_read >= 0; ++round)
     {
-        nargs = rtosc_count_printed_arg_vals_of_msg(messages);
-        if(nargs > 0)
+        msgs_read = 0;
+        rd_total = 0;
+        const char* msg_ptr = messages;
+        do
         {
-            rtosc_arg_val_t arg_vals[nargs];
+            nargs = rtosc_count_printed_arg_vals_of_msg(msg_ptr);
+            if(nargs >= 0)
+            {
+                // 16 is usually too much, but it allows the user to add
+                // arguments if necessary
+                size_t maxargs = 16;
+                rtosc_arg_val_t arg_vals[maxargs];
+                rd = rtosc_scan_message(msg_ptr, portname, buffersize,
+                                        arg_vals, nargs, strbuf, buffersize);
+                rd_total += rd;
 
-            rd = rtosc_scan_message(messages, portname, buffersize,
-                                    arg_vals, nargs, strbuf, buffersize);
-            rd_total += rd;
+                const Port* port = ports.apropos(portname);
+                savefile_dispatcher_t::dependency_t dependency =
+                    (savefile_dispatcher_t::dependency_t)
+                    (port
+                    ? !!port->meta()["default depends"]
+                    : (int)savefile_dispatcher_t::not_specified);
 
-            rtosc_arg_t vals[nargs];
-            char argstr[nargs+1];
-            for(int i = 0; i < nargs; ++i) {
-                vals[i] = arg_vals[i].val;
-                argstr[i] = arg_vals[i].type;
+                // let the user modify the message and the args
+                // the argument number may have changed, or the user
+                // wants to discard the message or abort the savefile loading
+                nargs = dispatcher->on_dispatch(buffersize, portname,
+                                                maxargs, nargs, arg_vals,
+                                                round, dependency);
+
+                if(nargs == savefile_dispatcher_t::abort)
+                    msgs_read = -rd_total-1; // => causes abort
+                else
+                {
+                    if(nargs != savefile_dispatcher_t::discard)
+                    {
+                        rtosc_arg_t vals[nargs];
+                        char argstr[nargs+1];
+                        for(int i = 0; i < nargs; ++i) {
+                            vals[i] = arg_vals[i].val;
+                            argstr[i] = arg_vals[i].type;
+                        }
+                        argstr[nargs] = 0;
+
+                        rtosc_amessage(message, buffersize, portname,
+                                       argstr, vals);
+
+                        (*dispatcher)(message);
+                    }
+                }
+
+                msg_ptr += rd;
+                ++msgs_read;
             }
-            argstr[nargs] = 0;
-
-            rtosc_amessage(message, buffersize, portname, argstr, vals);
-
-            RtData d;
-            d.obj = runtime;
-            d.loc = loc; // we're always dispatching at the base
-            ports.dispatch(message, d, true);
-
-            messages += rd;
-            ++msgs_read;
-        }
-        else
-            // overwrite meaning of msgs_read in order to
-            // inform the user where the issue occured
-            msgs_read = -rd-1;
-    } while(*messages && (msgs_read > 0));
+            else
+                // overwrite meaning of msgs_read in order to
+                // inform the user where the read error occurred
+                msgs_read = -rd_total-1;
+        } while(*msg_ptr && (msgs_read >= 0));
+    }
     return msgs_read;
+}
+
+std::string rtosc::save_to_file(const Ports &ports, void *runtime,
+                                const char *appname, rtosc_version appver)
+{
+    std::string res;
+    char rtosc_vbuf[12], app_vbuf[12];
+
+    {
+        rtosc_version rtoscver = rtosc_current_version();
+        rtosc_version_print_to_12byte_str(&rtoscver, rtosc_vbuf);
+        rtosc_version_print_to_12byte_str(&appver, app_vbuf);
+    }
+
+    res += "% RT OSC v"; res += rtosc_vbuf; res += " savefile\n"
+           "% "; res += appname; res += " v"; res += app_vbuf; res += "\n";
+    res += get_changed_values(ports, runtime);
+
+    return res;
+}
+
+int rtosc::load_from_file(const char* file_content,
+                          const Ports& ports, void* runtime,
+                          const char* appname,
+                          rtosc_version appver,
+                          savefile_dispatcher_t* dispatcher)
+{
+    char appbuf[128];
+    int bytes_read = 0;
+
+    if(dispatcher)
+    {
+        dispatcher->app_curver = appver;
+        dispatcher->rtosc_curver = rtosc_current_version();
+    }
+
+    unsigned vma, vmi, vre;
+    int n;
+
+    sscanf(file_content,
+           "%% RT OSC v%u.%u.%u savefile%n ", &vma, &vmi, &vre, &n);
+    if(n <= 0 || vma > 255 || vmi > 255 || vre > 255)
+        return -bytes_read-1;
+    if(dispatcher)
+    {
+        dispatcher->rtosc_filever.major = vma;
+        dispatcher->rtosc_filever.minor = vmi;
+        dispatcher->rtosc_filever.revision = vre;
+    }
+    file_content += n;
+    bytes_read += n;
+    n = 0;
+
+    sscanf(file_content,
+           "%% %128s v%u.%u.%u%n ", appbuf, &vma, &vmi, &vre, &n);
+    if(n <= 0 || strcmp(appbuf, appname) || vma > 255 || vmi > 255 || vre > 255)
+        return -bytes_read-1;
+
+    if(dispatcher)
+    {
+        dispatcher->app_filever.major = vma;
+        dispatcher->app_filever.minor = vmi;
+        dispatcher->app_filever.revision = vre;
+    }
+    file_content += n;
+    bytes_read += n;
+    n = 0;
+
+    int rval = dispatch_printed_messages(file_content,
+                                         ports, runtime, dispatcher);
+    return (rval < 0) ? (rval-bytes_read) : rval;
 }
 
 /*

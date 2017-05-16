@@ -687,13 +687,6 @@ int rtosc_count_printed_arg_vals(const char* src)
     while (*src == '%')
         skip_fmt(&src, "%*[^\n] %n");
 
-    if(*src == '/') // skip address?
-    {
-        for(; *src && !isspace(*src);++src);
-        skip_while(&src, isspace);
-        while (*src == '%')
-            skip_fmt(&src, "%*[^\n] %n");
-    }
     for(; src && *src && *src != '/'; ++num)
     {
         src = rtosc_skip_next_printed_arg(src);
@@ -721,7 +714,7 @@ int rtosc_count_printed_arg_vals_of_msg(const char* msg)
         return rtosc_count_printed_arg_vals(msg);
     }
     else
-        return 0;
+        return -1;
 }
 
 //! Tries to parse an identifier at @p src and stores it in @p arg
@@ -1045,7 +1038,7 @@ size_t rtosc_scan_arg_vals(const char* src,
 }
 
 size_t rtosc_scan_message(const char* src,
-                          char* msgbuf, size_t msgsize,
+                          char* address, size_t adrsize,
                           rtosc_arg_val_t *args, size_t n,
                           char* buffer_for_strings, size_t bufsize)
 {
@@ -1055,10 +1048,10 @@ size_t rtosc_scan_message(const char* src,
         rd += skip_fmt(&src, "%*[^\n] %n");
 
     assert(*src == '/');
-    for(; *src && !isspace(*src) && rd < msgsize; ++rd)
-        *msgbuf++ = *src++;
-    assert(rd < msgsize); // otherwise, the address was too long
-    *msgbuf = 0;
+    for(; *src && !isspace(*src) && rd < adrsize; ++rd)
+        *address++ = *src++;
+    assert(rd < adrsize); // otherwise, the address was too long
+    *address = 0;
 
     for(;*src && isspace(*src); ++src) ++rd;
 

@@ -15,6 +15,8 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     include(GNUInstallDirs)
 endif()
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version.c.in
+    ${CMAKE_CURRENT_BINARY_DIR}/version.c)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(CXX11_FLAG "-std=c++11")
@@ -46,7 +48,8 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CPP_FLAGS} ${CXX11_FLAG}")
 
-add_library(rtosc STATIC src/rtosc.c src/dispatch.c src/pretty-format.c)
+add_library(rtosc STATIC src/rtosc.c src/dispatch.c src/pretty-format.c
+            ${CMAKE_CURRENT_BINARY_DIR}/version.c)
 add_library(rtosc-cpp STATIC src/cpp/ports.cpp src/cpp/miditable.cpp
     src/cpp/midimapper.cpp
     src/cpp/thread-link.cpp
@@ -126,9 +129,10 @@ macro(maketestcpp fname)
     target_link_libraries(${fname} rtosc-cpp rtosc)
 endmacro(maketestcpp)
 
+maketest(version)
 maketest(osc-spec)
 maketest(cmp-arg-vals)
-maketest(pretty-printer)
+maketest(pretty-format)
 maketest(simple-messages)
 maketest(null-messages)
 maketest(bundles)

@@ -114,7 +114,7 @@ int rtosc_count_printed_arg_vals(const char* src);
  *   do a complete syntax check
  *
  * @param msg The message to scan from
- * @return 0 if the address could not be scanned,
+ * @return -1 if the address could not be scanned,
  *   otherwise @see rtosc_count_printed_arg_vals
  */
 int rtosc_count_printed_arg_vals_of_msg(const char* msg);
@@ -158,7 +158,9 @@ size_t rtosc_scan_arg_vals(const char* src,
  * parameter. Preceding and trailing whitespace will be consumed.
  *
  * @param src The string
- * @param arg Pointer to an array of argument values; the output will be
+ * @param address A buffer where the port address will be written
+ * @param adrsize Size of buffer @p address
+ * @param args Pointer to an array of argument values; the output will be
  *    written here
  * @param n The amount of argument values to scan
  * @param buffer_for_strings A buffer with enough space for scanned
@@ -167,7 +169,7 @@ size_t rtosc_scan_arg_vals(const char* src,
  * @return The number of bytes scanned
  */
 size_t rtosc_scan_message(const char* src,
-                          char* msgbuf, size_t msgsize,
+                          char* address, size_t adrsize,
                           rtosc_arg_val_t *args, size_t n,
                           char* buffer_for_strings, size_t bufsize);
 

@@ -240,6 +240,10 @@ void fail_at_arg(const char* arg_val_str, int exp_fail, int line)
 
 void messages()
 {
+    int num = rtosc_count_printed_arg_vals_of_msg("not beginning with a '/'");
+    assert_int_eq(-1, num, "return -1 if the message does not start"
+                           "with a slash", __LINE__);
+
     int strbuflen = 256;
     char strbuf[strbuflen];
     int msgbuflen = 256;
@@ -247,7 +251,7 @@ void messages()
     const char* input = "%this is a savefile\n"
                         "/noteOn 0 0 0 % a noteOn message";
 
-    int num = rtosc_count_printed_arg_vals_of_msg(input);
+    num = rtosc_count_printed_arg_vals_of_msg(input);
     assert_int_eq(3, num, "read a /noteOn message", __LINE__);
     rtosc_arg_val_t scanned[num];
     size_t rd = rtosc_scan_message(input, msgbuf, msgbuflen,
@@ -268,6 +272,14 @@ void messages()
     assert_int_eq(strlen(exp), written,
                   "print a message and return written number of bytes",
                   __LINE__);
+
+    // scan message that has no parameters
+    // => a following argument is not considered as an argument of
+    //    the first message
+    rd = rtosc_scan_message("/first_param\n"
+                            "/second_param 123", msgbuf, msgbuflen,
+                            scanned, 0, strbuf, strbuflen);
+    assert_int_eq(13, rd, "scan message without arguments", __LINE__);
 }
 
 void scan_invalid()
