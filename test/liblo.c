@@ -15,7 +15,7 @@ char buffer4[2048];
 char buffer5[2048];
 
 #define DO_PERF 1
-#define PERF_TRIALS 200000000
+#define PERF_TRIALS 200000
 void speed_liblo_write(void)
 {
     char buffer6[2048];
