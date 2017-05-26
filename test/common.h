@@ -193,8 +193,11 @@ int assert_hex_eq(const char *a, const char *b, size_t size_a, size_t size_b,
 
 int assert_flt_eq(float a, float b, const char *testcase, int line)
 {
-    return assert_hex_eq((char*)&a, (char*)&b, sizeof(float), sizeof(float),
+    int ret = assert_hex_eq((char*)&a, (char*)&b, sizeof(float), sizeof(float),
             testcase, line);
+    if(ret)
+        printf("#expected=%f actual %f\n", a, b);
+    return ret;
 }
 
 int test_summary(void)

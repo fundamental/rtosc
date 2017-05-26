@@ -164,6 +164,8 @@ endif()
 
 maketestcpp(path-collapse)
 
+maketestcpp(test-automation)
+
 # Documentation
 find_package(Doxygen)
 if(DOXYGEN_FOUND)

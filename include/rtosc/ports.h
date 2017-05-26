@@ -92,6 +92,7 @@ struct Port {
             bool operator==(MetaIterator a) {return title == a.title;}
             bool operator!=(MetaIterator a) {return title != a.title;}
             MetaIterator& operator++(void);
+            operator bool() const;
 
             const char *title;
             const char *value;

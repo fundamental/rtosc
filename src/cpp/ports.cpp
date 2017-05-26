@@ -122,6 +122,11 @@ Port::MetaIterator& Port::MetaIterator::operator++(void)
     return *this;
 }
 
+Port::MetaIterator::operator bool(void) const
+{
+    return title;
+}
+
 Port::MetaContainer::MetaContainer(const char *str_)
 :str_ptr(str_)
 {}
