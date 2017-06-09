@@ -129,13 +129,19 @@ void AutomationMgr::createBinding(int slot, const char *path, bool start_midi_le
         }
     }
 
-    slots[slot].automations[ind].used = true;
-    slots[slot].automations[ind].param_min = atof(meta["min"]);
-    slots[slot].automations[ind].param_max = atof(meta["max"]);
-    slots[slot].automations[ind].param_type = 'i';
-    slots[slot].automations[ind].param_path = path;
+    auto &au = slots[slot].automations[ind];
 
-    slots[slot].automations[ind].map.upoints = 4;
+    au.used = true;
+    au.param_min = atof(meta["min"]);
+    au.param_max = atof(meta["max"]);
+    au.param_type = 'i';
+    au.param_path = path;
+
+    au.map.upoints = 2;
+    au.map.control_points[0] = 0;
+    au.map.control_points[1] = au.param_min;
+    au.map.control_points[2] = 1;
+    au.map.control_points[3] = au.param_max;
 
     if(start_midi_learn)
         slots[slot].learning = true;
@@ -150,17 +156,28 @@ void AutomationMgr::setSlot(int slot_id, float value)
 
 void AutomationMgr::setSlotSub(int slot_id, int par, float value)
 {
-    if(slots[slot_id].automations[par].used == false)
+    auto &au = slots[slot_id].automations[par];
+    if(au.used == false)
         return;
-    const char *path = slots[slot_id].automations[par].param_path;
-    float mn = slots[slot_id].automations[par].param_min;
-    float mx = slots[slot_id].automations[par].param_max;
+    const char *path = au.param_path;
+    float mn = au.param_min;
+    float mx = au.param_max;
 
-    char type = slots[slot_id].automations[par].param_type;
+    float a  = au.map.control_points[1];
+    float b  = au.map.control_points[3];
+
+    char type = au.param_type;
 
     char msg[128] = {0};
     if(type == 'i') {
-        rtosc_message(msg, 128, path, "f", value*(mx-mn) + mn);
+        //printf("[%f..%f] rather than [%f..%f]\n", b, a, mx, mn);
+        float v = value*(b-a) + a;
+        if(v > mx)
+            v = mx;
+        else if(v < mn)
+            v = mn;
+
+        rtosc_message(msg, 128, path, "f", v);
     }
     RtData d;
     char loc[256];
@@ -195,7 +212,14 @@ void AutomationMgr::set_instance(void *v)
     this->instance = v;
 }
 
-void AutomationMgr::simpleSlope(int slot, int au, float slope, float offset)
+void AutomationMgr::simpleSlope(int slot_id, int par, float slope, float offset)
 {
+    auto &map = slots[slot_id].automations[par].map;
+    map.upoints = 2;
+    map.control_points[0] = 0;
+    map.control_points[1] = -(slope/2)+offset;
+    map.control_points[2] =  1;
+    map.control_points[3] =  slope/2+offset;
+
 }
 };

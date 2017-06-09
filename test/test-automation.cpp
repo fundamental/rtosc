@@ -14,6 +14,11 @@ rtosc::Ports p = {
     rParamF(bar, rLinear(0, 100.2), "no doc"),
 };
 
+void suite(const char *s)
+{ 
+    printf("\n\n#SUITE: %s\n", s);
+}
+
 
 //rtosc::MidiMapperStorage *storage = NULL;
 //
@@ -101,6 +106,7 @@ void test_relearn(void)
 
 void test_basic_learn(void)
 {
+    suite("test_basic_learn");
     rtosc::AutomationMgr mgr(4, 2, 16);
     Dummy d = {0,0};
     mgr.set_ports(p);
@@ -116,7 +122,7 @@ void test_basic_learn(void)
 
 void test_slot_learn(void)
 {
-    printf("#\n#test_slot_learn\n");
+    suite("test_slot_learn");
     rtosc::AutomationMgr mgr(4, 2, 16);
     Dummy d = {0,0};
     mgr.set_ports(p);
@@ -139,7 +145,7 @@ void test_slot_learn(void)
 
 void test_midi_learn(void)
 {
-    printf("#\n#test_midi_learn()\n");
+    suite("test_midi_learn");
     rtosc::AutomationMgr mgr(4, 2, 16);
     Dummy d = {0,0};
     mgr.set_ports(p);
@@ -163,7 +169,7 @@ void test_midi_learn(void)
 
 void test_macro_learn(void)
 {
-    printf("#\n#test_macro_learn\n");
+    suite("test_macro_learn");
     rtosc::AutomationMgr mgr(4, 2, 16);
     Dummy d = {0,0};
     mgr.set_ports(p);
@@ -186,26 +192,45 @@ void test_macro_learn(void)
 
 void test_curve_lerp(void)
 {
-    printf("#\n#test_curve_lerp\n");
+    suite("test_curve_lerp");
     rtosc::AutomationMgr mgr(4, 2, 16);
     Dummy d = {0,0};
     mgr.set_ports(p);
     mgr.set_instance(&d);
     mgr.createBinding(0, "/foo", true);
     assert_str_eq("/foo", mgr.slots[0].automations[0].param_path, "Parameter is learned", __LINE__);
-    assert_int_eq(4, mgr.slots[0].automations[0].map.upoints, "Map is ready", __LINE__);
-    printf("#Setting up low  (+) slope\n");
-    mgr.simpleSlope(0, 0, 80.0, 0.1);
-    assert_true(false, "TODO", __LINE__);
-    printf("#Setting up high (+) slope\n");
-    mgr.simpleSlope(0, 0, 2.0, -0.5);
-    assert_true(false, "TODO", __LINE__);
-    printf("#Setting up low  (-) slope\n");
-    assert_true(false, "TODO", __LINE__);
-    mgr.simpleSlope(0, 0, -2.5, -0.1);
-    printf("#Setting up high (-) slope\n");
-    assert_true(false, "TODO", __LINE__);
-    mgr.simpleSlope(0, 0, -200.5, +1.1);
+    assert_int_eq(2, mgr.slots[0].automations[0].map.upoints, "Map is ready", __LINE__);
+
+
+    printf("\n#Setting up high (+) slope\n");
+    mgr.simpleSlope(0, 0, 80.0, 0.25);
+    assert_flt_eq(0.0, d.foo,  "Setup does nothing", __LINE__);
+    mgr.setSlot(0, 0.25);
+    assert_flt_eq(-1, d.foo, "Minimum is correct", __LINE__);
+    mgr.setSlot(0, 0.75);
+    assert_flt_eq(10, d.foo, "Maximum is correct", __LINE__);
+
+
+    printf("\n#Setting up low  (+) slope\n");
+    mgr.simpleSlope(0, 0, 2.0, +3);
+    mgr.setSlot(0, 0);
+    assert_flt_eq(2.0, d.foo, "Minimum is correct", __LINE__);
+    mgr.setSlot(0, 1.0);
+    assert_flt_eq(4.0, d.foo, "Maximum is correct", __LINE__);
+
+    printf("\n#Setting up low  (-) slope\n");
+    mgr.simpleSlope(0, 0, -2.0, +3);
+    mgr.setSlot(0, 0);
+    assert_flt_eq(4.0, d.foo, "Minimum is correct", __LINE__);
+    mgr.setSlot(0, 1.0);
+    assert_flt_eq(2.0, d.foo, "Maximum is correct", __LINE__);
+
+    printf("\n#Setting up high (-) slope\n");
+    mgr.simpleSlope(0, 0, -80.0, 0.25);
+    mgr.setSlot(0, 0.25);
+    assert_flt_eq(10, d.foo, "Maximum is correct", __LINE__);
+    mgr.setSlot(0, 0.75);
+    assert_flt_eq(-1, d.foo, "Minimum is correct", __LINE__);
 }
 
 void test_curve_piecewise(void)
@@ -220,6 +245,6 @@ int main()
     test_slot_learn();
     test_midi_learn();
     test_macro_learn();
-    //test_curve_lerp();
+    test_curve_lerp();
     return test_summary();
 }
