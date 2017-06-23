@@ -54,6 +54,10 @@ struct RtData
     const Port *port;
     const char *message;
 
+    int idx[16];
+    void push_index(int ind);
+    void pop_index(void);
+
     virtual void replyArray(const char *path, const char *args,
             rtosc_arg_t *vals);
     virtual void reply(const char *path, const char *args, ...);

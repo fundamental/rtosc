@@ -30,7 +30,7 @@ struct Automation
 
     //Cached infomation
     float       param_base_value;
-    const char *param_path;
+    char        param_path[128];
     char        param_type;
     float       param_min;
     float       param_max;
@@ -39,19 +39,26 @@ struct Automation
     AutomationMapping map;
 };
 
+#define RTOSC_AUTOMATION_SLOT_NAME_LEN
 struct AutomationSlot
 {
     //If automation slot has active automations or not
     bool  active;
 
-    //True if a new MIDI binding is being learned
-    bool  learning;
+    //If automation slot has active automations or not
+    bool  used;
+
+    //Non-negative if a new MIDI binding is being learned
+    int  learning;
 
     //-1 or a valid MIDI CC + MIDI Channel
     int   midi_cc;
 
-    //Current state supplied by MIDI value or host 
+    //Current state supplied by MIDI value or host
     float current_state;
+
+    //Current name
+    char name[128];
 
     //Collection of automations
     Automation *automations;
@@ -78,6 +85,9 @@ class AutomationMgr
         void setSlotSub(int slot_id, int sub, float value);
         float getSlot(int slot_id);
 
+        void setName(int slot_id, const char *msg);
+        const char * getName(int slot_id);
+
         bool handleMidi(int channel, int cc, int val);
 
         void set_ports(const class Ports &p);
@@ -86,11 +96,19 @@ class AutomationMgr
 
         void simpleSlope(int slot, int au, float slope, float offset);
 
+        int free_slot(void) const;
 
         AutomationSlot *slots;
+        int nslots;
         int per_slot;
+        int active_slot;
+        int learn_queue_len;
         struct AutomationMgrImpl *impl;
         const rtosc::Ports *p;
         void *instance;
+
+        std::function<void(const char *)> backend;
+
+        int damaged;
 };
 };

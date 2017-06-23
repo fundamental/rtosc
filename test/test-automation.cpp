@@ -112,6 +112,12 @@ void test_basic_learn(void)
     mgr.set_ports(p);
     mgr.set_instance(&d);
     mgr.createBinding(0, "/foo", false);
+    mgr.backend = [&d](const char *msg) {
+        rtosc::RtData rd;
+        char loc[128];
+        rd.loc = loc;
+        rd.loc_size = sizeof(loc);
+        rd.obj = &d; p.dispatch(msg, rd, true);};
     assert_str_eq("/foo", mgr.slots[0].automations[0].param_path, "Parameter is learned", __LINE__);
     assert_flt_eq(0, d.foo, "Learning does not change values", __LINE__);
     mgr.setSlot(0, 1);
@@ -128,6 +134,12 @@ void test_slot_learn(void)
     mgr.set_ports(p);
     mgr.set_instance(&d);
     mgr.createBinding(0, "/foo", false);
+    mgr.backend = [&d](const char *msg) {
+        rtosc::RtData rd;
+        char loc[128];
+        rd.loc = loc;
+        rd.loc_size = sizeof(loc);
+        rd.obj = &d; p.dispatch(msg, rd, true);};
     assert_str_eq("/foo", mgr.slots[0].automations[0].param_path, "Parameter is learned", __LINE__);
     assert_flt_eq(0, d.foo, "Learning does not change values", __LINE__);
     mgr.setSlot(0, 1);
@@ -150,15 +162,22 @@ void test_midi_learn(void)
     Dummy d = {0,0};
     mgr.set_ports(p);
     mgr.set_instance(&d);
-    assert_false(mgr.slots[0].learning,
+    mgr.backend = [&d](const char *msg) {
+        rtosc::RtData rd;
+        char loc[128];
+        rd.loc = loc;
+        rd.loc_size = sizeof(loc);
+        rd.obj = &d; p.dispatch(msg, rd, true);};
+
+    assert_int_eq(-1, mgr.slots[0].learning,
             "Parameter starts inactive", __LINE__);
     mgr.createBinding(0, "/foo", true);
     assert_str_eq("/foo", mgr.slots[0].automations[0].param_path,
             "Parameter is bound quickly", __LINE__);
-    assert_true(mgr.slots[0].learning,
+    assert_int_eq(1, mgr.slots[0].learning,
             "Parameter is in learning state", __LINE__);
     mgr.handleMidi(0, 12, 0);
-    assert_false(mgr.slots[0].learning, "Learning stops when MIDI CC is grabbed", __LINE__);
+    assert_int_eq(-1, mgr.slots[0].learning, "Learning stops when MIDI CC is grabbed", __LINE__);
     assert_int_eq(12, mgr.slots[0].midi_cc, "MIDI CC is captured", __LINE__);
 
     mgr.handleMidi(0, 12, 127);
@@ -174,6 +193,13 @@ void test_macro_learn(void)
     Dummy d = {0,0};
     mgr.set_ports(p);
     mgr.set_instance(&d);
+    mgr.backend = [&d](const char *msg) {
+        rtosc::RtData rd;
+        char loc[128];
+        rd.loc = loc;
+        rd.loc_size = sizeof(loc);
+        rd.obj = &d; p.dispatch(msg, rd, true);};
+
     mgr.createBinding(0, "/foo", true);
     assert_str_eq("/foo", mgr.slots[0].automations[0].param_path, "Parameter is learned", __LINE__);
     assert_flt_eq(0, d.foo, "Learning does not change values", __LINE__);
@@ -197,6 +223,13 @@ void test_curve_lerp(void)
     Dummy d = {0,0};
     mgr.set_ports(p);
     mgr.set_instance(&d);
+    mgr.backend = [&d](const char *msg) {
+        rtosc::RtData rd;
+        char loc[128];
+        rd.loc = loc;
+        rd.loc_size = sizeof(loc);
+        rd.obj = &d; p.dispatch(msg, rd, true);};
+
     mgr.createBinding(0, "/foo", true);
     assert_str_eq("/foo", mgr.slots[0].automations[0].param_path, "Parameter is learned", __LINE__);
     assert_int_eq(2, mgr.slots[0].automations[0].map.upoints, "Map is ready", __LINE__);
