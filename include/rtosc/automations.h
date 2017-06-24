@@ -15,6 +15,9 @@ struct AutomationMapping
     float *control_points;
     int    npoints;
     int    upoints;
+
+    float gain;
+    float offset;
 };
 
 struct Automation
@@ -80,10 +83,25 @@ class AutomationMgr
          */
         void createBinding(int slot, const char *path, bool start_midi_learn);
 
+        void updateMapping(int slot, int sub);
+
+
+
         //Get/Set Automation Slot values 0..1
         void setSlot(int slot_id, float value);
         void setSlotSub(int slot_id, int sub, float value);
         float getSlot(int slot_id);
+
+        void clearSlot(int slot_id);
+        void clearSlotSub(int slot_id, int sub);
+
+
+        void setSlotSubGain(int slot_id, int sub, float f);
+        float getSlotSubGain(int slot_id, int sub);
+        void setSlotSubOffset(int slot_id, int sub, float f);
+        float getSlotSubOffset(int slot_id, int sub);
+
+
 
         void setName(int slot_id, const char *msg);
         const char * getName(int slot_id);

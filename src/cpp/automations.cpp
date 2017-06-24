@@ -59,11 +59,9 @@ void AutomationMgr::createBinding(int slot, const char *path, bool start_midi_le
         au.param_type = 'f';
     strncpy(au.param_path, path, sizeof(au.param_path));
 
-    au.map.upoints = 2;
-    au.map.control_points[0] = 0;
-    au.map.control_points[1] = au.param_min;
-    au.map.control_points[2] = 1;
-    au.map.control_points[3] = au.param_max;
+    au.map.gain   = 100.0;
+    au.map.offset = 0;
+    updateMapping(slot, ind);
 
     if(start_midi_learn && slots[slot].learning == -1 && slots[slot].midi_cc == -1)
         slots[slot].learning = ++learn_queue_len;
@@ -71,6 +69,22 @@ void AutomationMgr::createBinding(int slot, const char *path, bool start_midi_le
     damaged = true;
 
 };
+
+void AutomationMgr::updateMapping(int slot_id, int sub)
+{
+    auto &au = slots[slot_id].automations[sub];
+
+    float mn = au.param_min;
+    float mx = au.param_max;
+    float center = (mn+mx)*(0.5 + au.map.offset/100.0);
+    float range  = (mx-mn)*au.map.gain/100.0;
+
+    au.map.upoints = 2;
+    au.map.control_points[0] = 0;
+    au.map.control_points[1] = center-range/2.0;
+    au.map.control_points[2] = 1;
+    au.map.control_points[3] = center+range/2.0;
+}
 
 void AutomationMgr::setSlot(int slot_id, float value)
 {
@@ -132,6 +146,63 @@ float AutomationMgr::getSlot(int slot_id)
     return slots[slot_id].current_state;
 }
 
+
+void AutomationMgr::clearSlot(int slot_id)
+{
+    auto &s = slots[slot_id];
+    s.active = false;
+    s.used   = false;
+    if(s.learning)
+        learn_queue_len--;
+    for(int i=0; i<nslots; ++i)
+        if(slots[i].learning > s.learning)
+            slots[i].learning--;
+    s.learning = -1;
+    s.midi_cc  = -1;
+    s.current_state = 0;
+    memset(s.name, 0, sizeof(s.name));
+    sprintf(s.name, "Slot %d", slot_id);
+    for(int i=0; i<per_slot; ++i)
+        clearSlotSub(slot_id, i);
+    damaged = true;
+}
+
+void AutomationMgr::clearSlotSub(int slot_id, int sub)
+{
+    auto &a = slots[slot_id].automations[sub];
+    a.used    = false;
+    a.active  = false;
+    a.relative = false;
+    a.param_base_value = false;
+    memset(a.param_path, 0, sizeof(a.param_path));
+    a.param_type = 0;
+    a.param_min  = 0;
+    a.param_max  = 0;
+    a.param_step = 0;
+
+    damaged = true;
+}
+
+void  AutomationMgr::setSlotSubGain(int slot_id, int sub, float f)
+{
+    auto &m = slots[slot_id].automations[sub].map;
+    m.gain = f;
+}
+float AutomationMgr::getSlotSubGain(int slot_id, int sub)
+{
+    auto &m = slots[slot_id].automations[sub].map;
+    return m.gain;
+}
+void  AutomationMgr::setSlotSubOffset(int slot_id, int sub, float f)
+{
+    auto &m = slots[slot_id].automations[sub].map;
+    m.offset = f;
+}
+float AutomationMgr::getSlotSubOffset(int slot_id, int sub)
+{
+    auto &m = slots[slot_id].automations[sub].map;
+    return m.offset;
+}
 
 void AutomationMgr::setName(int slot_id, const char *msg)
 {
