@@ -1,4 +1,5 @@
 #include <rtosc/automations.h>
+#include <cmath>
 
 using namespace rtosc;
 
@@ -110,14 +111,13 @@ void AutomationMgr::setSlotSub(int slot_id, int par, float value)
 
     char msg[256] = {0};
     if(type == 'i') {
-        //printf("[%f..%f] rather than [%f..%f]\n", b, a, mx, mn);
         float v = value*(b-a) + a;
         if(v > mx)
             v = mx;
         else if(v < mn)
             v = mn;
 
-        rtosc_message(msg, 256, path, "i", (int)v);
+        rtosc_message(msg, 256, path, "i", (int)roundf(v));
     } else if(type == 'f') {
         float v = value*(b-a) + a;
         if(v > mx)
@@ -237,6 +237,7 @@ bool AutomationMgr::handleMidi(int channel, int cc, int val)
                 if(slots[j].learning > 1)
                     slots[j].learning -= 1;
             learn_queue_len--;
+            setSlot(i, val/127.0);
             damaged = 1;
             break;
         }
