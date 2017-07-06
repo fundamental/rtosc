@@ -6,6 +6,19 @@
 
 using namespace rtosc;
 
+void port_sugar()
+{
+    const char* presets_str = rPresetsAt(1, 3, 2);
+    assert_str_eq(":default 1", presets_str,
+                  "Port sugar for presets (1)", __LINE__);
+    assert_str_eq("=3", presets_str+11,
+                  "Port sugar for presets (2)", __LINE__);
+    assert_str_eq(":default 2", presets_str+14,
+                  "Port sugar for presets (3)", __LINE__);
+    assert_str_eq("=2", presets_str+25,
+                  "Port sugar for presets (4)", __LINE__);
+}
+
 static const Ports ports = {
     {"A::i", rDefault(64) rDoc("..."), NULL, NULL },
     {"B#2::i", rOpt(-2, Master) rOpt(-1, Off)
@@ -14,8 +27,6 @@ static const Ports ports = {
     {"D::f", rDefault(1.0), NULL, NULL},
     {"E::i", "", NULL, NULL}
 };
-
-
 
 void canonical_values()
 {
@@ -116,26 +127,38 @@ static const Ports envelope_ports = {
     /*
      * usual parameters
      */
-    {"sustain::i", rDefaultDepends(env_type)
+    {"sustain::i", rProp(parameter) rDefaultDepends(env_type)
      rMap(default 0, 30) rMap(default 1, 127), NULL,
         [](const char* m, RtData& d) {
             Envelope* obj = static_cast<Envelope*>(d.obj);
             obj->read_or_store(m, d, obj->sustain); }},
-    {"attack_rate::i", rDefaultDepends(env_type)
+    {"attack_rate::i", rProp(parameter) rDefaultDepends(env_type)
      rMap(default 0, 40) rDefault(127), NULL,
         [](const char* m, RtData& d) {
             Envelope* obj = static_cast<Envelope*>(d.obj);
             obj->read_or_store(m, d, obj->attack_rate); }},
-    rOption(scale_type, rOpt(0, logarithmic), rOpt(1, linear),
+    rOption(scale_type, rProp(parameter) rOpt(0, logarithmic), rOpt(1, linear),
             rDefault(linear), "scale type"),
+    // array: env_type 0: 0 1 2 3
+    //        env_type 1: 0 0 0 0
+/*    {"array#4::i", rDefaultDepends(env_type),
+        r(0, ),
+        rPreset(1, 0), // bash the whole array to 0 for preset 1
+        rDefault(3), // all not yet specified values are set to 3
+        rMap(default )}*/
+    // port without rDefault macros
+    // must not be noted for the savefile
+    {"paste:b", rProp(parameter), NULL,
+        [](const char* , RtData& ) { assert(false); } },
     /*
      * envelope type (~preset)
      */
-    {"env_type::i", rDefault(0), NULL, [](const char* m, RtData& d) {
-            Envelope* obj = static_cast<Envelope*>(d.obj);
-            if(obj->read_or_store(m, d, obj->env_type)) {
-                obj->update_env_type_dependencies();
-            }}}
+    {"env_type::i", rProp(parameter) rDefault(0), NULL,
+    [](const char* m, RtData& d) {
+        Envelope* obj = static_cast<Envelope*>(d.obj);
+        if(obj->read_or_store(m, d, obj->env_type)) {
+            obj->update_env_type_dependencies();
+        }}}
 };
 #undef rObject
 
@@ -177,7 +200,7 @@ void envelope_types()
     const char* changed_e2 = "/sustain 0\n/scale_type logarithmic\n/env_type 1";
     assert_str_eq(changed_e2,
                   get_changed_values(envelope_ports, &e2).c_str(),
-                  "get changed values where one is changed", __LINE__);
+                  "get changed values where three are changed", __LINE__);
 
     // restore values to envelope from a savefile
     // this is indirectly related to default values
@@ -390,6 +413,8 @@ void savefiles()
 
 int main()
 {
+    port_sugar();
+
     canonical_values();
     simple_default_values();
     envelope_types();

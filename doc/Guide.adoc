@@ -456,10 +456,13 @@ immediately
 * Identifiers (aka. Symbols, they have the capital 'S' as type letter) follow
   the C convention, i.e. "[A-Za-z_][A-Za-z0-9_]*". Unlike strings, identifiers
   are not surrounded by quotes. A typical use are enumerations like in combo
-  boxes.
+  boxes. If the C convention does not suffice to represent an identifier, it
+  can be written using the string convention mentioned above, with a capital
+  'S' directly appended to the closing quote
 ----------
 An_Identifier_with_a_Number_12345
 frequency_modulation
+"A more \"complicated\" identifier!"S
 ----------
 
 Here are a few examples of full messages:
@@ -477,14 +480,100 @@ Default Values
 Default values usually describe what an app can answer best if it currently has
 no valid data, or if it is in an initial or resetted state. The datatypes and
 the values which the ports reply as such a default response should be passed to
-the rDefault macro in the <<Pretty-printing Messages, "pretty format">>.
+the rDefault macro family in the <<Pretty-printing Messages, "pretty format">>.
+
+A single, simple default value is being noted using the rDefault macro. Note
+that rParameter must present if the parameter shall be saved into OSC savefiles.
+----------
+rParamI(panning, rParameter, rDefault(64), "Panning");
+----------
+
+Default values can depend on other variables. This can happen
+ 1. if you have the same Ports struct in multiple locations of your tree, where
+    the default values depend on where the Ports struct is located
+ 2. if you have multiple presets with different default values for each preset
+If you already have a variable defining that preset or location of the port you
+are using, you can simply depend on it and define "presets". An additional
+rDefault will match if no preset is specified.
+----------
+rParamI(panning, rParameter,
+        rDefaultDepends(preset), rDefault(64), rPresetsAt(2, 0, 127),
+        "Panning"),
+rOption(preset, rOptions(center1, center2, left, right), "Effect preset")
+----------
+
+Sometimes, you may not already have access to the port you depend on, because
+that information is stored in the runtime object belonging to the parent's
+ports. If you do not want to introduce an additional variable, you can declare
+the port (which depends on the other) in the parent Ports struct, too:
+
+----------
+class Parent
+{
+    bool component_enabled[NUM_COMPONENTS];
+    class Component
+    {
+        // we need a port that tells us if this component is enabled
+    };
+};
+
+// Parent ports:
+rRecurs(components, NUM_COMPONENTS),
+{"component#" STRINGIFY(NUM_COMPONENTS) "/enabled::T:F",
+ rProp(parameter)
+ rDefaultArr("[true]") rDefault(false), // => [true, NUM_COMPONENTSxfalse]
+ NULL, rArrayTCbMember(VoicePar, enabled)},
+----------
+
+Note that it's currently not supported to let a single array element depend on
+other ports; this is only possible for the whole array.
+
+OSC Savefiles
+~~~~~~~~~~~~~
+
+If an app has default values for all parameters, and only the diffs to the
+default values shall be saved (this is typically much less data and much easier
+to read), RT OSC offers savefiles that contain the OSC messages which turn a
+default-initializid app into the state at the time the savefile was created.
+
+Note that only parameters with some <<Default Values, "default notation">> and
+the "rProp(parameter)" are being saved.
+
+There are two situations to omit subtrees when saving. One situation where
+this might be wanted is to save time if you know that the subtree has not yet
+been changed. Use the rEnabled* family to mark a port enabled or disabled. This
+can be either done in the Port containing the Ports structure of the subtree,
+or in the Ports' "rSelf()" macro. Alternatively, if the runtime object belonging
+to the subports is a pointer, rtosc will automatically skip the tree if it's a
+nullptr.
+
+----------
+// enable self by port:
+rSelf(some_parameters, rEnabledBy(i_am_enabled)),
+rToggle(i_am_enabled, "port that returns if these parameters are enabled")
+// enable self by (rBOILed) condition:
+rSelf(some_parameters, rEnabledByCondition(c1)),
+rEnabledCondition(c1, obj->use_count() > 0)
+// enable subports by port
+rRecur(subports, rEnabledBy(subport_is_enabled))
+rToggle(subport_is_enabled, "port that returns if this subtree is enabled")
+----------
+
+Another situation where you may want to skip a subtree is if its data should
+never be saved. This can happen if the subtree ...
+ * contains parameters of your app that shall not be written into savefiles
+   (e.g. configuration parameters from $HOME/.app)
+ * contains parameters that can not be accessed at all or not in reasonable time
+ * shall only be synchronized when certain macros are defined
+In such a case, simply add the macro "rNoWalk" to the metadata of the port
+containing these subports.
 
 Undo Support
 ~~~~~~~~~~~~
 
-As, all mutations are prsented to the rtosc dispatcher in a set of ordered
+As, all mutations are presented to the rtosc dispatcher in a set of ordered
 actions, adding undo support is fairly trivial.
-Upon being presentd with a new value, a control can emit (along with its
+Upon being presented with a new value, a control can emit (along with its
 update) an undo event, which defines the transition from old to new values.
 These undo events can be used to form a linearized history which can be
 rewound or replayed.

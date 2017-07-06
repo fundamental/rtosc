@@ -62,6 +62,8 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t* arg, char* buffer,
  * @brief Pretty-print rtosct_arg_val_t array into buffer
  *
  * @see rtosc_print_message
+ * @warning in case of possible line breaks (almost always), buffer[-1] must
+ *   be accessible and be whitespace (since it can be converted to a newline)
  */
 size_t rtosc_print_arg_vals(const rtosc_arg_val_t *args, size_t n,
                             char *buffer, size_t bs,

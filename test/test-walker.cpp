@@ -26,8 +26,9 @@ int main()
     memset(buffer, 0, sizeof(buffer));
     walk_ports(&ports, 
             buffer, 1024, NULL,
-            [](const Port*, const char *name, void *) {
-            puts(name);
+            [](const Port*, const char *name, const char*,
+               const Ports&, void *, void*) {
+                puts(name);
             });
 
     const Port *p = ports.apropos("/subtree/port");

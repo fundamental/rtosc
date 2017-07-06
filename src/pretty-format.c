@@ -204,36 +204,58 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                             val->m[0], val->m[1], val->m[2], val->m[3]);
             break;
         case 's':
-        {
-            char* b = buffer;
-            *b++ = '"';
-            for(const char* s = val->s; *s; ++s)
-            {
-                if(*cols_used >= opt->linelength - 2)
-                    break_string(&b, bs, wrt, cols_used);
-                assert(bs);
-                int as_esc = as_escaped_char(*s, false);
-                if(as_esc != -1) {
-                    assert(bs-1);
-                    *b++ = '\\';
-                    *b++ = as_esc;
-                    *cols_used += 2;
-                    if(as_esc == 'n')
-                        break_string(&b, bs, wrt, cols_used);
-                }
-                else {
-                    *b++ = *s;
-                    ++*cols_used;
-                }
-            }
-            *b++ = '"';
-            *b = 0;
-            wrt += (b-buffer);
-            break;
-        }
         case 'S':
-            wrt = asnprintf(buffer, bs, "%s", val->s);
-            break;
+        {
+            bool plain; // e.g. without quotes
+            if(arg->type == 'S')
+            {
+                plain = true; // "Symbol": are quotes required?
+                if(*val->s != '_' && !isalpha(*val->s))
+                    plain = false;
+                else for(const char* s = val->s + 1; *s && plain; ++s)
+                    plain = (*s == '_' || (isalnum(*s)));
+            }
+            else plain = false;
+
+            if(plain)
+            {
+                wrt = asnprintf(buffer, bs, "%s", val->s);
+                break;
+            }
+            else
+            {
+                char* b = buffer;
+                *b++ = '"';
+                for(const char* s = val->s; *s; ++s)
+                {
+                    if(*cols_used >= opt->linelength - 2)
+                        break_string(&b, bs, wrt, cols_used);
+                    assert(bs);
+                    int as_esc = as_escaped_char(*s, false);
+                    if(as_esc != -1) {
+                        assert(bs-1);
+                        *b++ = '\\';
+                        *b++ = as_esc;
+                        *cols_used += 2;
+                        if(as_esc == 'n')
+                            break_string(&b, bs, wrt, cols_used);
+                    }
+                    else {
+                        *b++ = *s;
+                        ++*cols_used;
+                    }
+                }
+                assert(bs >= 2);
+                *b++ = '"';
+                if(arg->type == 'S') {
+                    assert(bs >= 2);
+                    *b++ = 'S';
+                }
+                *b = 0;
+                wrt += (b-buffer);
+                break;
+            }
+        }
         case 'b':
             wrt = asnprintf(buffer, bs, "[%d ", val->b.len);
             *cols_used += wrt;
@@ -594,6 +616,8 @@ const char* rtosc_skip_next_printed_arg(const char* src)
         }
         case '"':
             src = end_of_printed_string(src);
+            if(src && *src == 'S')
+                ++src;
             break;
         case 'M':
             if(!strncmp("MIDI", src, 4) && (isspace(src[4]) || src[4] == '['))
@@ -799,7 +823,6 @@ size_t rtosc_scan_arg_val(const char* src,
             break;
         case '"':
         {
-            arg->type = 's';
             ++src; // skip obligatory '"'
             char* dest = buffer_for_strings;
             bool cont;
@@ -828,6 +851,14 @@ size_t rtosc_scan_arg_val(const char* src,
             ++src; // skip final '"'
             (*bufsize)--;
             arg->val.s = buffer_for_strings;
+            if(*src == 'S')
+            {
+                ++src;
+                (*bufsize)--;
+                arg->type = 'S';
+            }
+            else
+                arg->type = 's';
             break;
         }
         case 'M':

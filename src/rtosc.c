@@ -286,7 +286,9 @@ int rtosc_arg_vals_eq(rtosc_arg_val_t* lhs, rtosc_arg_val_t* rhs,
                 break;
             case 's':
             case 'S':
-                rval = 0 == strcmp(lhs->val.s, rhs->val.s);
+	        rval = (lhs->val.s == NULL || rhs->val.s == NULL)
+                     ? lhs->val.s == rhs->val.s
+                     : (0 == strcmp(lhs->val.s, rhs->val.s));
                 break;
             case 'b':
             {
@@ -375,7 +377,9 @@ int rtosc_arg_vals_cmp(rtosc_arg_val_t* lhs, rtosc_arg_val_t* rhs,
                 break;
             case 's':
             case 'S':
-                rval = strcmp(lhs->val.s, rhs->val.s);
+                rval = (lhs->val.s == NULL || rhs->val.s == NULL)
+                     ? cmp_3way(lhs->val.s, rhs->val.s)
+                     : strcmp(lhs->val.s, rhs->val.s);
                 break;
             case 'b':
             {

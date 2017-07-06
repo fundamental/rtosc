@@ -178,6 +178,12 @@ void scan_and_print_single()
     check("truely falseeee infinite nilpferd immediatelyly nowhere MIDINOTE",
           NULL,
           "reserved keywords with letters appended are identifiers", __LINE__);
+    check_alt("\"identifier_in_quotes\"S", NULL, "an identifier that has, but "
+              "does not need quotes", __LINE__, "identifier_in_quotes");
+    check("\"identifier with whitespace\"S", NULL,
+          "An identifier with whitespace", __LINE__);
+    check("\"A more \\\"complicated\\\" identifier!\"S", NULL,
+          "An identifier with special characters", __LINE__);
 
     /*
         blobs
