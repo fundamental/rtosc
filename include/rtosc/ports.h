@@ -68,6 +68,10 @@ struct RtData
     //!   a base dispatch
     const char *message;
 
+    int idx[16];
+    void push_index(int ind);
+    void pop_index(void);
+
     virtual void replyArray(const char *path, const char *args,
             rtosc_arg_t *vals);
     virtual void reply(const char *path, const char *args, ...);
@@ -109,6 +113,7 @@ struct Port {
             bool operator==(MetaIterator a) {return title == a.title;}
             bool operator!=(MetaIterator a) {return title != a.title;}
             MetaIterator& operator++(void);
+            operator bool() const;
 
             const char *title;
             const char *value;

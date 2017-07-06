@@ -51,6 +51,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CPP_FLAGS} ${CXX11_FLAG}")
 add_library(rtosc STATIC src/rtosc.c src/dispatch.c src/pretty-format.c
             ${CMAKE_CURRENT_BINARY_DIR}/version.c)
 add_library(rtosc-cpp STATIC src/cpp/ports.cpp src/cpp/miditable.cpp
+    src/cpp/automations.cpp
     src/cpp/midimapper.cpp
     src/cpp/thread-link.cpp
     src/cpp/undo-history.cpp
@@ -170,6 +171,8 @@ if(CXX11_FLAG STREQUAL "-std=c++11")
 endif()
 
 maketestcpp(path-collapse)
+
+maketestcpp(test-automation)
 
 # Documentation
 find_package(Doxygen)

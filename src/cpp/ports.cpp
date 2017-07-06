@@ -41,7 +41,25 @@ static inline void scat(char *dest, const char *src)
 
 RtData::RtData(void)
     :loc(NULL), loc_size(0), obj(NULL), matches(0), message(NULL)
-{}
+{
+    for(int i=0; i<sizeof(idx)/sizeof(int); ++i)
+        idx[i] = 0;
+}
+
+void RtData::push_index(int ind)
+{
+    for(int i=1; i<sizeof(idx)/sizeof(int); ++i)
+        idx[i] = idx[i-1];
+    idx[0] = ind;
+}
+
+void RtData::pop_index(void)
+{
+    int n = sizeof(idx)/sizeof(int);
+    for(int i=n-2; i >= 0; --i)
+        idx[i] = idx[i+1];
+    idx[n-1] = 0;
+}
 
 void RtData::replyArray(const char *path, const char *args,
         rtosc_arg_t *vals)
@@ -144,6 +162,11 @@ Port::MetaIterator& Port::MetaIterator::operator++(void)
 
     metaiterator_advance(title, value);
     return *this;
+}
+
+Port::MetaIterator::operator bool(void) const
+{
+    return title;
 }
 
 Port::MetaContainer::MetaContainer(const char *str_)
