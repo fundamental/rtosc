@@ -257,7 +257,7 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
             }
         }
         case 'b':
-            wrt = asnprintf(buffer, bs, "[%d ", val->b.len);
+            wrt = asnprintf(buffer, bs, "BLOB [%d ", val->b.len);
             *cols_used += wrt;
             buffer += wrt;
             for(int32_t i = 0; i < val->b.len; ++i)
@@ -627,19 +627,29 @@ const char* rtosc_skip_next_printed_arg(const char* src)
             break;
         case '[':
         {
-            int rd = 0, blobsize = 0;
-            sscanf(src, "[ %i %n", &blobsize, &rd);
-            src = rd ? (src + rd) : NULL;
-            for(;src && *src == '0';) // i.e. 0x...
-            {
-                skip_fmt_null(&src, "0x%*x %n");
-                blobsize--;
-            }
-            if(blobsize)
-                src = NULL;
-            if(src)
-                src = (*src == ']') ? (src + 1) : NULL;
+            // TODO: read array
+            src = NULL;
             break;
+        }
+        case 'B':
+        {
+            skip_fmt_null(&src, "BLOB [ %n");
+            if(src)
+            {
+                int rd = 0, blobsize = 0;
+                sscanf(src, "%i %n", &blobsize, &rd);
+                src = rd ? (src + rd) : NULL;
+                for(;src && *src == '0';) // i.e. 0x...
+                {
+                    skip_fmt_null(&src, "0x%*x %n");
+                    blobsize--;
+                }
+                if(blobsize)
+                    src = NULL;
+                if(src)
+                    src = (*src == ']') ? (src + 1) : NULL;
+                break;
+            }
         }
         default:
         {
@@ -877,11 +887,10 @@ size_t rtosc_scan_arg_val(const char* src,
                 src = parse_identifier(src, arg, buffer_for_strings, bufsize);
             break;
         }
-        case '[': // blob
+        case 'B': // blob
         {
             arg->type = 'b';
-            while( isspace(*++src) ) ;
-            sscanf(src, "%"PRIi32" %n", &arg->val.b.len, &rd);
+            sscanf(src, "BLOB [ %"PRIi32" %n", &arg->val.b.len, &rd);
             src +=rd;
 
             assert(*bufsize >= (size_t)arg->val.b.len);

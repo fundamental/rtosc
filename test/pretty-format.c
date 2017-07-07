@@ -188,9 +188,9 @@ void scan_and_print_single()
     /*
         blobs
     */
-    check("[6 0x72 0x74 0x6f 0x73 0x63 0x00]", NULL,
+    check("BLOB [6 0x72 0x74 0x6f 0x73 0x63 0x00]", NULL,
           "a six bytes blob", __LINE__);
-    check("[0]", NULL, "an empty blob", __LINE__);
+    check("BLOB [0]", NULL, "an empty blob", __LINE__);
 
     /*
         comments
@@ -215,8 +215,8 @@ void scan_and_print_single()
               "    \"789\"");
     check("\"01234567\"\\\n    \"890\"", &shortline,
           "broken down string", __LINE__);
-    check_alt("[2 0xff 0xff]", &shortline, "long blob is being broken",
-              __LINE__, "[2 0xff\n    0xff]");
+    check_alt("BLOB [1 0xff]", &shortline, "long blob is being broken",
+              __LINE__, "BLOB [1\n    0xff]");
     check_alt("false false 'a'", &shortline,
               "break between arguments", __LINE__, "false\n    false 'a'");
 }
@@ -228,7 +228,7 @@ void scan_and_print_mulitple()
           "a string and a char", __LINE__);
     // interesting, because they overlap in the "buffer for strings"
     // (see "strbuf" above):
-    check("\"1\" [1 0xff] \"2\"", NULL,
+    check("\"1\" BLOB [1 0xff] \"2\"", NULL,
           "a string, a blob and a string", __LINE__);
 }
 
@@ -387,15 +387,15 @@ void scan_invalid()
     /*
         blobs
     */
-    BAD("[");
-    BAD("[ x ]");
-    BAD("[ 1 ]");
-    BAD("[ 2 0xff ]");
-    BAD("[ 1 0xff 0xff ]");
-    BAD("[ 0 0xff ]");
-    BAD("[ 1 0xff 123 ]");
-    BAD("[ 1 0xff ");
-    BAD("[ 1 0xff");
+    BAD("BLOB [");
+    BAD("BLOB [ x ]");
+    BAD("BLOB [ 1 ]");
+    BAD("BLOB [ 2 0xff ]");
+    BAD("BLOB [ 1 0xff 0xff ]");
+    BAD("BLOB [ 0 0xff ]");
+    BAD("BLOB [ 1 0xff 123 ]");
+    BAD("BLOB [ 1 0xff ");
+    BAD("BLOB [ 1 0xff");
 
     /*
         long message
