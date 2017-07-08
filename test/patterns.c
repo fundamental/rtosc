@@ -33,7 +33,7 @@ int64_t prm(const char *path, const char *args, ...)
 
     int64_t result = 0;
     for(int i=0; i<12; ++i)
-        result |= ((bool)rtosc_match(paths[i], buffer)) << i;
+        result |= ((bool)rtosc_match(paths[i], buffer, NULL)) << i;
     return result;
 }
 
