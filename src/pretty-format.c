@@ -755,11 +755,13 @@ const char* parse_identifier(const char* src, rtosc_arg_val_t *arg,
         arg->val.s = buffer_for_strings;
         for(; *src == '_' || isalnum(*src); ++src)
         {
-            assert((*bufsize)--);
+            --*bufsize;
+            assert(*bufsize);
             *buffer_for_strings = *src;
             ++buffer_for_strings;
         }
-        assert((*bufsize)--);
+        --*bufsize;
+        assert(*bufsize);
         *buffer_for_strings = 0;
         ++buffer_for_strings;
     }
@@ -911,11 +913,13 @@ size_t rtosc_scan_arg_val(const char* src,
                 arg->val.s = buffer_for_strings;
                 for(; *src == '_' || isalnum(*src); ++src)
                 {
-                    assert((*bufsize)--);
+                    --*bufsize;
+                    assert(*bufsize);
                     *buffer_for_strings = *src;
                     ++buffer_for_strings;
                 }
-                assert((*bufsize)--);
+                --*bufsize;
+                assert(*bufsize);
                 *buffer_for_strings = 0;
                 ++buffer_for_strings;
             }
