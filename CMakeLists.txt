@@ -207,6 +207,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT DEFINED RTOSC_NO_INSTALL)
         include/rtosc/undo-history.h
         include/rtosc/subtree-serialize.h
         include/rtosc/typed-message.h
+        include/rtosc/rtosc-version.h
         DESTINATION include/rtosc)
     install(TARGETS rtosc rtosc-cpp
         DESTINATION ${CMAKE_INSTALL_LIBDIR})
