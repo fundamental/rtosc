@@ -21,6 +21,7 @@ void cmp_1(int exp,
            const rtosc_cmp_options* opt,
            const char* ldesc, const char* rdesc, int line)
 {
+    printf("cmp1(%c, %c)\n", lhs->type, rhs->type);
     int res = rtosc_arg_vals_cmp(lhs, rhs, lsize, rsize, opt);
 
     strncpy(tc_full, ldesc, tc_len);
@@ -205,7 +206,7 @@ void different_types()
 {
     l[0].type = 'i';
     l[0].val.i = 0;
-    l[0].type = 'h';
+    r[0].type = 'h';
     r[0].val.h = 1;
 
     // 1 > 0, but 'i' > 'h' (alphabetically)

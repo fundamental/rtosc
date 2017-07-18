@@ -429,14 +429,19 @@ static const char* scanf_fmtstr(const char* src, char* type)
     char tmp;
     char* _type = type ? type : &tmp;
 
+    const char i32[] = "%*"PRIi32"%n";
+
     const char* r; // result
     int ok = (r = try_fmt(src, exp, "%*"PRIi64"h%n", _type, 'h'))
+          || (r = try_fmt(src, exp, "%*d%n", _type, 'i'))
           || (r = try_fmt(src, exp, "%*"PRIi32"i%n", _type, 'i'))
-          || (r = try_fmt(src, exp, "%*"PRIi32"%n", _type, 'i'))
+          || (r = try_fmt(src, exp, i32, _type, 'i'))
           || (r = try_fmt(src, exp, "%*lfd%n", _type, 'd'))
           || (r = try_fmt(src, exp, "%*ff%n", _type, 'f'))
           || (r = try_fmt(src, exp, "%*f%n", _type, 'f'));
     (void)ok;
+    if(r == i32)
+        r = "%*x%n";
     return r;
 }
 
@@ -444,7 +449,10 @@ static const char* scanf_fmtstr(const char* src, char* type)
 static const char* scanf_fmtstr_scan(const char* src, char* bytes8,
                                      char* type)
 {
-    strncpy(bytes8, scanf_fmtstr(src, type), 8);
+    const char *buf = scanf_fmtstr(src, type);
+    assert(buf);
+    assert(bytes8);
+    strncpy(bytes8, buf, 8);
     *++bytes8 = '%'; // transform "%*" to "%"
     return bytes8;
 }
