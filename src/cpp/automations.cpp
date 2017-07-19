@@ -47,6 +47,9 @@ void AutomationMgr::createBinding(int slot, const char *path, bool start_midi_le
         }
     }
 
+    if(ind == -1)
+        return;
+
     slots[slot].used = true;
 
     auto &au = slots[slot].automations[ind];
@@ -73,6 +76,10 @@ void AutomationMgr::createBinding(int slot, const char *path, bool start_midi_le
 
 void AutomationMgr::updateMapping(int slot_id, int sub)
 {
+    if(slot_id >= nslots || slot_id < 0 || sub >= per_slot || sub < 0)
+        return;
+
+
     auto &au = slots[slot_id].automations[sub];
 
     float mn = au.param_min;
@@ -89,6 +96,8 @@ void AutomationMgr::updateMapping(int slot_id, int sub)
 
 void AutomationMgr::setSlot(int slot_id, float value)
 {
+    if(slot_id >= nslots || slot_id < 0)
+        return;
     for(int i=0; i<per_slot; ++i)
         setSlotSub(slot_id, i, value);
 
@@ -97,6 +106,8 @@ void AutomationMgr::setSlot(int slot_id, float value)
 
 void AutomationMgr::setSlotSub(int slot_id, int par, float value)
 {
+    if(slot_id >= nslots || slot_id < 0 || par >= per_slot || par < 0)
+        return;
     auto &au = slots[slot_id].automations[par];
     if(au.used == false)
         return;
@@ -143,12 +154,16 @@ void AutomationMgr::setSlotSub(int slot_id, int par, float value)
 
 float AutomationMgr::getSlot(int slot_id)
 {
+    if(slot_id >= nslots || slot_id < 0)
+        return 0.0;
     return slots[slot_id].current_state;
 }
 
 
 void AutomationMgr::clearSlot(int slot_id)
 {
+    if(slot_id >= nslots || slot_id < 0)
+        return;
     auto &s = slots[slot_id];
     s.active = false;
     s.used   = false;
@@ -169,6 +184,8 @@ void AutomationMgr::clearSlot(int slot_id)
 
 void AutomationMgr::clearSlotSub(int slot_id, int sub)
 {
+    if(slot_id >= nslots || slot_id < 0 || sub >= per_slot || sub < 0)
+        return;
     auto &a = slots[slot_id].automations[sub];
     a.used    = false;
     a.active  = false;
@@ -185,32 +202,44 @@ void AutomationMgr::clearSlotSub(int slot_id, int sub)
 
 void  AutomationMgr::setSlotSubGain(int slot_id, int sub, float f)
 {
+    if(slot_id >= nslots || slot_id < 0 || sub >= per_slot || sub < 0)
+        return;
     auto &m = slots[slot_id].automations[sub].map;
     m.gain = f;
 }
 float AutomationMgr::getSlotSubGain(int slot_id, int sub)
 {
+    if(slot_id >= nslots || slot_id < 0 || sub >= per_slot || sub < 0)
+        return 0.0;
     auto &m = slots[slot_id].automations[sub].map;
     return m.gain;
 }
 void  AutomationMgr::setSlotSubOffset(int slot_id, int sub, float f)
 {
+    if(slot_id >= nslots || slot_id < 0 || sub >= per_slot || sub < 0)
+        return;
     auto &m = slots[slot_id].automations[sub].map;
     m.offset = f;
 }
 float AutomationMgr::getSlotSubOffset(int slot_id, int sub)
 {
+    if(slot_id >= nslots || slot_id < 0 || sub >= per_slot || sub < 0)
+        return 0.0;
     auto &m = slots[slot_id].automations[sub].map;
     return m.offset;
 }
 
 void AutomationMgr::setName(int slot_id, const char *msg)
 {
+    if(slot_id >= nslots || slot_id < 0)
+        return;
     strncpy(slots[slot_id].name, msg, sizeof(slots[slot_id].name));
     damaged = 1;
 }
 const char *AutomationMgr::getName(int slot_id)
 {
+    if(slot_id >= nslots || slot_id < 0)
+        return "";
     return slots[slot_id].name;
 }
 bool AutomationMgr::handleMidi(int channel, int cc, int val)
@@ -259,6 +288,8 @@ void AutomationMgr::set_instance(void *v)
 
 void AutomationMgr::simpleSlope(int slot_id, int par, float slope, float offset)
 {
+    if(slot_id >= nslots || slot_id < 0 || par >= per_slot || par < 0)
+        return;
     auto &map = slots[slot_id].automations[par].map;
     map.upoints = 2;
     map.control_points[0] = 0;

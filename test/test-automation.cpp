@@ -272,12 +272,26 @@ void test_curve_piecewise(void)
     mgr.set_ports(p);
 }
 
+void test_learn_many(void)
+{
+    rtosc::AutomationMgr mgr(4, 2, 16);
+    mgr.set_ports(p);
+    mgr.createBinding(0, "/foo", true);
+    mgr.createBinding(0, "/bar", true);
+    mgr.createBinding(0, "/foo", true);
+    mgr.createBinding(0, "/bar", true);
+    mgr.createBinding(0, "/foo", true);
+    mgr.createBinding(0, "/bar", true);
+    mgr.createBinding(0, "/foo", true);
+    mgr.createBinding(0, "/bar", true);
+}
+
 int main()
 {
     test_basic_learn();
     test_slot_learn();
     test_midi_learn();
     test_macro_learn();
-    test_curve_lerp();
+    test_learn_many();
     return test_summary();
 }
