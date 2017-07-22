@@ -538,7 +538,7 @@ void Ports::dispatch(const char *m, rtosc::RtData &d, bool base_dispatch) const
     //simple case
     if(!d.loc || !d.loc_size) {
         for(const Port &port: ports) {
-            if(rtosc_match(port.name,m))
+            if(rtosc_match(port.name,m, NULL))
                 d.port = &port, port.cb(m,d), d.obj = obj;
         }
     } else {
@@ -557,7 +557,8 @@ void Ports::dispatch(const char *m, rtosc::RtData &d, bool base_dispatch) const
         if(impl->pos.empty()) { //No perfect minimal hash function
             for(unsigned i=0; i<elms; ++i) {
                 const Port &port = ports[i];
-                if(!rtosc_match(port.name, m))
+                const char* m_end;
+                if(!rtosc_match(port.name, m, &m_end))
                     continue;
                 if(!port.ports)
                     d.matches++;
@@ -566,10 +567,8 @@ void Ports::dispatch(const char *m, rtosc::RtData &d, bool base_dispatch) const
                 if(strchr(port.name,'#')) {
                     const char *msg = m;
                     char       *pos = old_end;
-                    while(*msg && *msg != '/')
+                    while(*msg && msg != m_end)
                         *pos++ = *msg++;
-                    if(strchr(port.name, '/'))
-                        *pos++ = '/';
                     *pos = '\0';
                 } else
                     scat(d.loc, port.name);
@@ -1183,7 +1182,7 @@ int rtosc::dispatch_printed_messages(const char* messages,
         msgs_read = 0;
         rd_total = 0;
         const char* msg_ptr = messages;
-        do
+        while(*msg_ptr && (msgs_read >= 0))
         {
             nargs = rtosc_count_printed_arg_vals_of_msg(msg_ptr);
             if(nargs >= 0)
@@ -1234,11 +1233,18 @@ int rtosc::dispatch_printed_messages(const char* messages,
                 msg_ptr += rd;
                 ++msgs_read;
             }
-            else
+            else if(nargs == std::numeric_limits<int>::min())
+            {
+                // this means the (rest of the) file is whitespace only
+                // => don't increase msgs_read
+                while(*++msg_ptr) ;
+            }
+            else {
                 // overwrite meaning of msgs_read in order to
                 // inform the user where the read error occurred
                 msgs_read = -rd_total-1;
-        } while(*msg_ptr && (msgs_read >= 0));
+            }
+        }
     }
     return msgs_read;
 }
@@ -1344,14 +1350,14 @@ const Port *Ports::apropos(const char *path) const
         ++path;
 
     for(const Port &port: ports)
-        if(strchr(port.name,'/') && rtosc_match_path(port.name,path))
+        if(strchr(port.name,'/') && rtosc_match_path(port.name,path, NULL))
             return (strchr(path,'/')[1]==0) ? &port :
                 port.ports->apropos(snip(path));
 
     //This is the lowest level, now find the best port
     for(const Port &port: ports)
         if(*path && (strstr(port.name, path)==port.name ||
-                    rtosc_match_path(port.name, path)))
+                    rtosc_match_path(port.name, path, NULL)))
             return &port;
 
     return NULL;

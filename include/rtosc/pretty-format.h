@@ -110,7 +110,7 @@ const char* rtosc_skip_next_printed_arg(const char* src,
  * no complete syntax check.
  *
  * @param src The string to scan from
- * @return The number of arguments that can be scanned, or if the nth arg
+ * @return The number of arguments that can be scanned (>=0), or if the nth arg
  *   (range 1...) can not be scanned, -n. Array arguments and array start each
  *   count as one argument. This function never returns 0
  */
@@ -122,6 +122,7 @@ int rtosc_count_printed_arg_vals(const char* src);
  *
  * @param msg The message to scan from
  * @return -1 if the address could not be scanned,
+ *   INT_MIN if the whole string is whitespace,
  *   otherwise @see rtosc_count_printed_arg_vals
  */
 int rtosc_count_printed_arg_vals_of_msg(const char* msg);

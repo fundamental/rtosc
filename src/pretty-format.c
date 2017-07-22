@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <ctype.h>
 #include <string.h>
 #include <time.h>
@@ -878,6 +879,8 @@ int rtosc_count_printed_arg_vals_of_msg(const char* msg)
         for(; *msg && !isspace(*msg); ++msg);
         return rtosc_count_printed_arg_vals(msg);
     }
+    else if(!*msg)
+        return INT_MIN;
     else
         return -1;
 }

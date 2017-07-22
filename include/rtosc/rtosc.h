@@ -323,9 +323,12 @@ uint64_t rtosc_bundle_timetag(const char *msg);
  *
  * @param pattern The pattern string stored in the Port
  * @param msg     The OSC message to be matched
+ * @param path_end if non-NULL, will point to where parsing stopped in the path
+ *   (in case of a match, *path_end is always '/' or '\0')
  * @returns true if a normal match and false if unmatched
  */
-bool rtosc_match(const char *pattern, const char *msg);
+bool rtosc_match(const char *pattern,
+                 const char *msg, const char** path_end);
 
 
 /**
@@ -333,8 +336,11 @@ bool rtosc_match(const char *pattern, const char *msg);
  *
  * @param pattern rtosc pattern
  * @param msg a normal C string or a rtosc message
+ * @param path_end if non-NULL, will point to where parsing stopped in the path
+ *   (in case of a match, *path_end is always '/' or '\0')
  */
-const char *rtosc_match_path(const char *pattern, const char *msg);
+const char *rtosc_match_path(const char *pattern,
+                             const char *msg, const char** path_end);
 
 #ifdef __cplusplus
 };

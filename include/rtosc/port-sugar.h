@@ -261,6 +261,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
 
 //Default values
 #define rDefault(default_value_) rMap(default, default_value_)
+#define rDefaultId(default_value_) ":default\0=\"" STRINGIFY(default_value_) "\"S\0"
 //#define rDefaultArr(default_value_, idx_) rMap(default[idx_], default_value_)
 #define rPreset(no, default_value) \
     ":default " STRINGIFY(no) "\0=" STRINGIFY(default_value) "\0"
