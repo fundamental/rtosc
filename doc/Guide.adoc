@@ -464,6 +464,21 @@ An_Identifier_with_a_Number_12345
 frequency_modulation
 "A more \"complicated\" identifier!"S
 ----------
+* Arrays are written as multiple, space separated elements of the same type,
+  encapsulated by brackets. For numerical values, the ellipsis can be used to
+  create a linearly increasing or decreasing range. The syntax [ a b ... c ]
+  evaluates to [ a b b+d b+2d b+3d ... c ] where d:=b-a. If a is not given, d is
+  being computed as d:=sgn(c-b), i.e d:=1 if c>b and d:=-1 if b>c.
+----------
+[ "Multiple" "strings" ]
+[ 10 8 ... 2 ]   % 10 8 6 4 2
+[ 1 ... 5 ]      %  1 2 3 4 5
+----------
+
+There are a few limitations:
+* Arrays inside arrays do not work
+* Strings inside arrays can sometimes exceed the linelength slightly
+
 
 Here are a few examples of full messages:
 ----------
@@ -591,5 +606,5 @@ NOTE:: UndoHistory instances are NOT realtime safe
 
 
 
-This basic idea is certainly ynot perfect, as it is very dumb to start with 
+This basic idea is certainly not perfect, as it is very dumb to start with
 

@@ -65,6 +65,33 @@ static void break_string(char** buffer, size_t bs, int wrt, int* cols_used)
     *cols_used = 5;
 }
 
+// helper function to break lines after an argument has been written
+// which broke the line length
+static void linebreak_check_after_write(int* cols_used, size_t* wrt,
+                                        char* last_sep,
+                                        char** buffer, size_t* bs,
+                                        size_t inc, int* args_written_this_line,
+                                        int linelength)
+{
+
+    ++*args_written_this_line;
+    // did we break the line length,
+    // and this was not the first arg written in this line?
+    if(*cols_used > linelength && (*args_written_this_line > 1))
+    {
+        // insert "\n    "
+        *last_sep = '\n';
+        assert(*bs >= 4);
+        memmove(last_sep+5, last_sep+1, inc);
+        last_sep[1] = last_sep[2] = last_sep[3] = last_sep[4] = ' ';
+        *cols_used = 4 + *wrt;
+        *wrt += 4;
+        *buffer += 4;
+        *bs -= 4;
+        *args_written_this_line = 0;
+    }
+}
+
 size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                            char *buffer, size_t bs,
                            const rtosc_print_options* opt,
@@ -76,7 +103,8 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
     assert(arg);
     const rtosc_arg_t* val = &arg->val;
 
-    switch(arg->type) {
+    switch(arg->type)
+    {
         case 'T':
             assert(bs>4);
             strncpy(buffer, "true", bs);
@@ -217,44 +245,48 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
             }
             else plain = false;
 
-            if(plain)
+            char* b = buffer;
+            if(!plain)
             {
-                wrt = asnprintf(buffer, bs, "%s", val->s);
-                break;
+                *b++ = '"';
+                ++*cols_used;
             }
+            for(const char* s = val->s; *s; ++s)
+            {
+                // "3": 2 quote signs and escaping backslash
+                if(*cols_used > opt->linelength - 3)
+                    break_string(&b, bs, wrt, cols_used);
+                assert(bs);
+                int as_esc = as_escaped_char(*s, false);
+                if(as_esc != -1) {
+                    assert(bs-1);
+                    *b++ = '\\';
+                    *b++ = as_esc;
+                    *cols_used += 2;
+                    if(as_esc == 'n')
+                        break_string(&b, bs, wrt, cols_used);
+                }
+                else {
+                    *b++ = *s;
+                    ++*cols_used;
+                }
+            }
+
+            if(plain)
+                assert(bs);
             else
             {
-                char* b = buffer;
-                *b++ = '"';
-                for(const char* s = val->s; *s; ++s)
-                {
-                    if(*cols_used >= opt->linelength - 2)
-                        break_string(&b, bs, wrt, cols_used);
-                    assert(bs);
-                    int as_esc = as_escaped_char(*s, false);
-                    if(as_esc != -1) {
-                        assert(bs-1);
-                        *b++ = '\\';
-                        *b++ = as_esc;
-                        *cols_used += 2;
-                        if(as_esc == 'n')
-                            break_string(&b, bs, wrt, cols_used);
-                    }
-                    else {
-                        *b++ = *s;
-                        ++*cols_used;
-                    }
-                }
                 assert(bs >= 2);
                 *b++ = '"';
+                ++*cols_used;
                 if(arg->type == 'S') {
                     assert(bs >= 2);
                     *b++ = 'S';
                 }
-                *b = 0;
-                wrt += (b-buffer);
-                break;
             }
+            *b = 0;
+            wrt += (b-buffer);
+            break;
         }
         case 'b':
             wrt = asnprintf(buffer, bs, "BLOB [%d ", val->b.len);
@@ -276,13 +308,62 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
             }
             buffer[-1] = ']';
             break;
+        case 'a':
+        {
+            assert(bs);
+            char* last_sep = buffer - 1;
+            int args_written_this_line = (cols_used) ? 1 : 0;
+
+            *buffer++ = '[';
+            ++*cols_used;
+            ++wrt;
+            --bs;
+            if(val->a.len)
+            for(int32_t i = 1; i <= val->a.len; ++i)
+            {
+                size_t tmp = rtosc_print_arg_val(arg+i, buffer, bs,
+                                                 opt, cols_used);
+                buffer += tmp;
+                wrt += tmp;
+                bs -= tmp;
+
+                linebreak_check_after_write(cols_used, &wrt,
+                                            last_sep, &buffer, &bs,
+                                            tmp, &args_written_this_line,
+                                            opt->linelength);
+
+                assert(bs);
+                last_sep = buffer;
+                *buffer++ = ' ';
+                ++*cols_used;
+                ++wrt;
+                --bs;
+            }
+            else
+            {
+                // TODO: redundancy
+                assert(bs);
+                *buffer++ = ' ';
+                ++*cols_used;
+                ++wrt;
+                --bs;
+            }
+            assert(bs);
+            buffer[-1] = ']';
+            *buffer = 0;
+            ++*cols_used;
+            --bs;
+            break;
+        }
         default:
             ;
     }
 
     switch(arg->type)
     {
+        case 'a':
         case 's':
+        case 'S':
         case 'b':
             // these can break the line, so they compute *cols_used themselves
             break;
@@ -303,30 +384,20 @@ size_t rtosc_print_arg_vals(const rtosc_arg_val_t *args, size_t n,
         opt = default_print_options;
     size_t sep_len = strlen(opt->sep);
     char* last_sep = buffer - 1;
-    for(size_t i = 0; i < n; ++i)
+    for(size_t i = 0; i < n;)
     {
-        size_t tmp = rtosc_print_arg_val(args++, buffer, bs, opt, &cols_used);
+        size_t tmp = rtosc_print_arg_val(args, buffer, bs, opt, &cols_used);
 
         wrt += tmp;
         buffer += tmp;
         bs -= tmp;
-        ++args_written_this_line;
-        // did we break the line length,
-        // and this is not the first arg written in this line?
-        if(cols_used > opt->linelength && (args_written_this_line > 1))
-        {
-            // insert "\n    "
-            *last_sep = '\n';
-            assert(bs >= 4);
-            memmove(last_sep+5, last_sep+1, tmp);
-            last_sep[1] = last_sep[2] = last_sep[3] = last_sep[4] = ' ';
-            cols_used = 4 + wrt;
-            wrt += 4;
-            buffer += 4;
-            bs -= 4;
-            args_written_this_line = 0;
-        }
-        if(i<n-1)
+        linebreak_check_after_write(&cols_used, &wrt, last_sep, &buffer, &bs,
+                                    tmp, &args_written_this_line,
+                                    opt->linelength);
+        size_t inc = (args->type == 'a') ? (args->val.a.len + 1) : 1;
+        i += inc;
+        args += inc;
+        if(i<n)
         {
             assert(sep_len < bs);
             last_sep = buffer;
@@ -420,7 +491,7 @@ static const char* scanf_fmtstr(const char* src, char* type)
 {
     const char* end = src;
     // skip to string end, word end or a closing paranthesis
-    for(;*end && !isspace(*end) && (*end != ')');++end);
+    for(; *end && !isspace(*end) && (*end != ')') && (*end != ']'); ++end);
 
     int exp = end - src;
 
@@ -554,27 +625,51 @@ static const char* skip_identifier(const char* str)
     }
 }
 
-const char* rtosc_skip_next_printed_arg(const char* src)
+const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
+                                        char* type)
 {
+    char dummy;
+    if(!type)
+        type = &dummy;
+    assert(skipped);
+    *skipped = 1; // in almost all cases
     switch(*src)
     {
         case 't':
-            if(!skip_word("true", &src))
+            if(skip_word("true", &src))
+                *type = 'T';
+            else {
                 src = skip_identifier(src);
+                *type = 'S';
+            }
             break;
         case 'f':
-            if(!skip_word("false", &src))
+            if(skip_word("false", &src))
+                *type = 'F';
+            else {
                 src = skip_identifier(src);
+                *type = 'S';
+            }
             break;
         case 'n':
-            if(!skip_word("nil", &src))
-            if(!skip_word("now", &src))
+            if(skip_word("nil", &src))
+                *type = 'N';
+            else if(skip_word("now", &src))
+                *type = 't';
+            else {
                 src = skip_identifier(src);
+                *type = 'S';
+            }
             break;
         case 'i':
-            if(!skip_word("inf", &src))
-            if(!skip_word("immediately", &src))
+            if(skip_word("inf", &src))
+                *type = 'I';
+            else if(skip_word("immediately", &src))
+                *type = 't';
+            else {
                 src = skip_identifier(src);
+                *type = 'S';
+            }
             break;
         case '#':
             for(size_t i = 0; i<8; ++i)
@@ -586,6 +681,7 @@ const char* rtosc_skip_next_printed_arg(const char* src)
                 }
             }
             if(src) ++src;
+            *type = 'r';
             break;
         case '\'':
         {
@@ -612,23 +708,54 @@ const char* rtosc_skip_next_printed_arg(const char* src)
             // if the last char was no single quote,
             // or we had an invalid escape sequence, return NULL
             src = (!esc || src[2] != '\'') ? NULL : (src + 3);
+            *type = 'c';
             break;
         }
         case '"':
             src = end_of_printed_string(src);
-            if(src && *src == 'S')
+            if(src && *src == 'S') {
                 ++src;
+                *type = 'S';
+            }
+            else
+                *type = 's';
             break;
         case 'M':
             if(!strncmp("MIDI", src, 4) && (isspace(src[4]) || src[4] == '['))
+            {
                 skip_fmt_null(&src, "MIDI [ 0x%*x 0x%*x 0x%*x 0x%*x ]%n");
-            else
+                *type = 'm';
+            }
+            else {
                 src = skip_identifier(src);
+                *type = 'S';
+            }
             break;
         case '[':
         {
-            // TODO: read array
-            src = NULL;
+            while(isspace(*++src));
+            char arraytype = 0;
+            while(src && *src && *src != ']')
+            {
+                char arraytype_cur = 20;
+                int skipped2;
+                src = rtosc_skip_next_printed_arg(src, &skipped2, &arraytype_cur);
+                if(src)
+                    for( ; isspace(*src); ++src) ;
+                if(!arraytype)
+                    arraytype = arraytype_cur;
+                else if(arraytype != arraytype_cur)
+                    src = NULL;
+                *skipped += skipped2;
+            }
+            if(src)
+            {
+                if(*src) // => ']'
+                    ++src;
+                else
+                    src = NULL;
+            }
+            *type = 'b';
             break;
         }
         case 'B':
@@ -650,6 +777,7 @@ const char* rtosc_skip_next_printed_arg(const char* src)
                     src = (*src == ']') ? (src + 1) : NULL;
                 break;
             }
+            *type = 'b';
         }
         default:
         {
@@ -657,6 +785,7 @@ const char* rtosc_skip_next_printed_arg(const char* src)
             if(*src == '_' || isalpha(*src))
             {
                 for(; *src == '_' || isalnum(*src); ++src) ;
+                *type = 'S';
             }
             // is it a date? (vs a numeric)
             else if(skip_fmt(&src, "%*4d-%*1d%*1d-%*1d%*1d%n"))
@@ -685,17 +814,17 @@ const char* rtosc_skip_next_printed_arg(const char* src)
                             src = NULL;
                     }
                 }
+                *type = 't';
             }
             else
             {
-                char type;
-                int rd = skip_numeric(&src, &type);
+                int rd = skip_numeric(&src, type);
                 if(!rd) { src = NULL; break; }
                 const char* after_num = src;
                 skip_while(&after_num, isspace);
                 if(*after_num == '(')
                 {
-                    if (type == 'f' || type =='d')
+                    if (*type == 'f' || *type == 'd')
                     {
                         // skip lossless representation
                         src = ++after_num;
@@ -721,10 +850,12 @@ int rtosc_count_printed_arg_vals(const char* src)
     while (*src == '%')
         skip_fmt(&src, "%*[^\n] %n");
 
-    for(; src && *src && *src != '/'; ++num)
+    int skipped_now = 0;
+    for(; src && *src && *src != '/'; num += skipped_now)
     {
-        src = rtosc_skip_next_printed_arg(src);
-        if(src) // parse error
+        src = rtosc_skip_next_printed_arg(src, &skipped_now, NULL);
+
+        if(src) // no parse error
         {
             skip_while(&src, isspace);
             if(*src && !isspace(*src))
@@ -774,11 +905,13 @@ const char* parse_identifier(const char* src, rtosc_arg_val_t *arg,
 }
 
 size_t rtosc_scan_arg_val(const char* src,
-                          rtosc_arg_val_t *arg,
+                          rtosc_arg_val_t *arg, size_t nargs,
                           char* buffer_for_strings, size_t* bufsize)
 {
     int rd = 0;
     const char* start = src;
+    assert(nargs);
+    --nargs;
     switch(*src)
     {
         case 't':
@@ -885,6 +1018,41 @@ size_t rtosc_scan_arg_val(const char* src,
             }
             else
                 src = parse_identifier(src, arg, buffer_for_strings, bufsize);
+            break;
+        }
+        case '[':
+        {
+            // the current RT OSC implementation represents printed arrays as an
+            // arg val of type 'a', including type T and size N in the data,
+            // followed by N arg vals of type T
+            // Note: there is currently no corresponding symbol for 'a' in
+            //       *messages*
+            while(isspace(*++src));
+            int32_t num_read = 0;
+
+            rtosc_arg_val_t* start_arg = arg++;
+
+            size_t last_bufsize;
+
+            for(;src && *src && *src != ']'; ++arg, ++num_read)
+            {
+                last_bufsize = *bufsize;
+
+                src += rtosc_scan_arg_val(src, arg, nargs,
+                                          buffer_for_strings, bufsize);
+                --nargs; // TODO: allow arrays inside arrays
+                for( ; isspace(*src); ++src) ;
+
+                size_t written = last_bufsize - *bufsize;
+                buffer_for_strings += written;
+
+                // TODO: allow comments in arrays, blobs, midi?
+            }
+
+            ++src; // ']'
+            start_arg->type = 'a';
+            start_arg->val.a.type = num_read ? (arg-1)->type : ' ';
+            start_arg->val.a.len = num_read;
             break;
         }
         case 'B': // blob
@@ -1056,13 +1224,15 @@ size_t rtosc_scan_arg_vals(const char* src,
 {
     size_t last_bufsize;
     size_t rd=0;
-    for(size_t i = 0; i < n; ++i)
+    for(size_t i = 0; i < n;)
     {
         last_bufsize = bufsize;
-        size_t tmp = rtosc_scan_arg_val(src, args + i,
+
+        size_t tmp = rtosc_scan_arg_val(src, args+i, n-i,
                                         buffer_for_strings, &bufsize);
         src += tmp;
         rd += tmp;
+        i += (args->type == 'a') ? (args->val.a.len + 1) : 1;
 
         size_t written = last_bufsize - bufsize;
         buffer_for_strings += written;

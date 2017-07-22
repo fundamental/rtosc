@@ -173,6 +173,8 @@ void scan_and_print_single()
     /*
         identifiers aka symbols
     */
+    rtosc_print_options shortline_9 = ((rtosc_print_options) { true, 3,
+                                                               " ", 9 });
     check("an_identifier_42", NULL, "a simple identifier", __LINE__);
     check("_", NULL, "the identifier \"_\"", __LINE__);
     check("truely falseeee infinite nilpferd immediatelyly nowhere MIDINOTE",
@@ -184,6 +186,8 @@ void scan_and_print_single()
           "An identifier with whitespace", __LINE__);
     check("\"A more \\\"complicated\\\" identifier!\"S", NULL,
           "An identifier with special characters", __LINE__);
+    check("\"identi\"\\\n    \"fi\"\\\n    \"er\"", &shortline_9,
+          "a long identifier", __LINE__);
 
     /*
         blobs
@@ -206,14 +210,14 @@ void scan_and_print_single()
     */
     rtosc_print_options shortline = ((rtosc_print_options) { true, 3,
                                                              " ", 10 });
-    check_alt("\"01234567890123456789\"", &shortline,
+    check_alt("\"0123456789012345678\"", &shortline,
               "string exceeding line length", __LINE__,
-              "\"01234567\"\\\n"
-              "    \"890\"\\\n"
-              "    \"123\"\\\n"
-              "    \"456\"\\\n"
-              "    \"789\"");
-    check("\"01234567\"\\\n    \"890\"", &shortline,
+              "\"0123456\"\\\n"
+              "    \"789\"\\\n"
+              "    \"012\"\\\n"
+              "    \"345\"\\\n"
+              "    \"678\"");
+    check("\"0123456\"\\\n    \"789\"", &shortline,
           "broken down string", __LINE__);
     check_alt("BLOB [1 0xff]", &shortline, "long blob is being broken",
               __LINE__, "BLOB [1\n    0xff]");
@@ -232,12 +236,25 @@ void scan_and_print_mulitple()
           "a string, a blob and a string", __LINE__);
 }
 
+void arrays()
+{
+    check("[0 1 2]", NULL, "simple integer array", __LINE__);
+    check("[]", NULL, "empty array", __LINE__);
+
+    rtosc_print_options shortline = ((rtosc_print_options)
+                                     { true, 3, " ", 12 });
+    // TODO: arrays with strings print newline positions wrong
+    //       write *one* generic function rtosc_insert_newlines?
+    check("[\"123\" \"45\" \"\"\\\n    \"6\"]", &shortline,
+          "array with linebreak", __LINE__);
+}
+
 void fail_at_arg(const char* arg_val_str, int exp_fail, int line)
 {
     int tc_len = 256;
     char tc_full[tc_len]; // descr. for full testcase name
 
-    size_t num = rtosc_count_printed_arg_vals(arg_val_str);
+    int num = rtosc_count_printed_arg_vals(arg_val_str);
 
     strcpy(tc_full, "find 1st invalid arg in ");
     strncat(tc_full, arg_val_str, tc_len);
@@ -364,7 +381,6 @@ void scan_invalid()
         MIDI
     */
     // valid identifier + invalid blob
-    fail_at_arg("MI [ 0xff 0xff 0xff 0xff ]", 2, __LINE__);
     BAD("MIDI x");
     BAD("MIDI 0xff 0xff 0xff 0xff ]");
     fail_at_arg("2 MIDI [ 0xff ]", 2, __LINE__);
@@ -398,6 +414,13 @@ void scan_invalid()
     BAD("BLOB [ 1 0xff");
 
     /*
+        arrays
+    */
+    // note: array start and array args each do count
+    fail_at_arg("[0 1 2", 4, __LINE__);
+    fail_at_arg("[0 2h]", 3, __LINE__);
+
+    /*
         long message
     */
     fail_at_arg("\"rtosc is\" true \"ly\" '\a' 0x6rea7 \"library\"",
@@ -410,6 +433,8 @@ int main()
 {
     scan_and_print_single();
     scan_and_print_mulitple();
+    arrays();
+
     messages();
 
     scan_invalid();

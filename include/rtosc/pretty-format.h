@@ -94,9 +94,13 @@ size_t rtosc_print_message(const char* address,
  * @brief Skip characters from a string until one argument value
  *   would have been scanned
  * @param src The string
+ * @param skipped The number of arg_vals that would be skipped when scanning,
+ *   typically 1 (though not for arrays)
+ * @param type The skipped type
  * @return The first character after that argument value
  */
-const char* rtosc_skip_next_printed_arg(const char* src);
+const char* rtosc_skip_next_printed_arg(const char* src,
+                                        int* skipped, char* type);
 
 /**
  * @brief Count arguments that would be scanned and do a complete syntax check
@@ -107,7 +111,8 @@ const char* rtosc_skip_next_printed_arg(const char* src);
  *
  * @param src The string to scan from
  * @return The number of arguments that can be scanned, or if the nth arg
- *   (range 1...) can not be scanned, -n. Never returns 0
+ *   (range 1...) can not be scanned, -n. Array arguments and array start each
+ *   count as one argument. This function never returns 0
  */
 int rtosc_count_printed_arg_vals(const char* src);
 
@@ -128,7 +133,9 @@ int rtosc_count_printed_arg_vals_of_msg(const char* msg);
  * rtosc_count_printed_arg_vals() before.
  *
  * @param src The string
- * @param arg Pointer to where to store the argument value; must be allocated
+ * @param arg Pointer to an array where to store the argument value
+ * @param n Size of the array @p arg. Since only one arg is being scanned, for
+ *   almost all cases (except arrays), n being 1 is sufficient.
  * @param buffer_for_strings A buffer with enough space for scanned
  *   strings and blobs
  * @param bufsize Size of @p buffer_for_strings , will be shrinked to the
@@ -136,7 +143,7 @@ int rtosc_count_printed_arg_vals_of_msg(const char* msg);
  * @return The number of bytes scanned
  */
 size_t rtosc_scan_arg_val(const char* src,
-                          rtosc_arg_val_t *arg,
+                          rtosc_arg_val_t *arg, size_t n,
                           char* buffer_for_strings, size_t* bufsize);
 
 /**

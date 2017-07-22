@@ -42,6 +42,11 @@ typedef struct {
     uint8_t *data;
 } rtosc_blob_t;
 
+typedef struct {
+    char type;
+    int32_t len;
+} array_start_t;
+
 typedef union {
     int32_t       i;   //i,c,r
     char          T;   //I,T,F,N
@@ -52,6 +57,7 @@ typedef union {
     uint8_t       m[4];//m
     const char   *s;   //s,S
     rtosc_blob_t  b;   //b
+    array_start_t a;   //a
 } rtosc_arg_t;
 
 /**
