@@ -9,15 +9,18 @@ AutomationMgr::AutomationMgr(int slots, int per_slot, int control_points)
     this->slots = new AutomationSlot[slots];
     memset(this->slots, 0, sizeof(AutomationSlot)*slots);
     for(int i=0; i<slots; ++i) {
-        sprintf(this->slots[i].name, "Slot %d", i);
-        this->slots[i].midi_cc  = -1;
-        this->slots[i].learning = -1;
+        auto &s = this->slots[i];
+        sprintf(s.name, "Slot %d", i);
+        s.midi_cc  = -1;
+        s.learning = -1;
 
-        this->slots[i].automations = new Automation[per_slot];
-        memset(this->slots[i].automations, 0, sizeof(Automation)*per_slot);
+        s.automations = new Automation[per_slot];
+        memset(s.automations, 0, sizeof(Automation)*per_slot);
         for(int j=0; j<per_slot; ++j) {
-            this->slots[i].automations[j].map.control_points = new float[control_points];
-            this->slots[i].automations[j].map.npoints = control_points;
+            s.automations[j].map.control_points = new float[control_points];
+            s.automations[j].map.npoints = control_points;
+            s.automations[j].map.gain   = 100.0;
+            s.automations[j].map.offset = 0.0;
         }
     }
 
@@ -196,6 +199,8 @@ void AutomationMgr::clearSlotSub(int slot_id, int sub)
     a.param_min  = 0;
     a.param_max  = 0;
     a.param_step = 0;
+    a.map.gain   = 100;
+    a.map.offset = 0;
 
     damaged = true;
 }
