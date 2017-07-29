@@ -42,6 +42,10 @@ void AutomationMgr::createBinding(int slot, const char *path, bool start_midi_le
         fprintf(stderr, "No bounds for '%s' known\n", path);
         return;
     }
+    if(meta.find("internal") || meta.find("no learn")) {
+        fprintf(stderr, "[Warning] port '%s' is unlearnable\n", path);
+        return;
+    }
     int ind = -1;
     for(int i=0; i<per_slot; ++i) {
         if(slots[slot].automations[i].used == false) {
