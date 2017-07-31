@@ -4,7 +4,7 @@
 using namespace rtosc;
 
 AutomationMgr::AutomationMgr(int slots, int per_slot, int control_points)
-    :nslots(slots), per_slot(per_slot), active_slot(0), p(NULL), learn_queue_len(0), damaged(0)
+    :nslots(slots), per_slot(per_slot), active_slot(0), learn_queue_len(0), p(NULL), damaged(0)
 {
     this->slots = new AutomationSlot[slots];
     memset(this->slots, 0, sizeof(AutomationSlot)*slots);
@@ -283,7 +283,7 @@ bool AutomationMgr::handleMidi(int channel, int cc, int val)
     return 0;
 }
 
-void AutomationMgr::set_ports(const class Ports &p_) {
+void AutomationMgr::set_ports(const struct Ports &p_) {
     p = &p_;
 };
 //

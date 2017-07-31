@@ -42,13 +42,13 @@ static inline void scat(char *dest, const char *src)
 RtData::RtData(void)
     :loc(NULL), loc_size(0), obj(NULL), matches(0), message(NULL)
 {
-    for(int i=0; i<sizeof(idx)/sizeof(int); ++i)
+    for(int i=0; i<(int)(sizeof(idx)/sizeof(int)); ++i)
         idx[i] = 0;
 }
 
 void RtData::push_index(int ind)
 {
-    for(int i=1; i<sizeof(idx)/sizeof(int); ++i)
+    for(int i=1; i<(int)(sizeof(idx)/sizeof(int)); ++i)
         idx[i] = idx[i-1];
     idx[0] = ind;
 }
@@ -1093,7 +1093,7 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
                                                       max_arg_vals,
                                                       arg_vals_runtime);
 
-        if(nargs_default == nargs_runtime)
+        if(nargs_default == (int) nargs_runtime)
         {
             canonicalize_arg_vals(arg_vals_default, nargs_default,
                                   strchr(p->name, ':'), meta);
