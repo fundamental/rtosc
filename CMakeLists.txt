@@ -49,6 +49,7 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CPP_FLAGS} ${CXX11_FLAG}")
 
 add_library(rtosc STATIC src/rtosc.c src/dispatch.c src/pretty-format.c
+            src/arg-val-math.c
             ${CMAKE_CURRENT_BINARY_DIR}/version.c)
 add_library(rtosc-cpp STATIC src/cpp/ports.cpp src/cpp/miditable.cpp
     src/cpp/automations.cpp

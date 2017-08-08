@@ -467,17 +467,16 @@ frequency_modulation
 * Arrays are written as multiple, space separated elements of the same type,
   encapsulated by brackets. For numerical values, the ellipsis can be used to
   create a linearly increasing or decreasing range. The syntax [ a b ... c ]
-  evaluates to [ a b b+d b+2d b+3d ... c ] where d:=b-a. If a is not given, d is
-  being computed as d:=sgn(c-b), i.e d:=1 if c>b and d:=-1 if b>c.
+  evaluates to [ a b b+d b+2d b+3d ... c ] where d:=b-a. If a is not given or of
+  different type than b, d is being computed as d:=sgn(c-b), i.e d:=1 if c>b
+  and d:=-1 if b>c. If there is no "n" such that a+nd=c, the last value the
+  ellipsis expands to is "b+n'd", with "n'" being the highest value such that
+  b+n'd<c.
 ----------
 [ "Multiple" "strings" ]
 [ 10 8 ... 2 ]   % 10 8 6 4 2
-[ 1 ... 5 ]      %  1 2 3 4 5
+[ 1.0 ... 5.2 ]      %  1 2 3 4 5 5.2
 ----------
-
-There are a few limitations:
-* Arrays inside arrays do not work
-* Strings inside arrays can sometimes exceed the linelength slightly
 
 
 Here are a few examples of full messages:

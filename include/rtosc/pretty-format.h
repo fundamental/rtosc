@@ -41,6 +41,7 @@ typedef struct
     int floating_point_precision;
     const char* sep; //!< separator for multiple argument values
     int linelength;
+    int compress_ranges;
 } rtosc_print_options;
 
 /**
@@ -97,10 +98,12 @@ size_t rtosc_print_message(const char* address,
  * @param skipped The number of arg_vals that would be skipped when scanning,
  *   typically 1 (though not for arrays)
  * @param type The skipped type
- * @return The first character after that argument value
+ * @return The first character after that argument value, or NULL if a
+ *   parsing error occurred
  */
 const char* rtosc_skip_next_printed_arg(const char* src,
-                                        int* skipped, char* type);
+                                        int* skipped, char* type,
+                                        const char* llhssrc,const char* lhssrc);
 
 /**
  * @brief Count arguments that would be scanned and do a complete syntax check
@@ -145,7 +148,8 @@ int rtosc_count_printed_arg_vals_of_msg(const char* msg);
  */
 size_t rtosc_scan_arg_val(const char* src,
                           rtosc_arg_val_t *arg, size_t n,
-                          char* buffer_for_strings, size_t* bufsize);
+                          char* buffer_for_strings, size_t* bufsize,
+                          size_t args_before);
 
 /**
  * @brief Scan a fixed number of argument values from a string.

@@ -27,9 +27,9 @@ void check_alt(const char* arg_val_str, const rtosc_print_options* opt,
     size_t rd = rtosc_scan_arg_vals(arg_val_str, scanned, num,
                                     strbuf, strbuflen);
 
-    strcpy(tc_full, "scan ");
+    strcpy(tc_full, "scan \"");
     strncat(tc_full, tc_base, tc_len);
-    strncat(tc_full, " (read exactly the input string)",
+    strncat(tc_full, "\" (read exactly the input string)",
             tc_len - strlen(tc_full));
     assert_int_eq(strlen(arg_val_str), rd, tc_full, line);
 
@@ -38,15 +38,15 @@ void check_alt(const char* arg_val_str, const rtosc_print_options* opt,
     size_t written = rtosc_print_arg_vals(scanned, num, printed, len, opt, 0);
 
     const char* exp_print = _exp_print ? _exp_print : arg_val_str;
-    strcpy(tc_full, "print ");
+    strcpy(tc_full, "print \"");
     strncat(tc_full, tc_base, tc_len);
-    strncat(tc_full, " (value = value before scan)",
+    strncat(tc_full, "\" (value = value before scan)",
             tc_len - strlen(tc_full));
     assert_str_eq(exp_print, printed, tc_full, line);
 
-    strcpy(tc_full, "print ");
+    strcpy(tc_full, "print \"");
     strncat(tc_full, tc_base, tc_len);
-    strncat(tc_full, " (return value check)", tc_len - strlen(tc_full));
+    strncat(tc_full, "\" (return value check)", tc_len - strlen(tc_full));
     assert_int_eq(strlen(exp_print), written, tc_full, line);
 }
 
@@ -82,7 +82,8 @@ void scan_and_print_single()
     /*
         timestamps
     */
-    rtosc_print_options lossy = ((rtosc_print_options) { false, 3, " ", 80 });
+    rtosc_print_options lossy = ((rtosc_print_options) { false, 3, " ", 80,
+                                                         true });
     check_alt("1970-01-02 00:00:00", NULL, "one day after the epoch", __LINE__,
               "1970-01-02");
     check("2016-11-16 19:44:06", NULL, "a timestamp", __LINE__);
@@ -105,7 +106,8 @@ void scan_and_print_single()
         doubles
     */
     // saving this as a float will lose precision
-    rtosc_print_options prec6 = ((rtosc_print_options) { true, 6, " ", 80 });
+    rtosc_print_options prec6 = ((rtosc_print_options) { true, 6, " ", 80,
+                                                         true });
     check_alt("1234567890.098700d", &prec6,
               "a double that would not fit into a float", __LINE__,
               "1234567890.098700d (0x1.26580b486511ap+30)");
@@ -119,7 +121,8 @@ void scan_and_print_single()
     // rtosc *must* discard the first number and read the lossless one
     check_alt("0.0f (-0x1.8p+0)", NULL, "the zero float (0.0f)", __LINE__,
               "-1.50 (-0x1.8p+0)");
-    rtosc_print_options prec0 = ((rtosc_print_options) { true, 0, " ", 80 });
+    rtosc_print_options prec0 = ((rtosc_print_options) { true, 0, " ", 80,
+                                                         true });
     // this float may not lose its period (otherwise,
     // it would be read as an int!)
     check_alt("1.", &prec0, "a float with zero precision", __LINE__,
@@ -173,8 +176,8 @@ void scan_and_print_single()
     /*
         identifiers aka symbols
     */
-    rtosc_print_options shortline_9 = ((rtosc_print_options) { true, 3,
-                                                               " ", 9 });
+    rtosc_print_options shortline_9 = ((rtosc_print_options) { true, 3, " ", 9,
+                                                               true });
     check("an_identifier_42", NULL, "a simple identifier", __LINE__);
     check("_", NULL, "the identifier \"_\"", __LINE__);
     check("truely falseeee infinite nilpferd immediatelyly nowhere MIDINOTE",
@@ -208,8 +211,8 @@ void scan_and_print_single()
     /*
         linebreaks
     */
-    rtosc_print_options shortline = ((rtosc_print_options) { true, 3,
-                                                             " ", 10 });
+    rtosc_print_options shortline = ((rtosc_print_options) { true, 3, " ", 10,
+                                                             true });
     check_alt("\"0123456789012345678\"", &shortline,
               "string exceeding line length", __LINE__,
               "\"0123456\"\\\n"
@@ -222,7 +225,7 @@ void scan_and_print_single()
     check_alt("BLOB [1 0xff]", &shortline, "long blob is being broken",
               __LINE__, "BLOB [1\n    0xff]");
     check_alt("false false 'a'", &shortline,
-              "break between arguments", __LINE__, "false\n    false 'a'");
+              "break between arguments", __LINE__, "false\n    false\n    'a'");
 }
 
 void scan_and_print_mulitple()
@@ -242,11 +245,51 @@ void arrays()
     check("[]", NULL, "empty array", __LINE__);
 
     rtosc_print_options shortline = ((rtosc_print_options)
-                                     { true, 3, " ", 12 });
+                                     { true, 3, " ", 12, true });
     // TODO: arrays with strings print newline positions wrong
     //       write *one* generic function rtosc_insert_newlines?
     check("[\"123\" \"45\" \"\"\\\n    \"6\"]", &shortline,
           "array with linebreak", __LINE__);
+
+    check("[[0 1] [] [2 3]]", NULL, "arrays inside arrays", __LINE__);
+}
+
+void ranges()
+{
+    rtosc_print_options uncompressed = ((rtosc_print_options) { false, 3, " ",
+                                                                10, false });
+    check_alt("1 ... 7", &uncompressed,
+              "a simple upwards integer range", __LINE__,
+              "1 2 3 4 5\n"
+              "    6 7");
+    check_alt("'z' 'x' ... 'r'", &uncompressed,
+              "a simple downward char range", __LINE__,
+              "'z' 'x'\n"
+              "    'v'\n"
+              "    't'\n"
+              "    'r'");
+    check_alt("0.0f 0.3333f ... 1.0f", &uncompressed,
+              "float range which only fits approximatelly", __LINE__,
+              "0.000\n    0.333\n    0.667\n    1.000");
+    check_alt("[3...0]", &uncompressed,
+              "downward range in an array", __LINE__,
+              "[3 2 1 0]");
+    check_alt("1 3 ... 11 ... 15", &uncompressed,
+              "two subsequent ranges", __LINE__,
+              "1 3 5 7 9\n"
+              "    11 12\n    13 14\n    15");
+    check_alt("1 3 ... 11 13 ... 19", &uncompressed,
+              "two almost subsequent ranges", __LINE__,
+              "1 3 5 7 9\n"
+              "    11 13\n"
+              "    15 17\n"
+              "    19");
+    check_alt("[ 1 ... 3 ]", &uncompressed,
+              "range with delta 1 in an array (1)", __LINE__,
+              "[1 2 3]");
+    check_alt("[3...0]", &uncompressed,
+              "range with delta 1 in an array (2)", __LINE__,
+              "[3 2 1 0]");
 }
 
 void fail_at_arg(const char* arg_val_str, int exp_fail, int line)
@@ -256,8 +299,9 @@ void fail_at_arg(const char* arg_val_str, int exp_fail, int line)
 
     int num = rtosc_count_printed_arg_vals(arg_val_str);
 
-    strcpy(tc_full, "find 1st invalid arg in ");
+    strcpy(tc_full, "find 1st invalid arg in \"");
     strncat(tc_full, arg_val_str, tc_len);
+    strncat(tc_full, "\"", tc_len);
     assert_int_eq(exp_fail, -num, tc_full, line);
 }
 
@@ -286,7 +330,8 @@ void messages()
 
     size_t len = 128;
     char printed[len];
-    rtosc_print_options shortline = ((rtosc_print_options) { true, 3, " ", 7 });
+    rtosc_print_options shortline = ((rtosc_print_options) { true, 3, " ", 7,
+                                                             true });
     size_t written = rtosc_print_message("/noteOn", scanned, num,
                                          printed, len, &shortline, 0);
 
@@ -420,6 +465,17 @@ void scan_invalid()
     fail_at_arg("[0 1 2", 4, __LINE__);
     fail_at_arg("[0 2h]", 3, __LINE__);
 
+    // the results are sometimes a bit strange here,
+    // but let's at least document that they do not change
+    BAD("... 25");
+    fail_at_arg("4 ...", 3, __LINE__);
+    fail_at_arg("6 ... 12h", 3, __LINE__); // different types
+    // there's no natural number "n" with 0.25n = 1.1:
+    fail_at_arg("0.0 0.25 ... 1.1", 4, __LINE__);
+    fail_at_arg("1.9f ... 0f", 3, __LINE__);
+    fail_at_arg("[ ... 3 ]", 2, __LINE__); // what is the range start here?
+    fail_at_arg("\"ranges don't work \" ... \"with strings\"", 3, __LINE__);
+
     /*
         long message
     */
@@ -434,6 +490,7 @@ int main()
     scan_and_print_single();
     scan_and_print_mulitple();
     arrays();
+    ranges();
 
     messages();
 

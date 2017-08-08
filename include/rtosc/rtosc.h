@@ -47,7 +47,15 @@ typedef struct {
     int32_t len;
 } array_start_t;
 
+// a repeater is being followed by a delta argument (unless has_delta is 0)
+typedef struct
+{
+    int32_t       num;       // how often the element is being repeated
+    int32_t       has_delta; // if not 0, the next argument is the delta
+} repeater_t;
+
 typedef union {
+// types that can be used in messages
     int32_t       i;   //i,c,r
     char          T;   //I,T,F,N
     float         f;   //f
@@ -57,7 +65,9 @@ typedef union {
     uint8_t       m[4];//m
     const char   *s;   //s,S
     rtosc_blob_t  b;   //b
+// types that can *not* be used in messages
     array_start_t a;   //a
+    repeater_t    r;   //-
 } rtosc_arg_t;
 
 /**
@@ -146,7 +156,7 @@ typedef struct
  * @param opt Comparison options or NULL for default options
  * @return One if they are equal, zero if not
  */
-int rtosc_arg_vals_eq(rtosc_arg_val_t* lhs, rtosc_arg_val_t* rhs,
+int rtosc_arg_vals_eq(const rtosc_arg_val_t *lhs, const rtosc_arg_val_t *rhs,
                       size_t lsize, size_t rsize,
                       const rtosc_cmp_options* opt);
 
@@ -164,7 +174,7 @@ int rtosc_arg_vals_eq(rtosc_arg_val_t* lhs, rtosc_arg_val_t* rhs,
  * @return An integer less than, equal to, or greater than zero if lhs is found,
  *         respectively, to be less than, to match, or be greater than rhs.
  */
-int rtosc_arg_vals_cmp(rtosc_arg_val_t* lhs, rtosc_arg_val_t* rhs,
+int rtosc_arg_vals_cmp(const rtosc_arg_val_t *lhs, const rtosc_arg_val_t *rhs,
                        size_t lsize, size_t rsize,
                        const rtosc_cmp_options* opt);
 

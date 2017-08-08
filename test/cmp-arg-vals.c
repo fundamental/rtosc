@@ -201,6 +201,75 @@ void blobs()
     cmp_gt(l, l+1, 1, 1, NULL, "normal blob", "empty blob", __LINE__);
 }
 
+void arrays()
+{
+    // fill three arrays, both with the ints 1, 2, 3 resp. 1, 2, 2
+    rtosc_arg_val_t la[16], ra[16]; // left array, right array
+    la[0].type = ra[0].type = 'a';
+    la[0].val.a.type = ra[0].val.a.type = 'i';
+    la[0].val.a.len = ra[0].val.a.len = 3;
+    la[1].type = la[2].type = la[3].type =
+    ra[1].type = ra[2].type = ra[3].type = 'i';
+    la[1].val.i = 1; la[2].val.i = 2; la[3].val.i = 3;
+    ra[1].val.i = 1; ra[2].val.i = 2; ra[3].val.i = 2;
+
+    // same size
+    cmp_gt(la, ra, 4, 4, NULL, "[1 2 3]", "[1 2 2]", __LINE__);
+
+    // different size
+    ra[0].val.a.len = 2;
+    ra[3].val.i = 3;
+    cmp_gt(la, ra, 4, 4, NULL, "[1 2 3]", "[1 2] 3", __LINE__);
+}
+
+void ranges()
+{
+    rtosc_arg_val_t l[8], r[8];
+
+    // generate range 1 ... 5
+    l[0].type = 'a';
+    l[0].val.a.len = 5;
+    l[0].val.a.type = 'i';
+    l[1].type = 'i';
+    l[1].val.i = 1;
+    l[2].type = '-';
+    l[2].val.r.has_delta = 1;
+    l[2].val.r.num = 3;
+    l[3].type = 'i';
+    l[3].val.i = 1;
+    l[4].type = 'i';
+    l[4].val.i = 5;
+
+    r[0] = l[0];
+    for(size_t i = 0; i < 5; ++i) {
+        r[i+1].type = 'i';
+        r[i+1].val.i = i+1;
+    }
+
+    cmp_1(eq, l+1, r+1, 4, 5, NULL,
+          "range 1 ... 5", "integers 1 2 3 4 5", __LINE__);
+
+    cmp_1(eq, l+1, r+1, 4, 5, NULL,
+          "[1 ... 5]", "[1 2 3 4 5]", __LINE__);
+
+    // let l+1 = 1 ... 5 6 7
+    // and r+1 = 1 2 3 4 ... 7
+    l[5].val.i = 6;
+    l[6].val.i = 7;
+    l[5].type = l[6].type = 'i';
+    r[5].type = '-';
+    r[5].val.r.has_delta = 1;
+    r[5].val.r.num = 2;
+    r[6].type = 'i';
+    r[6].val.i = 1;
+    r[7].type = 'i';
+    r[7].val.i = 7;
+
+    cmp_1(eq, l+1, r+1, 6, 7, NULL,
+          "1 ... 5 6 7", "1 2 3 ... 7", __LINE__);
+
+}
+
 void different_types()
 {
     l[0].type = 'i';
@@ -252,6 +321,8 @@ int main()
     timestamps();
     midi();
     blobs();
+    arrays();
+    ranges();
     different_types();
     multiple_args();
     different_sizes();
