@@ -379,7 +379,7 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                 buffer += 4;
                 bs -= 4;
                 *cols_used += 4;
-                start = val->r.num;
+                start = val->r.num + 1;
             }
             else {
                 start = 1;

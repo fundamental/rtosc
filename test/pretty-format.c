@@ -258,10 +258,18 @@ void ranges()
 {
     rtosc_print_options uncompressed = ((rtosc_print_options) { false, 3, " ",
                                                                 10, false });
+    rtosc_print_options simplefloats = ((rtosc_print_options) { false, 2, " ",
+                                                                80, true });
+
+    /*
+        with delta
+     */
     check_alt("1 ... 7", &uncompressed,
               "a simple upwards integer range", __LINE__,
               "1 2 3 4 5\n"
               "    6 7");
+    check("2.00 1.40 ... -0.40 -1.00", &simplefloats,
+          "a simple float range", __LINE__);
     check_alt("'z' 'x' ... 'r'", &uncompressed,
               "a simple downward char range", __LINE__,
               "'z' 'x'\n"
@@ -290,6 +298,11 @@ void ranges()
     check_alt("[3...0]", &uncompressed,
               "range with delta 1 in an array (2)", __LINE__,
               "[3 2 1 0]");
+
+    /*
+        without delta
+     */
+//    check_alt("2x");
 }
 
 void fail_at_arg(const char* arg_val_str, int exp_fail, int line)

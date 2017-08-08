@@ -50,13 +50,16 @@ int rtosc_arg_val_negate(rtosc_arg_val_t* av)
 
 int rtosc_arg_val_round(rtosc_arg_val_t* av)
 {
+    int tmp;
     switch(av->type)
     {
         case 'd':
-            av->val.d = (double)(int)(av->val.d);
+            tmp = (int)(av->val.d);
+            av->val.d = tmp + (int)(av->val.d - tmp > 0.001);
             return true;
         case 'f':
-            av->val.f = (float)(int)(av->val.f);
+            tmp = (int)(av->val.f);
+            av->val.f = tmp + (int)(av->val.f - tmp > 0.001f);
             return true;
         case 'h':
         case 'c':

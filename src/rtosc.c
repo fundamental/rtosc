@@ -374,7 +374,7 @@ int rtosc_arg_vals_eq(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
         lhs = increase_counters(lhs, &li, &lhsi);
         rhs = increase_counters(rhs, &ri, &rhsi);
     }
-    fprintf(stderr, "%lu %lu %lu %lu\n", li, lsize, ri, rsize);
+
     if(!rval)
         return rval;
     else {
