@@ -181,14 +181,20 @@ struct Ports
     Ports(const Ports&) = delete;
 
     /**
-     * Dispatches message to all matching ports.
-     * This uses simple pattern matching available in rtosc::match.
+     * @brief Dispatches message to all matching ports.
+     *
+     * This uses simple pattern matching available in rtosc::match().
+     *
+     * @invariant In each recursion, "d.loc + m" must make the port's full path.
+     *   For further recursions, a call to scat() will append
+     *   the toplevel of m to d.loc, and in the rRecur* callbacks, SNIP() will
+     *   cut the toplevel from m. I.e.: loc="", m="a/b/c" => loc="/a/", m="b/c".
      *
      * @param m A valid OSC message. Note that the address part shall not
      *          contain any type specifier.
-     * @param d The RtData object shall contain a path buffer (or null), the length of
-     *          the buffer, a pointer to data. It must also contain the location
-     *          if an answer is being expected.
+     * @param d The RtData object shall contain a path buffer (or null), the
+     *          length of the buffer, a pointer to data. It must also contain
+     *          the location if an answer is being expected.
      * @param base_dispatch Whether the OSC path is to be interpreted as a full
      *                      OSC path beginning at the root
      */
@@ -202,9 +208,9 @@ struct Ports
 
 
     /**
-     * Find the best match for a given path
+     * @brief Find the best match for a given path
      *
-     * @parameter path partial OSC path
+     * @param path partial OSC path
      * @returns first path prefixed by the argument
      *
      * Example usage:

@@ -45,7 +45,7 @@ static int asnprintf(char* str, size_t size, const char* format, ...)
 static int next_arg_offset(const rtosc_arg_val_t* cur)
 {
     return (cur->type == 'a')
-           ? cur->val.a.len + 1 // TODO: actually wrong for array-arrays?
+           ? cur->val.a.len + 1
            : (cur->type == '-')
              ? 1                              /* range arg */
                + next_arg_offset(cur + 1)     /* start arg */
@@ -124,6 +124,13 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                            char *buffer, size_t bs,
                            const rtosc_print_options* opt, int *cols_used)
 {
+#define COUNT_UP(number) { int _n1 = number; bs -= _n1; buffer += _n1; \
+                           wrt += _n1; }
+#define COUNT_UP_COL(number) { int _n2 = number; \
+                               COUNT_UP(_n2); *cols_used += _n2; }
+#define COUNT_UP_WRITE(c) { assert(bs); \
+                            *buffer++ = c; --bs; ++wrt; ++*cols_used; }
+
     size_t wrt = 0;
     if(!opt)
         opt = default_print_options;
@@ -328,10 +335,8 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                     buffer += (tmp-1);
                     *cols_used = 4;
                 }
-                wrt += asnprintf(buffer, bs, "0x%02x ", val->b.data[i]);
-                bs -= 5;
-                buffer += 5;
-                *cols_used += 5;
+                asnprintf(buffer, bs, "0x%02x ", val->b.data[i]);
+                COUNT_UP_COL(5);
             }
             buffer[-1] = ']';
             break;
@@ -340,42 +345,26 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
             char* last_sep = buffer - 1;
             int args_written_this_line = (cols_used) ? 1 : 0;
 
-            assert(bs);
-            *buffer++ = '[';
-            ++*cols_used;
-            ++wrt;
-            --bs;
+            COUNT_UP_WRITE('[');
             if(val->a.len)
             for(int32_t i = 1; i <= val->a.len; )
             {
                 size_t tmp = rtosc_print_arg_val(arg+i, buffer, bs,
                                                  opt, cols_used);
                 i += next_arg_offset(arg+i);
-                buffer += tmp;
-                wrt += tmp;
-                bs -= tmp;
+                COUNT_UP(tmp);
 
                 linebreak_check_after_write(cols_used, &wrt,
                                             last_sep, &buffer, &bs,
                                             tmp, &args_written_this_line,
                                             opt->linelength);
 
-                assert(bs);
                 last_sep = buffer;
-                *buffer++ = ' ';
-                ++*cols_used;
-                ++wrt;
-                --bs;
+                COUNT_UP_WRITE(' ');
             }
             else
-            {
-                // TODO: redundancy
-                assert(bs);
-                *buffer++ = ' ';
-                ++*cols_used;
-                ++wrt;
-                --bs;
-            }
+                COUNT_UP_WRITE(' ');
+
             assert(bs);
             buffer[-1] = ']';
             *buffer = 0;
@@ -385,25 +374,19 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
         }
         case '-':
         {
-            int start, tmp;
+            int start;
 
             // prepare for the loop
             if(opt->compress_ranges)
             {
                 if(val->r.has_delta)
                 {
-                    tmp = rtosc_print_arg_val(arg+2, buffer, bs,
-                                              opt, cols_used);
-                    wrt += tmp;
-                    buffer += tmp;
-                    bs -= tmp;
-                    *cols_used += tmp;
+                    int tmp = rtosc_print_arg_val(arg+2, buffer, bs,
+                                                  opt, cols_used);
+                    COUNT_UP(tmp);
 
                     asnprintf(buffer, bs, " ... ");
-                    wrt += 5;
-                    buffer += 5;
-                    bs -= 5;
-                    *cols_used += 5;
+                    COUNT_UP_COL(5);
 
                     // print only the last value
                     start = val->r.num - 1;
@@ -413,16 +396,10 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                     int tmp;
                     // print "nx..."
                     tmp = asnprintf(buffer, bs, "%dx", arg->val.r.num + 1);
-                    wrt += tmp;
-                    buffer += tmp;
-                    bs -= tmp;
-                    *cols_used += tmp;
+                    COUNT_UP_COL(tmp);
                     tmp = rtosc_print_arg_val(arg+1, buffer, bs,
                                               opt, cols_used);
-                    wrt += tmp;
-                    buffer += tmp;
-                    bs -= tmp;
-                    *cols_used += tmp;
+                    COUNT_UP(tmp);
 
                     // skip loop below
                     start = val->r.num;
@@ -451,21 +428,15 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
 
                 size_t tmp = rtosc_print_arg_val(cur, buffer, bs,
                                                  opt, cols_used);
-                wrt += tmp;
-                buffer += tmp;
-                bs -= tmp;
+                COUNT_UP(tmp);
 
                 linebreak_check_after_write(cols_used, &wrt,
                                             last_sep, &buffer, &bs,
                                             tmp, &args_written_this_line,
                                             opt->linelength);
 
-                assert(bs);
                 last_sep = buffer;
-                *buffer++ = ' ';
-                ++*cols_used;
-                ++wrt;
-                --bs;
+                COUNT_UP_WRITE(' ');
             }
 
             buffer[-1] = 0;
@@ -490,6 +461,9 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
     }
 
     return wrt;
+#undef COUNT_UP_COL
+#undef COUNT_UP
+#undef COUNT_UP_WRITE
 }
 
 size_t rtosc_print_arg_vals(const rtosc_arg_val_t *args, size_t n,
@@ -750,23 +724,6 @@ static const char* skip_identifier(const char* str)
     }
 }
 
-/*
-    // TODO: rewrite this when delta-less args (nx...) are implemented
-    there are 4 cases:
-      llhssrc ... lhssrc ... rhssrc
-      ... llhssrc ... lhssrc ... rhssrc
-      llhssrc lhssrc ... rhssrc
-      ... llhssrc lhssrc ... rhssrc
-
-    in all cases:
-      rhsarg must be the arg val of rhssrc
-      lhssrc and llhssrc must be the arg vals of
-        the last element of the range (if it's a range)
-        the element itself (if it's no range)
-
-    the first two cases do not require llhssrc to be computed
-    llhsarg must point to an arg which equals the range's last values
-*/
 int32_t delta_from_arg_vals(const rtosc_arg_val_t* llhsarg,
                             const rtosc_arg_val_t* lhsarg,
                             const rtosc_arg_val_t* rhsarg,
@@ -776,7 +733,6 @@ int32_t delta_from_arg_vals(const rtosc_arg_val_t* llhsarg,
     /*
         compute delta
     */
-
     int cmp;
     if(must_be_untiy)
     {
@@ -1082,22 +1038,12 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
         {
             src = src2;
 
-            // TODO: rewrite this
-            // what we need to do is only checking for correctness:
+            // What we need to do is only checking for correctness:
             //  * lhs (left hand sign) and rhs are given
             //  * lhs and rhs must be of the same type
             //  * there must be an "n" such that lhs + n*delta = rhs
             //    => therefore, compute delta
             //  * such "n" must not be 0
-
-            // four cases:
-            //  * no ellipsis in lhs and llhs (left of left hand sign)
-            //    => normal delta computation
-            //  * ellipsis only in llhs
-            //    => normal delta computation, but take lhs value from
-            //       after the ellipsis
-            //  * ellipsis in lhs
-            //    => delta = 1
 
             const char* rhssrc = src;
             const char* ellipsis = src;
@@ -1436,7 +1382,6 @@ size_t rtosc_scan_arg_val(const char* src,
 
             assert(*bufsize >= (size_t)arg->val.b.len);
             *bufsize -= (size_t)arg->val.b.len;
-// TODO: buffer_for_strings: increase?
             arg->val.b.data = (uint8_t*)buffer_for_strings;
             for(int32_t i = 0; i < arg->val.b.len; ++i)
             {

@@ -198,6 +198,8 @@ void scan_and_print_single()
     check("BLOB [6 0x72 0x74 0x6f 0x73 0x63 0x00]", NULL,
           "a six bytes blob", __LINE__);
     check("BLOB [0]", NULL, "an empty blob", __LINE__);
+    check("BLOB [2 0x00 0x01] BLOB [1 0x02]", NULL,
+          "two consecutive blobs", __LINE__);
 
     /*
         comments
@@ -250,6 +252,9 @@ void arrays()
     //       write *one* generic function rtosc_insert_newlines?
     check("[\"123\" \"45\" \"\"\\\n    \"6\"]", &shortline,
           "array with linebreak", __LINE__);
+
+    check("[1 2 3] ['a' 'b'] [] [\"Hello World\"]", NULL,
+          "Consecutive arrays", __LINE__);
 
     check("[[0 1] [] [2 3]]", NULL, "arrays inside arrays", __LINE__);
 }
