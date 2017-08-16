@@ -10,6 +10,19 @@
 #include <rtosc/pretty-format.h>
 #include <rtosc/arg-val-math.h>
 
+/**
+    @file pretty-format.c
+    @brief Implementation of pretty printer and scanner
+
+    Most arguments are read into single arg_val_t elements
+    exceptions:
+     * arrays: "[arg1 arg2 ... argn]" <=> ('a', <type>, <size>) arg1 ... argn
+     * ranges with delta: "arg1 ... argn"
+        <=> ('-', <num>, <has_delta=1>) delta_arg arg1
+     * ranges without delta: "nxarg"
+        <=> ('-', <num>, <has_delta=0>) arg1
+*/
+
 static const rtosc_print_options* default_print_options
  = &((rtosc_print_options) { true, 2, " ", 80, true});
 
@@ -29,12 +42,15 @@ static int asnprintf(char* str, size_t size, const char* format, ...)
 
 //! return the offset of the next arg from cur, arrays seen as one arg and
 //! delta args (from ranges) seen as @p additional_for_delta args
-int next_arg_offset(const rtosc_arg_val_t* cur, int additional_for_delta)
+static int next_arg_offset(const rtosc_arg_val_t* cur)
 {
     return (cur->type == 'a')
-           ? cur->val.a.len + 1
-           : 1 + additional_for_delta * (cur->type == '-' &&
-                                         cur->val.r.has_delta);
+           ? cur->val.a.len + 1 // TODO: actually wrong for array-arrays?
+           : (cur->type == '-')
+             ? 1                              /* range arg */
+               + next_arg_offset(cur + 1)     /* start arg */
+               + (int) cur->val.r.has_delta   /* delta arg */
+             : 1;
 }
 
 /**
@@ -334,7 +350,7 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
             {
                 size_t tmp = rtosc_print_arg_val(arg+i, buffer, bs,
                                                  opt, cols_used);
-                i += next_arg_offset(arg+i, 1);
+                i += next_arg_offset(arg+i);
                 buffer += tmp;
                 wrt += tmp;
                 bs -= tmp;
@@ -369,39 +385,72 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
         }
         case '-':
         {
-            int start;
+            int start, tmp;
+
+            // prepare for the loop
             if(opt->compress_ranges)
             {
-                // print "... "
-                // set start to highest value
-                asnprintf(buffer, bs, "... ");
-                wrt += 4;
-                buffer += 4;
-                bs -= 4;
-                *cols_used += 4;
-                start = val->r.num + 1;
+                if(val->r.has_delta)
+                {
+                    tmp = rtosc_print_arg_val(arg+2, buffer, bs,
+                                              opt, cols_used);
+                    wrt += tmp;
+                    buffer += tmp;
+                    bs -= tmp;
+                    *cols_used += tmp;
+
+                    asnprintf(buffer, bs, " ... ");
+                    wrt += 5;
+                    buffer += 5;
+                    bs -= 5;
+                    *cols_used += 5;
+
+                    // print only the last value
+                    start = val->r.num - 1;
+                }
+                else
+                {
+                    int tmp;
+                    // print "nx..."
+                    tmp = asnprintf(buffer, bs, "%dx", arg->val.r.num + 1);
+                    wrt += tmp;
+                    buffer += tmp;
+                    bs -= tmp;
+                    *cols_used += tmp;
+                    tmp = rtosc_print_arg_val(arg+1, buffer, bs,
+                                              opt, cols_used);
+                    wrt += tmp;
+                    buffer += tmp;
+                    bs -= tmp;
+                    *cols_used += tmp;
+
+                    // skip loop below
+                    start = val->r.num;
+                }
+
             }
             else {
-                start = 1;
+                    start = 0; // print the whole range
             }
 
+            // loop over all args of the range
             char* last_sep = buffer - 1;
             int args_written_this_line = (cols_used) ? 1 : 0;
 
-            for(int i = start; i <= val->r.num; ++i)
+            for(int i = start; i < val->r.num; ++i)
             {
-                rtosc_arg_val_t offset, mult, cur;
+                rtosc_arg_val_t tmparg;
+                const rtosc_arg_val_t *cur;
                 if(arg->val.r.has_delta)
                 {
-                    rtosc_arg_val_from_int(&offset, arg[-1].type, i);
-                    rtosc_arg_val_mult(&offset, arg+1, &mult);
-                    rtosc_arg_val_add(arg-1, &mult, &cur);
+                    rtosc_arg_val_range_arg(arg, i, &tmparg);
+                    cur = &tmparg;
                 }
                 else
-                    cur = arg[-1];
+                    cur = arg + 1;
 
-                size_t tmp = rtosc_print_arg_val(&cur, buffer, bs, opt,
-                                                 cols_used);
+                size_t tmp = rtosc_print_arg_val(cur, buffer, bs,
+                                                 opt, cols_used);
                 wrt += tmp;
                 buffer += tmp;
                 bs -= tmp;
@@ -469,7 +518,7 @@ size_t rtosc_print_arg_vals(const rtosc_arg_val_t *args, size_t n,
                                     tmp, &args_written_this_line,
                                     opt->linelength);
 
-        size_t inc = next_arg_offset(args, 1);
+        size_t inc = next_arg_offset(args);
         i += inc;
         args += inc;
         if(i<n)
@@ -718,8 +767,10 @@ static const char* skip_identifier(const char* str)
     the first two cases do not require llhssrc to be computed
     llhsarg must point to an arg which equals the range's last values
 */
-int32_t delta_from_arg_vals(rtosc_arg_val_t* llhsarg, rtosc_arg_val_t* lhsarg,
-                            rtosc_arg_val_t* rhsarg,  rtosc_arg_val_t* delta,
+int32_t delta_from_arg_vals(const rtosc_arg_val_t* llhsarg,
+                            const rtosc_arg_val_t* lhsarg,
+                            const rtosc_arg_val_t* rhsarg,
+                            rtosc_arg_val_t* delta,
                             int must_be_untiy)
 {
     /*
@@ -743,7 +794,7 @@ int32_t delta_from_arg_vals(rtosc_arg_val_t* llhsarg, rtosc_arg_val_t* lhsarg,
     }
 
     if(!cmp)
-        return false;
+        return -1;
 
     /*
      * check if delta matches,
@@ -755,25 +806,44 @@ int32_t delta_from_arg_vals(rtosc_arg_val_t* llhsarg, rtosc_arg_val_t* lhsarg,
     rtosc_arg_val_round(&div);
     rtosc_arg_val_mult(&div, delta, &width2);
 
-    static const rtosc_cmp_options cmp_options
+    const rtosc_cmp_options cmp_options
      = ((rtosc_cmp_options) { 0.001 });
     if( ! rtosc_arg_vals_eq(&width, &width2, 1, 1, &cmp_options))
-        return 0;
+        return -1;
 
     int res;
     rtosc_arg_val_to_int(&div, &res);
-    return res - 1;
+    return res + 1;
 }
+
+static int is_range_multiplier(const char* s)
+{
+    int rval;
+    if(isdigit(*s) && *s != '0')
+    {
+        while(isdigit(*++s)) ;
+        rval = (*s == 'x');
+    }
+    else
+        rval = 0;
+    return rval;
+}
+
+static const char* allowed_range_types() { return "cihfd"; }
 
 const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
                                         char* type, const char* llhssrc,
-                                        const char* lhssrc)
+                                        int follow_ellipsis)
 {
     char dummy;
     if(!type)
         type = &dummy;
     assert(skipped);
     *skipped = 1; // in almost all cases
+
+    char deltaless_range_type = 0;
+
+    const char* old_src = src;
     switch(*src)
     {
         case 't':
@@ -876,17 +946,15 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
         {
             while(isspace(*++src));
             char arraytype = 0;
-            const char* llhssrc = NULL, * lhssrc = NULL;
+            const char* recent_src = NULL;
             while(src && *src && *src != ']')
             {
                 char arraytype_cur = 20;
                 int skipped2;
                 const char* newsrc = rtosc_skip_next_printed_arg(src, &skipped2,
                                                                  &arraytype_cur,
-                                                                 llhssrc,
-                                                                 lhssrc);
-                llhssrc = lhssrc;
-                lhssrc = src;
+                                                                 recent_src, 1);
+                recent_src = src;
                 src = newsrc;
 
                 if(src)
@@ -930,127 +998,20 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
         }
         default:
         {
-            // is it an ellipsis?
-            if(!strncmp(src, "...", 3))
+            // nx... ? (n > 0)
+            if(is_range_multiplier(src))
             {
-                // what we need to do is only checking for correctness:
-                //  * lhs (left hand sign) and rhs are given
-                //  * lhs and rhs must be of the same type
-                //  * there must be an "n" such that lhs + n*delta = rhs
-                //    => therefore, compute delta
-                //  * such "n" must not be 0
+                while(*++src != 'x') ;
+                ++src;
 
-                // four cases:
-                //  * no ellipsis in lhs and llhs (left of left hand sign)
-                //    => normal delta computation
-                //  * ellipsis only in llhs
-                //    => normal delta computation, but take lhs value from
-                //       after the ellipsis
-                //  * ellipsis in lhs
-                //    => delta = 1
-
-                const char* rhssrc = src;
-                src = NULL;
-
-                do
-                {
-                    if(!lhssrc)
-                        break; // "..." is binary or ternary
-                    else
-                    {
-                        ++*skipped; // ellipsis skips 2 arg vals
-                        *type = '-';
-
-                        rtosc_arg_val_t llhsarg, lhsarg, rhsarg;
-                        char lhstype, llhstype, rhstype[2] = "x";
-                        size_t zero = 0;
-                        int llhsskipped, lhsskipped, rhsskipped;
-
-                        rtosc_arg_val_t delta;
-                        bool must_be_unity = false;
-
-                        /*
-                         * in all cases, check rhs
-                         */
-                        rhssrc += 2;
-                        while(isspace(*++rhssrc)) ;
-                        const char* endsrc = rtosc_skip_next_printed_arg(
-                                                 rhssrc, &rhsskipped,
-                                                 rhstype, NULL, NULL);
-                        if(!endsrc)
-                            break;
-                        if(! strpbrk(rhstype, "ihcfd"))
-                            break;
-                        rtosc_scan_arg_val(rhssrc, &rhsarg, 1, NULL, &zero, 0);
-
-                        /*
-                         * in all cases, check lhs
-                         */
-                        if(!strncmp(lhssrc, "...", 3))
-                        {
-                            must_be_unity = true;
-
-                            // skip lhs ellipsis
-                            lhssrc += 2;
-                            while(isspace(*++lhssrc)) ;
-                        }
-                        rtosc_skip_next_printed_arg(lhssrc,  &lhsskipped,
-                                                    &lhstype, NULL, NULL);
-
-                        if(lhsskipped * rhsskipped != 1
-                           || lhstype != *rhstype)
-                        {
-                            // types must be equal and single numerics
-                            break;
-                        }
-                        rtosc_scan_arg_val(lhssrc, &lhsarg, 1,
-                                           NULL, &zero, 0);
-
-                        if(!must_be_unity)
-                        {
-                            /*
-                             * is llhs given and useful?
-                             */
-                            if(llhssrc)
-                            {
-                                if(!strncmp(llhssrc, "...",  3))
-                                {
-                                    // we're only interested in the final
-                                    // number in llhs
-                                    llhssrc += 2;
-                                    while(isspace(*++llhssrc)) ;
-                                }
-                                rtosc_skip_next_printed_arg(llhssrc,
-                                                            &llhsskipped,
-                                                            &llhstype,
-                                                            NULL, NULL);
-                                if(llhstype == lhstype)
-                                {
-                                    rtosc_scan_arg_val(llhssrc, &llhsarg, 1,
-                                                       NULL, &zero, 0);
-                                }
-                                else
-                                {
-                                    must_be_unity = true;
-                                }
-                            }
-                            else {
-                                must_be_unity = true;
-                            }
-                        }
-
-                        /*
-                            compute delta and check if it matches
-                        */                        
-                        if(!delta_from_arg_vals(&llhsarg, &lhsarg, &rhsarg,
-                                                &delta, must_be_unity))
-                            break;
-
-                        // if we made it until here, set src to non-NULL
-                        src = endsrc;
-                        ++*skipped; // element after ellipsis could be parsed
-                    }
-                } while(false);
+                int skipped2;
+                src = rtosc_skip_next_printed_arg(src, &skipped2,
+                                                  &deltaless_range_type,
+                                                  NULL, 0);
+                if(src) {
+                    *type = '-';
+                    *skipped += skipped2;
+                }
             }
             // is it an identifier?
             else if(*src == '_' || isalpha(*src))
@@ -1110,6 +1071,140 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
             }
         }
     }
+
+    if(follow_ellipsis && src)
+    {
+        // is the argument being followed by an ellipsis?
+        const char* src2 = src;
+        for(; isspace(*src2); ++src2) ;
+
+        if(!strncmp(src2, "...", 3))
+        {
+            src = src2;
+
+            // TODO: rewrite this
+            // what we need to do is only checking for correctness:
+            //  * lhs (left hand sign) and rhs are given
+            //  * lhs and rhs must be of the same type
+            //  * there must be an "n" such that lhs + n*delta = rhs
+            //    => therefore, compute delta
+            //  * such "n" must not be 0
+
+            // four cases:
+            //  * no ellipsis in lhs and llhs (left of left hand sign)
+            //    => normal delta computation
+            //  * ellipsis only in llhs
+            //    => normal delta computation, but take lhs value from
+            //       after the ellipsis
+            //  * ellipsis in lhs
+            //    => delta = 1
+
+            const char* rhssrc = src;
+            const char* ellipsis = src;
+            src = NULL;
+            const char* lhssrc;
+
+            do
+            {
+                lhssrc = old_src;
+                if(is_range_multiplier(lhssrc))
+                    lhssrc = strchr(lhssrc, 'x') + 1;
+
+                rtosc_arg_val_t llhsarg, lhsarg, rhsarg;
+                char lhstype = deltaless_range_type ? deltaless_range_type
+                                                    : *type,
+                     llhstype, rhstype[2] = "x";
+
+                *type = '-';
+
+                size_t zero = 0;
+                int llhsskipped, rhsskipped;
+
+                rtosc_arg_val_t delta;
+                bool must_be_unity = false;
+
+                /*
+                 * in all cases, check rhs
+                 */
+                rhssrc += 2;
+                while(isspace(*++rhssrc)) ;
+                const char* endsrc = rtosc_skip_next_printed_arg(
+                                         rhssrc, &rhsskipped,
+                                         rhstype, NULL, 0);
+                if(!endsrc)
+                    break;
+                if(! strpbrk(rhstype, allowed_range_types()))
+                    break;
+                rtosc_scan_arg_val(rhssrc, &rhsarg, 1, NULL, &zero, 0, 0);
+
+                /*
+                 * do not check lhs; it has been checked above
+                 */
+                if(lhstype == 'a' || lhstype == '-'
+                   || lhstype != *rhstype)
+                {
+                    // types must be equal and single values
+                    break;
+                }
+                rtosc_scan_arg_val(lhssrc, &lhsarg, 1,
+                                   NULL, &zero, 0, 0);
+
+                if(!must_be_unity)
+                {
+                    /*
+                     * is llhs given and useful?
+                     */
+                    if(llhssrc)
+                    {
+                        const char* next_ellipsis_from_llhssrc =
+                                strstr(llhssrc, "...");
+                        if(next_ellipsis_from_llhssrc < ellipsis)
+                        {
+                            llhssrc = next_ellipsis_from_llhssrc + 2;
+                            while(isspace(*++llhssrc)) ;
+                        }
+                        else if(is_range_multiplier(llhssrc))
+                        {
+                            llhssrc = strchr(llhssrc, 'x') + 1;
+                        }
+
+                        rtosc_skip_next_printed_arg(llhssrc,
+                                                    &llhsskipped, &llhstype,
+                                                    NULL, 0);
+                        if(llhstype == lhstype)
+                        {
+                            rtosc_scan_arg_val(llhssrc, &llhsarg, 1,
+                                               NULL, &zero, 0, 0);
+                            // hint: use rtosc_arg_val_range_arg here if
+                            // overlapping ranges shall be implemented
+                        }
+                        else
+                        {
+                            must_be_unity = true;
+                        }
+                    }
+                    else {
+                        must_be_unity = true;
+                    }
+                }
+
+                /*
+                    compute delta and check if it matches
+                */
+                if(delta_from_arg_vals(&llhsarg, &lhsarg, &rhsarg,
+                                       &delta, must_be_unity) < 1)
+                    break;
+
+                // if we made it until here, set src to non-NULL
+                src = endsrc;
+
+                // ellipsis skips 3 arg vals: range, delta, start
+                ++*skipped;
+                ++*skipped;
+            } while(false);
+        }
+    }
+
     return src;
 }
 
@@ -1122,13 +1217,12 @@ int rtosc_count_printed_arg_vals(const char* src)
         skip_fmt(&src, "%*[^\n] %n");
 
     int skipped_now = 0;
-    const char* llhssrc = NULL, * lhssrc = NULL;
+    const char* recent_src = NULL;
     for(; src && *src && *src != '/'; num += skipped_now)
     {
         const char* newsrc = rtosc_skip_next_printed_arg(src, &skipped_now,
-                                                         NULL, llhssrc, lhssrc);
-        llhssrc = lhssrc;
-        lhssrc = src;
+                                                         NULL, recent_src, 1);
+        recent_src = src;
         src = newsrc;
 
         if(src) // no parse error
@@ -1185,7 +1279,7 @@ const char* parse_identifier(const char* src, rtosc_arg_val_t *arg,
 size_t rtosc_scan_arg_val(const char* src,
                           rtosc_arg_val_t *arg, size_t nargs,
                           char* buffer_for_strings, size_t* bufsize,
-                          size_t args_before)
+                          size_t args_before, int follow_ellipsis)
 {
     int rd = 0;
     const char* start = src;
@@ -1301,11 +1395,6 @@ size_t rtosc_scan_arg_val(const char* src,
         }
         case '[':
         {
-            // the current RT OSC implementation represents printed arrays as an
-            // arg val of type 'a', including type T and size N in the data,
-            // followed by N arg vals of type T
-            // Note: there is currently no corresponding symbol for 'a' in
-            //       *messages*
             while(isspace(*++src));
             int32_t num_read = 0;
 
@@ -1319,19 +1408,17 @@ size_t rtosc_scan_arg_val(const char* src,
                 last_bufsize = *bufsize;
 
                 src += rtosc_scan_arg_val(src, arg, nargs,
-                                          buffer_for_strings, bufsize, i);
+                                          buffer_for_strings, bufsize, i, 1);
                 arrtype = arg->type;
 
-                size_t args_scanned = next_arg_offset(arg, 2);
+                size_t args_scanned = next_arg_offset(arg);
                 nargs -= args_scanned;
                 arg += args_scanned;
                 num_read += args_scanned;
 
                 for( ; isspace(*src); ++src) ;
 
-                size_t written = last_bufsize - *bufsize;
-                buffer_for_strings += written;
-
+                buffer_for_strings += (last_bufsize - *bufsize);
                 // TODO: allow comments in arrays, blobs, midi?
             }
 
@@ -1349,7 +1436,7 @@ size_t rtosc_scan_arg_val(const char* src,
 
             assert(*bufsize >= (size_t)arg->val.b.len);
             *bufsize -= (size_t)arg->val.b.len;
-
+// TODO: buffer_for_strings: increase?
             arg->val.b.data = (uint8_t*)buffer_for_strings;
             for(int32_t i = 0; i < arg->val.b.len; ++i)
             {
@@ -1364,54 +1451,28 @@ size_t rtosc_scan_arg_val(const char* src,
             break;
         }
         default:
-            // is it an ellipsis?
-            if(!strncmp(src, "...", 3))
+            // nx... ? (n > 0)
+            if(is_range_multiplier(src))
             {
-                rtosc_arg_val_t delta, rhs;
-                size_t zero;
-
-                src += 2;
-                while(isspace(*++src)) ;
-                src += rtosc_scan_arg_val(src,  &rhs,  1, NULL, &zero, 0);
-
-                /*
-                    these shall be conforming to delta_from_arg_vals,
-                    i.e. if ranges,    the last elements of the ranges
-                         if no ranges, the elements themselves
-                 */
-                // find lhs and llhs positions
-                rtosc_arg_val_t* lhsarg = arg-1;
-                // argument "-2" could be a delta arg
-                rtosc_arg_val_t* llhsarg = (args_before > 2 &&
-                                            arg[-3].type == '-' &&
-                                            arg[-3].val.r.has_delta)
-                              // -2 is a delta arg (followin a range arg)?
-                              ? arg-3
-                              : (args_before > 1 && arg[-2].type == '-')
-                              // -2 is a range arg (without delta)?
-                              ? arg-2
-                              : arg-2; // normal case
-
-                bool must_be_unity = false;
-                if(args_before <= 1)
-                {
-                    must_be_unity = true;
-                }
-                else
-                {
-                    if(lhsarg->type == '-' || llhsarg->type != lhsarg->type )
-                        // this includes llhsarg = '-'
-                        must_be_unity = true;
-                }
-
-                int32_t num = delta_from_arg_vals(llhsarg, lhsarg, &rhs,
-                                                  &delta, must_be_unity);
-
+                // collect information for range_arg
+                int multiplier, rd = 0;
+                sscanf(src, "%dx%n", &multiplier, &rd);
+                src += rd;
                 arg->type = '-';
-                arg->val.r.num = num;
-                arg->val.r.has_delta = 1;
-                *++arg = delta;
-                *++arg = rhs;
+                arg->val.r.num = multiplier;
+                arg->val.r.has_delta = 0;
+
+                ++arg;
+                // read value-arg
+                size_t old_bufsize = *bufsize;
+                size_t tmp = rtosc_scan_arg_val(src, arg, nargs,
+                                                buffer_for_strings, bufsize,
+                                                0, 0);
+                buffer_for_strings += old_bufsize - *bufsize;
+                int args_scanned = next_arg_offset(arg);
+                nargs -= args_scanned;
+                arg += args_scanned;
+                src += tmp;
             }
             // is it an identifier?
             else if(*src == '_' || isalpha(*src))
@@ -1550,6 +1611,65 @@ size_t rtosc_scan_arg_val(const char* src,
             } // date vs integer
         // case ident
     } // switch
+
+    // is the argument being followed by an ellipsis?
+    const char* src2 = src;
+    for(; isspace(*src2); ++src2) ;
+
+    if(follow_ellipsis && !strncmp(src2, "...", 3))
+    {
+        src = src2;
+        rtosc_arg_val_t delta, rhs;
+        size_t zero;
+
+        // skip ellipsis and read rhs
+        src += 2;
+        while(isspace(*++src)) ;
+        src += rtosc_scan_arg_val(src,  &rhs,  1, NULL, &zero, 0, 0);
+
+        /*
+            these shall be conforming to delta_from_arg_vals,
+            i.e. if ranges,    the last elements of the ranges
+                 if no ranges, the elements themselves
+         */
+        // find lhs and llhs positions
+        rtosc_arg_val_t lhsarg = *arg;
+        rtosc_arg_val_t tmp;
+        // argument "-2" could be a delta arg
+        rtosc_arg_val_t* llhsarg = (args_before > 2 &&
+                                    arg[-3].type == '-' &&
+                                    arg[-3].val.r.has_delta)
+                      // -2 is a delta arg (followin a range arg)?
+                      ? rtosc_arg_val_range_arg(arg-3, arg[-3].val.r.num-1,
+                                                &tmp)
+                      : (args_before > 1 && arg[-2].type == '-')
+                      // -2 is a range arg (without delta)?
+                      ? arg-1
+                      : arg-1; // normal case
+
+        bool must_be_unity = false;
+        if(args_before < 1)
+        {
+            must_be_unity = true;
+        }
+        else
+        {
+            if(lhsarg.type == '-' || llhsarg->type != lhsarg.type )
+                // this includes llhsarg = '-'
+                must_be_unity = true;
+        }
+
+        int32_t num = delta_from_arg_vals(llhsarg, &lhsarg, &rhs,
+                                          &delta, must_be_unity);
+        assert(num > 0);
+
+        arg->type = '-';
+        arg->val.r.num = num;
+        arg->val.r.has_delta = 1;
+        *++arg = delta;
+        *++arg = lhsarg;
+    }
+
     return (size_t)(src-start);
 }
 
@@ -1564,10 +1684,10 @@ size_t rtosc_scan_arg_vals(const char* src,
         last_bufsize = bufsize;
 
         size_t tmp = rtosc_scan_arg_val(src, args, n-i,
-                                        buffer_for_strings, &bufsize, i);
+                                        buffer_for_strings, &bufsize, i, 1);
         src += tmp;
         rd += tmp;
-        size_t length = next_arg_offset(args, 2);
+        size_t length = next_arg_offset(args);
         i += length;
         args += length;
 

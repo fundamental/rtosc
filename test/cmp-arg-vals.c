@@ -226,46 +226,46 @@ void ranges()
 {
     rtosc_arg_val_t l[8], r[8];
 
-    // generate range 1 ... 5
+    // generate range 1 ... 5 inside of an array
     l[0].type = 'a';
-    l[0].val.a.len = 5;
+    l[0].val.a.len = 3; // number of arg_val_t inside
     l[0].val.a.type = 'i';
-    l[1].type = 'i';
-    l[1].val.i = 1;
-    l[2].type = '-';
-    l[2].val.r.has_delta = 1;
-    l[2].val.r.num = 3;
+    l[1].type = '-';
+    l[1].val.r.has_delta = 1;
+    l[1].val.r.num = 5;
+    l[2].type = 'i';
+    l[2].val.i = 1;
     l[3].type = 'i';
     l[3].val.i = 1;
-    l[4].type = 'i';
-    l[4].val.i = 5;
 
-    r[0] = l[0];
+    r[0].type = 'a';
+    r[0].val.a.len = 5;
+    r[0].val.a.type = 'i';
     for(size_t i = 0; i < 5; ++i) {
         r[i+1].type = 'i';
         r[i+1].val.i = i+1;
     }
 
-    cmp_1(eq, l+1, r+1, 4, 5, NULL,
+    cmp_1(eq, l+1, r+1, 3, 5, NULL,
           "range 1 ... 5", "integers 1 2 3 4 5", __LINE__);
 
-    cmp_1(eq, l+1, r+1, 4, 5, NULL,
+    cmp_1(eq, l, r, 4, 6, NULL,
           "[1 ... 5]", "[1 2 3 4 5]", __LINE__);
 
     // let l+1 = 1 ... 5 6 7
     // and r+1 = 1 2 3 4 ... 7
-    l[5].val.i = 6;
-    l[6].val.i = 7;
-    l[5].type = l[6].type = 'i';
-    r[5].type = '-';
-    r[5].val.r.has_delta = 1;
-    r[5].val.r.num = 2;
+    l[4].val.i = 6;
+    l[5].val.i = 7;
+    l[4].type = l[5].type = 'i';
+    r[4].type = '-';
+    r[4].val.r.has_delta = 1;
+    r[4].val.r.num = 4;
+    r[5].type = 'i';
+    r[5].val.i = 1;
     r[6].type = 'i';
-    r[6].val.i = 1;
-    r[7].type = 'i';
-    r[7].val.i = 7;
+    r[6].val.i = 4;
 
-    cmp_1(eq, l+1, r+1, 6, 7, NULL,
+    cmp_1(eq, l+1, r+1, 5, 6, NULL,
           "1 ... 5 6 7", "1 2 3 ... 7", __LINE__);
 
 }

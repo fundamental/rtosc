@@ -464,20 +464,33 @@ An_Identifier_with_a_Number_12345
 frequency_modulation
 "A more \"complicated\" identifier!"S
 ----------
+* Ranges can be used for repeated or linearly increasing values.
+** If the element shall be repeated, the syntax "nxa" with "n" being a
+   *decimal* integer and "a" being an element, expands to "a a ... a", where "a"
+   is used "n" times. All element types except ranges are allowed.
+** Otherwise, the syntax "a b ... c", where "d:=b-a" and a natural number "n"
+   exists such that "a+nd = c", evaluates to "a b b+d b+2d b+3d ... c". If "a"
+   is not given or of different type than "b", "d" is being computed as
+   "d:=sgn(c-b)",
+     i.e d:= 1 if c>b
+     and d:=-1 if b>c.
+   For floating point numbers, "a+nd" does not need match "c", but an "n" must
+   exist such that "|a+nd-c| <= 0.001".
+   Restrictions:
+   * "a" and "b" must not be equal and must be of the same type
+   * Only simple numeric types, i.e. one of "cihfd", are allowed.
+   * Ranges may not overlap, i.e. no "2x1 ... 3" and no "1 ... 3 ... 5"
+----------
+10 8 ... 2                % 10 8 6 4 2
+0.000 0.333 ... 1.000     % 0.000 0.333 0.667 1.000
+3x["bad" "luck"]          % ["bad" "luck"] ["bad" "luck"] ["bad" "luck"]
+----------
 * Arrays are written as multiple, space separated elements of the same type,
-  encapsulated by brackets. For numerical values, the ellipsis can be used to
-  create a linearly increasing or decreasing range. The syntax [ a b ... c ]
-  evaluates to [ a b b+d b+2d b+3d ... c ] where d:=b-a. If a is not given or of
-  different type than b, d is being computed as d:=sgn(c-b), i.e d:=1 if c>b
-  and d:=-1 if b>c. If there is no "n" such that a+nd=c, the last value the
-  ellipsis expands to is "b+n'd", with "n'" being the highest value such that
-  b+n'd<c.
+  encapsulated by brackets. They can contain any types of elements.
 ----------
 [ "Multiple" "strings" ]
-[ 10 8 ... 2 ]   % 10 8 6 4 2
-[ 1.0 ... 5.2 ]      %  1 2 3 4 5 5.2
+[ 1 ... 5 ]
 ----------
-
 
 Here are a few examples of full messages:
 ----------

@@ -24,6 +24,7 @@
 
 /**
  * @file pretty-format.h
+ * @brief Header for pretty printer and scanner
  */
 
 #ifndef PRETTYFORMAT_H
@@ -98,12 +99,16 @@ size_t rtosc_print_message(const char* address,
  * @param skipped The number of arg_vals that would be skipped when scanning,
  *   typically 1 (though not for arrays)
  * @param type The skipped type
+ * @param llhssrc The recent reading position before this
+ *   (it will get the left of left hand sign of this argument)
+ * @param follow_ellipsis Whether an argument followed by an ellipsis is
+ *   interpreted as a range start or as only the argument itself
  * @return The first character after that argument value, or NULL if a
  *   parsing error occurred
  */
-const char* rtosc_skip_next_printed_arg(const char* src,
-                                        int* skipped, char* type,
-                                        const char* llhssrc,const char* lhssrc);
+const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
+                                        char* type, const char* llhssrc,
+                                        int follow_ellipsis);
 
 /**
  * @brief Count arguments that would be scanned and do a complete syntax check
@@ -144,12 +149,15 @@ int rtosc_count_printed_arg_vals_of_msg(const char* msg);
  *   strings and blobs
  * @param bufsize Size of @p buffer_for_strings , will be shrinked to the
  *   bufferbytes left after the scan
+ * @param args_before Number of arguments scanned before this one
+ * @param follow_ellipsis Whether an argument followed by an ellipsis is
+ *   interpreted as a range start or as only the argument itself
  * @return The number of bytes scanned
  */
 size_t rtosc_scan_arg_val(const char* src,
                           rtosc_arg_val_t *arg, size_t n,
                           char* buffer_for_strings, size_t* bufsize,
-                          size_t args_before);
+                          size_t args_before, int follow_ellipsis);
 
 /**
  * @brief Scan a fixed number of argument values from a string.

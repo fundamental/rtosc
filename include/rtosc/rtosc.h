@@ -43,15 +43,15 @@ typedef struct {
 } rtosc_blob_t;
 
 typedef struct {
-    char type;
-    int32_t len;
+    char type;               //!< common type of the elements
+    int32_t len;             //!< number of arg_val_t contained
 } array_start_t;
 
-// a repeater is being followed by a delta argument (unless has_delta is 0)
+//! a repeater is being followed by a delta argument (unless has_delta is 0)
 typedef struct
 {
-    int32_t       num;       // how often the element is being repeated
-    int32_t       has_delta; // if not 0, the next argument is the delta
+    int32_t       num;       //!< how often the element is being repeated
+    int32_t       has_delta; //!< if not 0, the next argument is the delta
 } repeater_t;
 
 typedef union {
@@ -153,6 +153,7 @@ typedef struct
 /**
  * @brief Check if two arrays of rtosc_arg_val_t are equal
  *
+ * @param lsize Array size of lhs, e.g. 3 if lhs is just one counting range
  * @param opt Comparison options or NULL for default options
  * @return One if they are equal, zero if not
  */
@@ -171,6 +172,7 @@ int rtosc_arg_vals_eq(const rtosc_arg_val_t *lhs, const rtosc_arg_val_t *rhs,
  * every other timestamp.
  *
  * @param opt Comparison options or NULL for default options
+ * @param lsize Array size of lhs, e.g. 3 if lhs is just one counting range
  * @return An integer less than, equal to, or greater than zero if lhs is found,
  *         respectively, to be less than, to match, or be greater than rhs.
  */

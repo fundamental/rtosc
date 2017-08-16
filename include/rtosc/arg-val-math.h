@@ -45,4 +45,8 @@ int rtosc_arg_val_div(const rtosc_arg_val_t *lhs, const rtosc_arg_val_t *rhs,
                       rtosc_arg_val_t* res);
 int rtosc_arg_val_to_int(const rtosc_arg_val_t *av, int* res);
 
+//! Calculate the range's i'th argument
+rtosc_arg_val_t *rtosc_arg_val_range_arg(const rtosc_arg_val_t* range_arg,
+                                         int ith, rtosc_arg_val_t *result);
+
 #endif // ARG_VAL_MATH_H

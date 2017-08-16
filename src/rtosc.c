@@ -246,12 +246,9 @@ static const rtosc_arg_val_t* get_operand_pointer(const
     if(operand->type == '-')
     {
         if(operand->val.r.has_delta)
-        {
-            rtosc_arg_val_t as_int, mult;
-            rtosc_arg_val_from_int(&as_int, operand[-1].type, range_i+1);
-            rtosc_arg_val_mult(&as_int, operand+1, &mult);
-            rtosc_arg_val_add(operand-1, &mult, buffer);
-        }
+            rtosc_arg_val_range_arg(operand, range_i, buffer);
+        else
+            *buffer = operand[1];
         result = buffer;
     }
     else result = operand;
@@ -269,13 +266,24 @@ static const rtosc_arg_val_t* increase_counters(const rtosc_arg_val_t* operand,
         {
             ++operand;
             ++*i;
+            ++operand;
+            ++*i;
         }
         *range_i = 0;
     }
+
     if(!*range_i)
     {
-        ++*i;
-        ++operand;
+        if(operand->type == 'a')
+        {
+            *i += operand->val.a.len;
+            operand += operand->val.a.len;
+        }
+        else
+        {
+            ++*i;
+            ++operand;
+        }
     }
     return operand;
 }
@@ -298,7 +306,7 @@ int rtosc_arg_vals_eq(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
     while(li < lsize && ri < rsize && rval)
     {
         const rtosc_arg_val_t* _lhs = get_operand_pointer(lhs, &rlhs, lhsi),
-                             * _rhs = get_operand_pointer(rhs, &rrhs, rhsi);
+                             *  _rhs = get_operand_pointer(rhs, &rrhs, rhsi);
 
         if(_lhs->type == _rhs->type)
         switch(_lhs->type)
@@ -352,14 +360,12 @@ int rtosc_arg_vals_eq(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
             }
             case 'a':
             {
-                if(_lhs->val.a.type != _rhs->val.a.type ||
-                   _lhs->val.a.len != _rhs->val.a.len)
+                if(_lhs->val.a.type != _rhs->val.a.type)
                     rval = 0;
                 else
-                {
-                    // the other args are being compared as usual
-                    //  => nothing to do
-                }
+                    return rtosc_arg_vals_eq(_lhs+1, _rhs+1,
+                                             _lhs->val.a.len, _rhs->val.a.len,
+                                             opt);
                 break;
             }
             case '-':
@@ -490,16 +496,7 @@ int rtosc_arg_vals_cmp(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
                 else
                 {
                     // the arg vals differ in this array => compare and return
-                    size_t array_min = llen > rlen ? rlen : llen;
-                    int cmp = 0;
-                    size_t j = 1;
-                    for( ; j <= array_min && !cmp; ++j)
-                    {
-                        cmp = rtosc_arg_vals_cmp(_lhs+j, _rhs+j, 1, 1, opt);
-                    }
-                    if(!cmp) // all elements equal until here
-                        rval = cmp_3way(llen, rlen);
-                    else return cmp;
+                    return rtosc_arg_vals_cmp(_lhs+1, _rhs+1, llen, rlen, opt);
                 }
                 break;
             }

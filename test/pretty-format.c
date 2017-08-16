@@ -268,6 +268,11 @@ void ranges()
               "a simple upwards integer range", __LINE__,
               "1 2 3 4 5\n"
               "    6 7");
+    check_alt("-3 ... -5", &uncompressed,
+              "a simple downwards integer range", __LINE__, "-3 -4 -5");
+    check_alt("3 ... 4", &uncompressed,
+              "a very short range, uncompressed", __LINE__, "3 4");
+    check("3 ... 4", &simplefloats, "a very short range, compressed", __LINE__);
     check("2.00 1.40 ... -0.40 -1.00", &simplefloats,
           "a simple float range", __LINE__);
     check_alt("'z' 'x' ... 'r'", &uncompressed,
@@ -282,10 +287,6 @@ void ranges()
     check_alt("[3...0]", &uncompressed,
               "downward range in an array", __LINE__,
               "[3 2 1 0]");
-    check_alt("1 3 ... 11 ... 15", &uncompressed,
-              "two subsequent ranges", __LINE__,
-              "1 3 5 7 9\n"
-              "    11 12\n    13 14\n    15");
     check_alt("1 3 ... 11 13 ... 19", &uncompressed,
               "two almost subsequent ranges", __LINE__,
               "1 3 5 7 9\n"
@@ -302,7 +303,26 @@ void ranges()
     /*
         without delta
      */
-//    check_alt("2x");
+    check_alt("3x0x0", &uncompressed, "range of 3 zeros", __LINE__, "0 0 0");
+    check_alt("[ 2x0.42f ]", &uncompressed, "array with range of 2 floats",
+              __LINE__, "[0.420\n    0.420]");
+    check_alt("2x[0 1]", &uncompressed,
+              "range of arrays", __LINE__, "[0 1] [0\n    1]");
+    /*
+        combined
+     */
+    check_alt("3x0.5 1.0 ... 2.5", &uncompressed,
+              "combined ranges", __LINE__,
+              "0.500\n    0.500\n    0.500\n"
+              "    1.000\n    1.500\n    2.000\n    2.500");
+    /* combined, but not yet implemented: */
+#if 0
+    check_alt("3x-6 ... -3", &uncompressed, "combined ranges (2)", __LINE__,
+              "-6 -6 -6\n-5 -4 -3");
+    check_alt("'a' 'b' ... 3x'f'", &uncompressed,
+              "combined ranges (3)", __LINE__,
+              "'a' 'b' 'c' 'd' 'e' 'f' 'f' 'f'");
+#endif
 }
 
 void fail_at_arg(const char* arg_val_str, int exp_fail, int line)
@@ -478,16 +498,26 @@ void scan_invalid()
     fail_at_arg("[0 1 2", 4, __LINE__);
     fail_at_arg("[0 2h]", 3, __LINE__);
 
+    /*
+        ranges
+    */
     // the results are sometimes a bit strange here,
     // but let's at least document that they do not change
     BAD("... 25");
-    fail_at_arg("4 ...", 3, __LINE__);
-    fail_at_arg("6 ... 12h", 3, __LINE__); // different types
+    BAD("4 ...");
+    BAD("6 ... 12h"); // different types
     // there's no natural number "n" with 0.25n = 1.1:
-    fail_at_arg("0.0 0.25 ... 1.1", 4, __LINE__);
-    fail_at_arg("1.9f ... 0f", 3, __LINE__);
+    fail_at_arg("0.0 0.25 ... 1.1", 2, __LINE__);
+    BAD("1.9f ... 0f");
     fail_at_arg("[ ... 3 ]", 2, __LINE__); // what is the range start here?
-    fail_at_arg("\"ranges don't work \" ... \"with strings\"", 3, __LINE__);
+    BAD("\"ranges don't work \" ... \"with strings\"");
+    BAD("-4 ... -4");
+    BAD("[] ... [1 2 3]"); // no arrays in ranges
+    // this has been disallowed (intercepting ranges):
+    // was the intention "... 11 12 13 14 15" or "... 11 13 15" ?
+    fail_at_arg("1 3 ... 11 ... 15", 5 , __LINE__);
+
+    BAD("2x");
 
     /*
         long message
