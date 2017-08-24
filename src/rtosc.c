@@ -266,9 +266,9 @@ static const rtosc_arg_val_t* increase_counters(const rtosc_arg_val_t* operand,
         {
             ++operand;
             ++*i;
-            ++operand;
-            ++*i;
         }
+        ++operand;
+        ++*i;
         *range_i = 0;
     }
 
@@ -306,7 +306,7 @@ int rtosc_arg_vals_eq(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
     while(li < lsize && ri < rsize && rval)
     {
         const rtosc_arg_val_t* _lhs = get_operand_pointer(lhs, &rlhs, lhsi),
-                             *  _rhs = get_operand_pointer(rhs, &rrhs, rhsi);
+                             * _rhs = get_operand_pointer(rhs, &rrhs, rhsi);
 
         if(_lhs->type == _rhs->type)
         switch(_lhs->type)

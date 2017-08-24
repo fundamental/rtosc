@@ -95,8 +95,9 @@ struct Envelope
     }
 
     std::size_t sustain, attack_rate;
-    int scale_type;
+    int scale_type; //!< 0=log, 1=lin
     size_t env_type;
+    int array[4];
 
     // constructor; sets all values to default
     Envelope() : scale_type(1), env_type(0)
@@ -111,10 +112,13 @@ struct Envelope
             case 0:
                 sustain = 30;
                 attack_rate = 40;
+                memset(array, 0, 4*sizeof(int));
                 break;
             case 1:
                 sustain = 127;
                 attack_rate = 127;
+                for(std::size_t i = 0; i < 4; ++i)
+                    array[i] = i;
                 break;
         }
     }
@@ -139,13 +143,14 @@ static const Ports envelope_ports = {
             obj->read_or_store(m, d, obj->attack_rate); }},
     rOption(scale_type, rProp(parameter) rOpt(0, logarithmic), rOpt(1, linear),
             rDefault(linear), "scale type"),
-    // array: env_type 0: 0 1 2 3
-    //        env_type 1: 0 0 0 0
-/*    {"array#4::i", rDefaultDepends(env_type),
-        r(0, ),
-        rPreset(1, 0), // bash the whole array to 0 for preset 1
-        rDefault(3), // all not yet specified values are set to 3
-        rMap(default )}*/
+    // array: env_type 0: 0 0 0 0
+    //        env_type 1: 0 1 2 3
+    rArrayI(array, 4, rDefaultDepends(env_type),
+            /*rPreset(0, 0),*/
+            rPreset(0, [4x0]),
+            rPreset(1, [0 1 2 3]), // bash the whole array to 0 for preset 1
+            rDefault(3), // all not yet specified values are set to 3
+            "some bundle"),
     // port without rDefault macros
     // must not be noted for the savefile
     {"paste:b", rProp(parameter), NULL,
@@ -181,6 +186,8 @@ void envelope_types()
     e2.attack_rate     = 127; // = envelope 1's default
     e2.env_type        =   1; // != default
     e2.scale_type      =   0; // != default
+    for(size_t i = 0; i < 4; ++i)
+        e2.array[i] = 3-i;
 
     assert_str_eq("30", get_default_value("sustain::i", envelope_ports, &e1),
                   "get default value with runtime (1)", __LINE__);
@@ -197,7 +204,8 @@ void envelope_types()
     assert_str_eq("/sustain 40",
                   get_changed_values(envelope_ports, &e1).c_str(),
                   "get changed values where none are changed", __LINE__);
-    const char* changed_e2 = "/sustain 0\n/scale_type logarithmic\n/env_type 1";
+    const char* changed_e2 = "/sustain 0\n/scale_type logarithmic\n"
+                             "/array [3 2 1 0]\n/env_type 1";
     assert_str_eq(changed_e2,
                   get_changed_values(envelope_ports, &e2).c_str(),
                   "get changed values where three are changed", __LINE__);
@@ -253,8 +261,8 @@ void envelope_types()
                               envelope_ports, &e2_restored,
                               appname.c_str(), appver);
 
-    assert_int_eq(3, rval,
-                  "load savefile from file, 3 messages read", __LINE__);
+    assert_int_eq(4, rval,
+                  "load savefile from file, 4 messages read", __LINE__);
 
     auto check_restored = [](int i1, int i2, const char* member) {
         std::string tcs = "restore "; tcs += member; tcs += " from file";
@@ -264,6 +272,10 @@ void envelope_types()
     check_restored(e2.sustain, e2_restored.sustain, "sustain value");
     check_restored(e2.attack_rate, e2_restored.attack_rate, "attack rate");
     check_restored(e2.scale_type, e2_restored.scale_type, "scale type");
+    check_restored(e2.array[0], e2_restored.array[0], "array[0]");
+    check_restored(e2.array[1], e2_restored.array[1], "array[1]");
+    check_restored(e2.array[2], e2_restored.array[2], "array[2]");
+    check_restored(e2.array[3], e2_restored.array[3], "array[3]");
     check_restored(e2.env_type, e2_restored.env_type, "envelope type");
 }
 

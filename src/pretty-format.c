@@ -698,7 +698,8 @@ static const char* skip_word(const char* exp, const char** str)
     size_t explen = strlen(exp);
     const char* cur = *str;
     int match = (!strncmp(exp, cur, explen) &&
-            (!cur[explen] || cur[explen] == '/' || isspace(cur[explen])));
+                 (!cur[explen] || cur[explen] == '/' || cur[explen] == ']'
+                  || isspace(cur[explen])));
     if(match) {
         *str += explen;
         return *str;
@@ -1356,6 +1357,8 @@ size_t rtosc_scan_arg_val(const char* src,
                 src += rtosc_scan_arg_val(src, arg, nargs,
                                           buffer_for_strings, bufsize, i, 1);
                 arrtype = arg->type;
+                if(arrtype == '-')
+                    arrtype = arg->val.r.has_delta ? arg[2].type : arg[1].type;
 
                 size_t args_scanned = next_arg_offset(arg);
                 nargs -= args_scanned;

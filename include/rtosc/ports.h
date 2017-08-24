@@ -471,12 +471,18 @@ typedef void(*port_walker_t)(const Port*,const char*,const char*,
  * @param buffer_size Size of name_buffer
  * @param data Data that should be available in the callback
  * @param walker Callback function
+ * @param expand_bundles Whether walking over bundles without subports
+ *   invokes walking over each of the bundle's port
+ * @param runtime Runtime object corresponding to @param base. If given, checks
+ *   the runtime object will be used stop recursion if the Ports are disabled
+ *   (using the "enabled by" property) and it will be passed to the walker
  */
 void walk_ports(const Ports *base,
                 char          *name_buffer,
                 size_t         buffer_size,
                 void          *data,
                 port_walker_t  walker,
+                bool expand_bundles = true,
                 void *runtime = NULL);
 
 /**

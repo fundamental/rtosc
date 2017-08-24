@@ -939,31 +939,56 @@ int rtosc::canonicalize_arg_vals(rtosc_arg_val_t* av, size_t n,
                                  const char* port_args,
                                  Port::MetaContainer meta)
 {
-    const char* first = port_args;
+    const char* first0 = port_args;
     int errors_found = 0;
 
-    for( ; *first && (*first == ':' || *first == '[' || *first == ']');
-           ++first) ;
+    // skip "[]:"
+    for( ; *first0 && (*first0 == ':' || *first0 == '[' || *first0 == ']');
+           ++first0) ;
 
-    for(size_t i = 0; i < n; ++i, ++first, ++av)
+    size_t arr_size;
+    size_t max;
+    bool is_array;
+    if(av->type == 'a') {
+        arr_size = av->val.a.len;
+        ++av;
+        max = 1; // only one element per bundle element
+                 // TODO: multiple may be possible
+        is_array = true;
+    }
+    else {
+        arr_size = 1;
+        max = n;
+        is_array = false;
+    }
+
+    for(size_t a = 0; a < arr_size; ++a)
     {
-        for( ; *first && (*first == '[' || *first == ']'); ++first) ;
-
-        if(!*first || *first == ':')
+        const char* first = first0;
+        for(size_t i = 0; i < max; ++i, ++first, ++av)
         {
-            // (n-i) arguments left, but we have no recipe to convert them
-            return n-i;
-        }
+            // skip "[]"
+            for( ; *first && (*first == '[' || *first == ']'); ++first) ;
 
-        if(av->type == 'S' && *first == 'i')
-        {
-            int val = enum_key(meta, av->val.s);
-            if(val == std::numeric_limits<int>::min())
-                ++errors_found;
-            else
+            if(is_array) // TODO: currently, only one element per bundle element
+                assert(first[1] == 0);
+
+            if(!*first || *first == ':')
             {
-                av->type = 'i';
-                av->val.i = val;
+                // (n-i) arguments left, but we have no recipe to convert them
+                return n-i;
+            }
+
+            if(av->type == 'S' && *first == 'i')
+            {
+                int val = enum_key(meta, av->val.s);
+                if(val == std::numeric_limits<int>::min())
+                    ++errors_found;
+                else
+                {
+                    av->type = 'i';
+                    av->val.i = val;
+                }
             }
         }
     }
@@ -1015,7 +1040,8 @@ int rtosc::get_default_value(const char* port_name, const char* port_args,
                                                    port_args,
                                                    port_hint->meta());
             if(errs_found)
-                fprintf(stderr, "Could not canonicalize %s\n", pretty);
+                fprintf(stderr, "Could not canonicalize %s for port %s\n",
+                        pretty, port_name);
             assert(!errs_found); // error in the metadata?
         }
     }
@@ -1023,6 +1049,45 @@ int rtosc::get_default_value(const char* port_name, const char* port_args,
         nargs = -1;
 
     return nargs;
+}
+
+template<class F>
+void bundle_foreach(const Port& p, char* old_end,
+                    const char* name_buffer, const Ports& base,
+                    void* data, void* runtime, F& ftor,
+                    bool expand_bundles = true)
+{
+    const char *name = p.name;
+    char       *pos  = old_end;
+    while(*name != '#') *pos++ = *name++;
+    const unsigned max = atoi(name+1);
+    while(isdigit(*++name)) ;
+
+    if(expand_bundles)
+    for(unsigned i=0; i<max; ++i)
+    {
+        char* pos_after_num = pos + sprintf(pos,"%d",i);
+        const char* name2_2 = name;
+
+        // append everything behind the '#' (for cases like a#N/b)
+        while(*name2_2 && *name2_2 != ':')
+            *pos_after_num++ = *name2_2++;
+
+        ftor(&p, name_buffer, old_end, base, data, runtime);
+    }
+    else
+    {
+        const char* name2_2 = name;
+        char* pos2 = pos;
+
+        // append everything behind the '#' (for cases like a#N/b)
+        while(*name2_2 && *name2_2 != ':')
+            *pos2++ = *name2_2++;
+
+        ftor(&p, name_buffer, old_end, base, data, runtime);
+    }
+
+    *pos = 0;
 }
 
 std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
@@ -1049,19 +1114,28 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
             // thus, it can not be compared with the default value
             return;
         }
+        else
+        {
+            const char* colon = strchr(p->name, ':');
+            if(!colon || !colon[1])
+            {
+                // runtime information can not be loaded, so don't save it
+                // a possible FEATURE would be to save it anyways
+                return;
+            }
+        }
 
-        char loc[buffersize] = "";
+        char loc[buffersize] = ""; // buffer to hold the dispatched path
         rtosc_arg_val_t arg_vals_default[max_arg_vals];
         rtosc_arg_val_t arg_vals_runtime[max_arg_vals];
+        // buffer to hold the message (i.e. /port ..., without port's bases)
         char buffer_with_port[buffersize];
-        char cur_value_pretty[buffersize] = " ";
         char strbuf[buffersize]; // temporary string buffer for pretty-printing
 
         std::string* res = (std::string*)data;
         assert(strlen(port_buffer) + 1 < buffersize);
         strncpy(loc, port_buffer, buffersize); // TODO: +-1?
 
-        strncpy(buffer_with_port, port_from_base, buffersize);
         const char* portargs = strchr(p->name, ':');
         if(!portargs)
             portargs = p->name + strlen(p->name);
@@ -1084,17 +1158,56 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
                                               arg_vals_default,
                                               strbuf,
                                               buffersize);
-        size_t nargs_runtime = get_value_from_runtime(runtime,
-                                                      *p,
-                                                      buffersize, loc,
-                                                      port_from_base,
-                                                      buffer_with_port,
-                                                      buffersize,
-                                                      max_arg_vals,
-                                                      arg_vals_runtime);
 
-        if(nargs_default == nargs_runtime)
+        if(nargs_default > 0)
         {
+            size_t nargs_runtime = 0;
+
+            auto ftor = [&](const Port* p,const char* name_buffer,
+                            const char* /*old_end*/,
+                            const Ports& ,void* ,void* runtime)
+            {
+                strncpy(buffer_with_port, p->name, buffersize);
+
+                size_t
+                nargs_runtime_cur = get_value_from_runtime(runtime,
+                                                           *p,
+                                                           buffersize, loc,
+                                                           name_buffer,
+                                                           buffer_with_port,
+                                                           buffersize,
+                                                           max_arg_vals,
+                                                           arg_vals_runtime +
+                                                               nargs_runtime);
+                nargs_runtime += nargs_runtime_cur;
+            };
+
+            if(strchr(p->name, '#'))
+            {
+                // We assure to not overwrite anything above (i.e. with a lower
+                // address than the beginning of the substring of) the array port.
+                // Basically, that just does what walk_ports would have done if we
+                // would have used expand_bundles=true.
+                // This might also be solved by walk_ports giving noconst access
+                // to only the last part (lowest subport) of port_buffer.
+                char* port_buffer_no_const = const_cast<char*>(port_buffer);
+
+                // Skip the array element (type 'a') for now...
+                ++nargs_runtime;
+
+                // Start filling at arg_vals_runtime + 1
+                bundle_foreach(*p, port_buffer_no_const + 1, port_buffer + 1,
+                               base, data, runtime,
+                               ftor, true);
+
+                // "Go back" to fill arg_vals_runtime + 0
+                arg_vals_runtime[0].type = 'a';
+                arg_vals_runtime[0].val.a.len = nargs_runtime-1;
+                arg_vals_runtime[0].val.a.type = arg_vals_runtime[1].type;
+            }
+            else
+                ftor(p, port_buffer, NULL, base, NULL, runtime);
+
             canonicalize_arg_vals(arg_vals_default, nargs_default,
                                   strchr(p->name, ':'), meta);
             if(!rtosc_arg_vals_eq(arg_vals_default,
@@ -1103,6 +1216,8 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
                                   nargs_runtime,
                                   NULL))
             {
+                char cur_value_pretty[buffersize] = " ";
+
                 map_arg_vals(arg_vals_runtime, nargs_runtime, meta);
                 rtosc_print_arg_vals(arg_vals_runtime, nargs_runtime,
                                      cur_value_pretty + 1, buffersize - 1,
@@ -1115,7 +1230,7 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
         }
     };
 
-    walk_ports(&ports, port_buffer, buffersize, &res, on_reach_port,
+    walk_ports(&ports, port_buffer, buffersize, &res, on_reach_port, false,
                runtime);
 
     if(res.length()) // remove trailing newline
@@ -1187,9 +1302,9 @@ int rtosc::dispatch_printed_messages(const char* messages,
             nargs = rtosc_count_printed_arg_vals_of_msg(msg_ptr);
             if(nargs >= 0)
             {
-                // 16 is usually too much, but it allows the user to add
-                // arguments if necessary
-                size_t maxargs = 16;
+                // nargs << 1 is usually too much, but it allows to user to use
+                // these values (using on_dispatch())
+                size_t maxargs = std::max(nargs << 1, 16);
                 rtosc_arg_val_t arg_vals[maxargs];
                 rd = rtosc_scan_message(msg_ptr, portname, buffersize,
                                         arg_vals, nargs, strbuf, buffersize);
@@ -1215,18 +1330,42 @@ int rtosc::dispatch_printed_messages(const char* messages,
                 {
                     if(nargs != savefile_dispatcher_t::discard)
                     {
+                        size_t max;
+                        const rtosc_arg_val_t* arg_val_ptr;
+                        bool is_array;
+                        if(nargs && arg_vals[0].type == 'a')
+                        {
+                            is_array = true;
+                            max = arg_vals[0].val.a.len;
+                            nargs = 1; // overwrite nargs
+                            arg_val_ptr = arg_vals + 1;
+                        }
+                        else {
+                            is_array = false;
+                            max = 1;
+                            arg_val_ptr = arg_vals;
+                        }
+
                         rtosc_arg_t vals[nargs];
                         char argstr[nargs+1];
-                        for(int i = 0; i < nargs; ++i) {
-                            vals[i] = arg_vals[i].val;
-                            argstr[i] = arg_vals[i].type;
+                        char* portname_end = portname + strlen(portname);
+
+                        for(size_t arr_idx = 0; arr_idx < max; ++arr_idx)
+                        {
+                            for(int i = 0; i < nargs; ++i) {
+                                vals[i] = arg_val_ptr[arr_idx + i].val;
+                                argstr[i] = arg_val_ptr[arr_idx + i].type;
+                            }
+                            argstr[nargs] = 0;
+
+                            if(is_array)
+                                snprintf(portname_end, 8, "%d", (int)arr_idx);
+
+                            rtosc_amessage(message, buffersize, portname,
+                                           argstr, vals);
+
+                            (*dispatcher)(message);
                         }
-                        argstr[nargs] = 0;
-
-                        rtosc_amessage(message, buffersize, portname,
-                                       argstr, vals);
-
-                        (*dispatcher)(message);
                     }
                 }
 
@@ -1569,12 +1708,14 @@ void rtosc::walk_ports(const Ports  *base,
                        size_t        buffer_size,
                        void         *data,
                        port_walker_t walker,
+                       bool          expand_bundles,
                        void*         runtime)
 {
     auto walk_ports_recurse = [](const Port& p, char* name_buffer,
                                  size_t buffer_size, const Ports& base,
                                  void* data, port_walker_t walker,
-                                 void* runtime, const char* old_end)
+                                 void* runtime, const char* old_end,
+                                 bool expand_bundles)
     {
         // TODO: all/most of these checks must also be done for the
         // first, non-recursive call
@@ -1610,7 +1751,7 @@ void rtosc::walk_ports(const Ports  *base,
         }
         if(enabled)
             rtosc::walk_ports(p.ports, name_buffer, buffer_size,
-                              data, walker, runtime);
+                              data, walker, expand_bundles, runtime);
     };
 
     //only walk valid ports
@@ -1646,7 +1787,8 @@ void rtosc::walk_ports(const Ports  *base,
 
                     //Recurse
                     walk_ports_recurse(p, name_buffer, buffer_size,
-                                       *base, data, walker, runtime, old_end);
+                                       *base, data, walker, runtime, old_end,
+                                       expand_bundles);
                 }
             } else {
                 //Append the path
@@ -1655,28 +1797,13 @@ void rtosc::walk_ports(const Ports  *base,
 
                 //Recurse
                 walk_ports_recurse(p, name_buffer, buffer_size,
-                                   *base, data, walker, runtime, old_end);
+                                   *base, data, walker, runtime, old_end,
+                                   expand_bundles);
             }
         } else {
             if(strchr(p.name,'#')) {
-                const char *name = p.name;
-                char       *pos  = old_end;
-                while(*name != '#') *pos++ = *name++;
-                const unsigned max = atoi(name+1);
-                while(isdigit(*++name)) ;
-
-                for(unsigned i=0; i<max; ++i)
-                {
-                    char* pos_after_num = pos + sprintf(pos,"%d",i);
-                    const char* name2_2 = name;
-
-                    // append everything behind the '#' (for cases like a#N/b)
-                    while(*name2_2 && *name2_2 != ':')
-                        *pos_after_num++ = *name2_2++;
-
-                    //Apply walker function
-                    walker(&p, name_buffer, old_end, *base, data, runtime);
-                }
+                bundle_foreach(p, old_end, name_buffer, *base, data, runtime,
+                               walker, expand_bundles);
             } else {
                 //Append the path
                 scat(name_buffer, p.name);
@@ -1727,7 +1854,7 @@ void walk_ports2(const rtosc::Ports *base,
 
                     //Recurse
                     walk_ports2(p.ports, name_buffer, buffer_size,
-                            data, walker);
+                                data, walker);
                 }
             } else {
                 //Append the path
