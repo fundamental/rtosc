@@ -268,6 +268,44 @@ void ranges()
     cmp_1(eq, l+1, r+1, 5, 6, NULL,
           "1 ... 5 6 7", "1 2 3 ... 7", __LINE__);
 
+    // keep    l+1 = 1 ... 5 6 7
+    // and let r+1 = 1 2 3 4 ...
+    r[4].val.r.num = 0;
+    r[6].type = 'x';
+
+    cmp_1(eq, l+1, r+1, 5, 5, NULL,
+          "1 ... 5 6 7", "1 2 3 4 ...", __LINE__);
+
+    // let      l+1 = 1 ... 5 6 6
+    // and keep r+1 = 1 2 3 4 ...
+    l[5].val.i = 6;
+
+    cmp_gt(r+1, l+1, 5, 5, NULL, "infinite range", "integers", __LINE__);
+
+    // let      l+1 = 1 ...  7
+    // and keep r+1 = 1 2 3 4 ...
+    l[1].val.r.num = 7;
+
+    cmp_1(eq, l+1, r+1, 3, );
+
+
+    // let l+1 = 1 2 3 ...
+    // and r+1 = 1 2 ...
+
+    cmp_1(eq, );
+
+    // let l+1 = 1 1 ...
+    // and r+1 = 1 1 1
+
+    // let l+1 = 1 1 ...
+    // and r+1 = 1
+
+    // eq
+
+    // keep    l+1 = 1 1 ...
+    // and let r+1 = 1 ...
+
+
 }
 
 void different_types()
