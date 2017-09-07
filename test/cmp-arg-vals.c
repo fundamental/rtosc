@@ -25,7 +25,7 @@ void cmp_1(int exp,
     int res = rtosc_arg_vals_cmp(lhs, rhs, lsize, rsize, opt);
 
     strncpy(tc_full, ldesc, tc_len);
-    const char* sgn;
+    const char* sgn = "ERROR";
     switch(exp)
     {
         case gt: sgn = " >(3way)"; break;
