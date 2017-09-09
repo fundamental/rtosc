@@ -486,10 +486,18 @@ frequency_modulation
 3x["bad" "luck"]          % ["bad" "luck"] ["bad" "luck"] ["bad" "luck"]
 ----------
 * Arrays are written as multiple, space separated elements of the same type,
-  encapsulated by brackets. They can contain any types of elements.
+  encapsulated by brackets. They can contain any types of elements. There is a
+  special range type only valid at the end of arrays: "a b ...". The missing
+  right-hand-sign means that the range is infinite. If there's no suiting
+  left-of-left-hand-sign, or it exists and equals the left-hand-sign the range
+  is delta-less, e.g. the same element is being repeated.
 ----------
 [ "Multiple" "strings" ]
 [ 1 ... 5 ]
+[ 1 2 ... ]               % 1 2 3 4 ...
+[ 0.1 1 ... ]             % 0.1 1 1 1 ...
+[ 1 1 ... ]               % 1 1 1 1 1 ...
+% not allowed: [ 1 1 ... 1]
 ----------
 
 Here are a few examples of full messages:

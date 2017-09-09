@@ -237,6 +237,8 @@ static const rtosc_cmp_options* default_cmp_options
  = &((rtosc_cmp_options) { 0.0 });
 
 //! helper function for arg val comparing
+//! this usually just returns the value from operand, except for range operands,
+//! where the value is being interpolated
 static const rtosc_arg_val_t* get_operand_pointer(const
                                                   rtosc_arg_val_t* operand,
                                                   rtosc_arg_val_t* buffer,
@@ -259,19 +261,24 @@ static const rtosc_arg_val_t* get_operand_pointer(const
 static const rtosc_arg_val_t* increase_counters(const rtosc_arg_val_t* operand,
                                                 size_t* i, int* range_i)
 {
+    // increase the range index
     if(operand->type == '-')
-    if(++*range_i >= operand->val.r.num)
     {
-        if(operand->val.r.has_delta)
+        // increase if the limit was reached, and the limit was not infinity (=0)
+        if(++*range_i >= operand->val.r.num && operand->val.r.num)
         {
+            if(operand->val.r.has_delta)
+            {
+                ++operand;
+                ++*i;
+            }
             ++operand;
             ++*i;
+            *range_i = 0;
         }
-        ++operand;
-        ++*i;
-        *range_i = 0;
     }
 
+    // if not inside a range, increase the index
     if(!*range_i)
     {
         if(operand->type == 'a')
@@ -303,7 +310,9 @@ int rtosc_arg_vals_eq(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
 
     int rval = 1;
     size_t li = 0, ri = 0;
-    while(li < lsize && ri < rsize && rval)
+
+    int elements_left = lsize && rsize;
+    while(elements_left && rval)
     {
         const rtosc_arg_val_t* _lhs = get_operand_pointer(lhs, &rlhs, lhsi),
                              * _rhs = get_operand_pointer(rhs, &rrhs, rhsi);
@@ -379,13 +388,21 @@ int rtosc_arg_vals_eq(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
 
         lhs = increase_counters(lhs, &li, &lhsi);
         rhs = increase_counters(rhs, &ri, &rhsi);
+
+        // abort only if one side was finished, or if both are infinite ranges
+        elements_left = (li < lsize)
+                    && (ri < rsize) && (lhs->type != '-' || rhs->type != '-'
+                    || lhs->val.r.num || rhs->val.r.num);
     }
 
     if(!rval)
         return rval;
     else {
         // arrays are equal by now, but is one longer?
-        return li == lsize && ri == rsize;
+        // each array must have either been completely passed, or it must
+        // have reached an infinite range
+        return    (li == lsize || (lhs->type == '-' && !lhs->val.r.num))
+               && (ri == rsize || (rhs->type == '-' && !rhs->val.r.num));
     }
 #undef mfabs
 }
@@ -409,7 +426,9 @@ int rtosc_arg_vals_cmp(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
     size_t rval = 0;
 
     size_t li = 0, ri = 0;
-    while(li < lsize && ri < rsize && !rval)
+
+    int elements_left = lsize && rsize;
+    while(elements_left && !rval)
     {
         const rtosc_arg_val_t* _lhs = get_operand_pointer(lhs, &rlhs, lhsi),
                              * _rhs = get_operand_pointer(rhs, &rrhs, rhsi);
@@ -511,13 +530,30 @@ int rtosc_arg_vals_cmp(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
 
         lhs = increase_counters(lhs, &li, &lhsi);
         rhs = increase_counters(rhs, &ri, &rhsi);
+
+        // abort only if one side was finished, or if both are infinite ranges
+        elements_left = (li < lsize)
+                    && (ri < rsize) && (lhs->type != '-' || rhs->type != '-'
+                    || lhs->val.r.num || rhs->val.r.num);
     }
 
-    if(rval == 0 && (lsize-li) != (rsize-ri))
-    {
-        return (lsize-li > rsize-ri) ? 1 : -1;
+    if(rval)
+        return rval;
+    else {
+        // arrays are equal by now, but is one longer?
+        // each array must have either been completely passed, or it must
+        // have reached an infinite range
+        if(       (li == lsize || (lhs->type == '-' && !lhs->val.r.num))
+               && (ri == rsize || (rhs->type == '-' && !rhs->val.r.num)))
+        {
+            return 0;
+        }
+        else
+        {
+            // they're equal until here, so one array must have elements left
+            return (lsize-li > rsize-ri) ? 1 : -1;
+        }
     }
-    return rval;
 
 #undef mfabs
 #undef cmp_3way

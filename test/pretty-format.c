@@ -328,6 +328,13 @@ void ranges()
               "combined ranges (3)", __LINE__,
               "'a' 'b' 'c' 'd' 'e' 'f' 'f' 'f'");
 #endif
+
+    /*
+        endless ranges
+     */
+    check("[1 ...]", NULL, "delta-less infinite range (1)", __LINE__);
+    check("[1 0 0 ...]", NULL, "delta-less infinite range (2)", __LINE__);
+    check("[0 1 ...]", NULL, "infinite range with delta", __LINE__);
 }
 
 void fail_at_arg(const char* arg_val_str, int exp_fail, int line)
@@ -502,6 +509,8 @@ void scan_invalid()
     // note: array start and array args each do count
     fail_at_arg("[0 1 2", 4, __LINE__);
     fail_at_arg("[0 2h]", 3, __LINE__);
+//  this bad array is currently not detected (TODO):
+//  fail_at_arg("[0.0 1 ... 5]", 3, __LINE__);
 
     /*
         ranges
@@ -523,6 +532,9 @@ void scan_invalid()
     fail_at_arg("1 3 ... 11 ... 15", 5 , __LINE__);
 
     BAD("2x");
+
+    // infite ranges
+    BAD("1 ..."); // not allowed outside of bundle
 
     /*
         long message

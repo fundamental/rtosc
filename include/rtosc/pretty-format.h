@@ -103,12 +103,13 @@ size_t rtosc_print_message(const char* address,
  *   (it will get the left of left hand sign of this argument)
  * @param follow_ellipsis Whether an argument followed by an ellipsis is
  *   interpreted as a range start or as only the argument itself
+ * @param inside_bundle TODO
  * @return The first character after that argument value, or NULL if a
  *   parsing error occurred
  */
 const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
                                         char* type, const char* llhssrc,
-                                        int follow_ellipsis);
+                                        int follow_ellipsis, int inside_bundle);
 
 /**
  * @brief Count arguments that would be scanned and do a complete syntax check

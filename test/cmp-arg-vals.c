@@ -5,7 +5,7 @@
 enum {
     gt,
     lt,
-    eq,
+    eq
 };
 
 rtosc_arg_val_t l[3], r[3]; // left, right
@@ -268,6 +268,71 @@ void ranges()
     cmp_1(eq, l+1, r+1, 5, 6, NULL,
           "1 ... 5 6 7", "1 2 3 ... 7", __LINE__);
 
+    // keep    l+1 = 1 ... 5 6 7
+    // and let r+1 = 1 2 3 4 ...
+    r[4].val.r.num = 0;
+    //r[6].type = 'x';
+
+    cmp_1(eq, l+1, r+1, 5, 6, NULL,
+          "1 ... 5 6 7", "1 2 3 4 ...", __LINE__);
+
+    // let      l+1 = 1 ... 5 6 6
+    // and keep r+1 = 1 2 3 4 ...
+    l[5].val.i = 6;
+    // careful! r and l are swapped!
+    cmp_gt(r+1, l+1, 6, 5, NULL, "infinite range", "integers", __LINE__);
+
+    // let      l+1 = 1 ... 7
+    // and keep r+1 = 1 2 3 4 ...
+    l[1].val.r.num = 7;
+    cmp_1(eq, l+1, r+1, 3, 6, NULL, "finite range", "infinite range", __LINE__);
+
+    // let l = 1 2 3 ...
+    // and r = 1 2 ...
+    l[0].type = l[1].type = 'i';
+    l[0].val.i = 1; l[1].val.i = 2;
+    l[2].type = '-';
+    l[2].val.r.has_delta = 1;
+    l[2].val.r.num = 0;
+    l[3].type = l[4].type = 'i';
+    l[3].val.i = 3; l[4].val.i = 1;
+
+    r[0].type = 'i';
+    r[0].val.i = 1;
+    r[1].type = '-';
+    r[1].val.r.has_delta = 1;
+    r[1].val.r.num = 0;
+    r[2].type = r[3].type = 'i';
+    r[2].val.i = 1; r[3].val.i = 2;
+
+    cmp_1(eq, l, r, 5, 4, NULL,
+          "infinite range", "infinite_range", __LINE__);
+
+    // let l+1 = 1 1 1
+    // and r+1 = 1 1 ...
+    l[1].val.i = 1;
+    l[2].type = 'i';
+    l[2].val.i = 1;
+    r[1].val.r.has_delta = 0;
+    r[2].val.i = 1;
+
+    cmp_1(eq, l, r, 3, 3, NULL,
+      "numbers", "infinite_range (no delta)", __LINE__);
+
+    // let      l+1 = 1
+    // and keep r+1 = 1 1 ...
+    cmp_1(eq, l, r, 1, 3, NULL,
+      "nothing", "infinite_range (no delta)", __LINE__);
+
+    // let      r+1 = 1 ...
+    // and keep l+1 = 1 1 ...
+    l[0].type = '-';
+    l[0].val.r.num = 0;
+    l[0].val.r.has_delta = 0;
+    l[1].type = 'i';
+    l[2].val.i = 1;
+    cmp_1(eq, l, r, 2, 3, NULL,
+      "infinite_range (no delta)", "infinite_range (no delta)", __LINE__);
 }
 
 void different_types()
