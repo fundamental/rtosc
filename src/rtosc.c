@@ -369,7 +369,9 @@ int rtosc_arg_vals_eq(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
             }
             case 'a':
             {
-                if(_lhs->val.a.type != _rhs->val.a.type)
+                if(     _lhs->val.a.type != _rhs->val.a.type
+                   && !(_lhs->val.a.type == 'T' && _rhs->val.a.type == 'F')
+                   && !(_lhs->val.a.type == 'F' && _rhs->val.a.type == 'T'))
                     rval = 0;
                 else
                     return rtosc_arg_vals_eq(_lhs+1, _rhs+1,
@@ -510,7 +512,9 @@ int rtosc_arg_vals_cmp(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
             case 'a':
             {
                 int32_t llen = _lhs->val.a.len, rlen = _rhs->val.a.len;
-                if(_lhs->val.a.type != _rhs->val.a.type)
+                if(     _lhs->val.a.type != _rhs->val.a.type
+                   && !(_lhs->val.a.type == 'T' && _rhs->val.a.type == 'F')
+                   && !(_lhs->val.a.type == 'F' && _rhs->val.a.type == 'T'))
                     rval = (_lhs->val.a.type > _rhs->val.a.type) ? 1 : -1;
                 else
                 {

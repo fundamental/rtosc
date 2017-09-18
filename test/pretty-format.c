@@ -257,6 +257,8 @@ void arrays()
           "Consecutive arrays", __LINE__);
 
     check("[[0 1] [] [2 3]]", NULL, "arrays inside arrays", __LINE__);
+
+    check("[true false]", NULL, "true and false have the same type", __LINE__);
 }
 
 void ranges()
@@ -333,8 +335,14 @@ void ranges()
         endless ranges
      */
     check("[1 ...]", NULL, "delta-less infinite range (1)", __LINE__);
-    check("[1 0 0 ...]", NULL, "delta-less infinite range (2)", __LINE__);
+    check("[\"Next Effect\"S ...]", NULL,
+          "delta-less infinite range (2)", __LINE__);
+    check_alt("[false...]", NULL, "delta-less infinite range (3)", __LINE__,
+              "[false ...]");
+    check("[1 0 0 ...]", NULL, "delta-less infinite range (4)", __LINE__);
     check("[0 1 ...]", NULL, "infinite range with delta", __LINE__);
+    check("[true false false ...]", NULL,
+          "endless range after \"true false false\"", __LINE__);
 }
 
 void fail_at_arg(const char* arg_val_str, int exp_fail, int line)

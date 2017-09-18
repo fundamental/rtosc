@@ -2,6 +2,7 @@
 #include <rtosc/rtosc.h>
 
 // TODO: later commit: move cmp functions here
+// TODO: test these functions
 
 int rtosc_arg_val_null(rtosc_arg_val_t* av, char type)
 {
@@ -44,6 +45,8 @@ int rtosc_arg_val_negate(rtosc_arg_val_t* av)
         case 'f': av->val.f = -av->val.f; return true;
         case 'c':
         case 'i': av->val.i = -av->val.i; return true;
+        case 'T':
+        case 'F': av->val.T = !av->val.T; return true;
         default: return false;
     }
 }
@@ -64,6 +67,8 @@ int rtosc_arg_val_round(rtosc_arg_val_t* av)
         case 'h':
         case 'c':
         case 'i':
+        case 'T':
+        case 'F':
             return true;
         default:
             return false;

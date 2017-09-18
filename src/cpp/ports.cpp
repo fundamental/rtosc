@@ -949,6 +949,7 @@ int rtosc::canonicalize_arg_vals(rtosc_arg_val_t* av, size_t n,
     size_t arr_size;
     size_t max;
     bool is_array;
+    rtosc_arg_val_t* start = av;
     if(av->type == 'a') {
         arr_size = av->val.a.len;
         ++av;
@@ -970,8 +971,10 @@ int rtosc::canonicalize_arg_vals(rtosc_arg_val_t* av, size_t n,
             // skip "[]"
             for( ; *first && (*first == '[' || *first == ']'); ++first) ;
 
-            if(is_array) // TODO: currently, only one element per bundle element
-                assert(first[1] == 0);
+            assert(!strchr(first0, '#'));
+
+//            if(is_array) // TODO: currently, only one element per bundle element
+//                assert(first[1] == 0);
 
             if(!*first || *first == ':')
             {
@@ -992,6 +995,9 @@ int rtosc::canonicalize_arg_vals(rtosc_arg_val_t* av, size_t n,
             }
         }
     }
+    if(is_array && arr_size)
+        start->val.a.type = av[-1].type;
+
     return errors_found;
 }
 
@@ -1035,6 +1041,7 @@ int rtosc::get_default_value(const char* port_name, const char* port_args,
         rtosc_scan_arg_vals(pretty, res, nargs, strbuf, strbufsize);
 
         {
+            // TODO: port_hint could be NULL here!
             int errs_found = canonicalize_arg_vals(res,
                                                    nargs,
                                                    port_args,
@@ -1164,7 +1171,7 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
             size_t nargs_runtime = 0;
 
             auto ftor = [&](const Port* p,const char* name_buffer,
-                            const char* /*old_end*/,
+                            const char* old_end,
                             const Ports& ,void* ,void* runtime)
             {
                 strncpy(buffer_with_port, p->name, buffersize);
@@ -1173,7 +1180,7 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
                 nargs_runtime_cur = get_value_from_runtime(runtime,
                                                            *p,
                                                            buffersize, loc,
-                                                           name_buffer,
+                                                           old_end,
                                                            buffer_with_port,
                                                            buffersize,
                                                            max_arg_vals,
@@ -1196,7 +1203,11 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
                 ++nargs_runtime;
 
                 // Start filling at arg_vals_runtime + 1
-                bundle_foreach(*p, port_buffer_no_const + 1, port_buffer + 1,
+
+                char* old_end = /*strrchr(port_buffer_no_const, '/');
+                old_end = old_end ? old_end + 1 : port_buffer_no_const;*/
+                const_cast<char*>(port_from_base);
+                bundle_foreach(*p, old_end, port_buffer + 1,
                                base, data, runtime,
                                ftor, true);
 
@@ -1206,7 +1217,7 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
                 arg_vals_runtime[0].val.a.type = arg_vals_runtime[1].type;
             }
             else
-                ftor(p, port_buffer, NULL, base, NULL, runtime);
+                ftor(p, port_buffer, port_from_base, base, NULL, runtime);
 
             canonicalize_arg_vals(arg_vals_default, nargs_default,
                                   strchr(p->name, ':'), meta);
