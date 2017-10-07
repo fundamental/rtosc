@@ -42,13 +42,13 @@ static inline void scat(char *dest, const char *src)
 RtData::RtData(void)
     :loc(NULL), loc_size(0), obj(NULL), matches(0), message(NULL)
 {
-    for(int i=0; i<sizeof(idx)/sizeof(int); ++i)
+    for(size_t i=0; i<sizeof(idx)/sizeof(int); ++i)
         idx[i] = 0;
 }
 
 void RtData::push_index(int ind)
 {
-    for(int i=1; i<sizeof(idx)/sizeof(int); ++i)
+    for(size_t i=1; i<sizeof(idx)/sizeof(int); ++i)
         idx[i] = idx[i-1];
     idx[0] = ind;
 }
@@ -1249,7 +1249,7 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
     return res;
 }
 
-void rtosc::savefile_dispatcher_t::operator()(const char* msg)
+bool rtosc::savefile_dispatcher_t::do_dispatch(const char* msg)
 {
     *loc = 0;
     RtData d;
@@ -1257,12 +1257,13 @@ void rtosc::savefile_dispatcher_t::operator()(const char* msg)
     d.loc = loc; // we're always dispatching at the base
     d.loc_size = 1024;
     ports->dispatch(msg, d, true);
+    return !!d.matches;
 }
 
 int savefile_dispatcher_t::default_response(size_t nargs,
                                             bool first_round,
                                             savefile_dispatcher_t::dependency_t
-                                            dependency)
+                                                dependency)
 {
     // default implementation:
     // no dependencies  => round 0,
@@ -1292,6 +1293,7 @@ int rtosc::dispatch_printed_messages(const char* messages,
     int rd, rd_total = 0;
     int nargs;
     int msgs_read = 0;
+    bool ok = true;
 
     savefile_dispatcher_t dummy_dispatcher;
     if(!dispatcher)
@@ -1303,12 +1305,12 @@ int rtosc::dispatch_printed_messages(const char* messages,
     //  * in the second round, only dispatch those with ports that depend on
     //    other ports
     //  * in the first round, only dispatch all others
-    for(int round = 0; round < 2 && msgs_read >= 0; ++round)
+    for(int round = 0; round < 2 && ok; ++round)
     {
         msgs_read = 0;
         rd_total = 0;
         const char* msg_ptr = messages;
-        while(*msg_ptr && (msgs_read >= 0))
+        while(*msg_ptr && ok)
         {
             nargs = rtosc_count_printed_arg_vals_of_msg(msg_ptr);
             if(nargs >= 0)
@@ -1336,7 +1338,7 @@ int rtosc::dispatch_printed_messages(const char* messages,
                                                 round, dependency);
 
                 if(nargs == savefile_dispatcher_t::abort)
-                    msgs_read = -rd_total-1; // => causes abort
+                    ok = false;
                 else
                 {
                     if(nargs != savefile_dispatcher_t::discard)
@@ -1361,7 +1363,7 @@ int rtosc::dispatch_printed_messages(const char* messages,
                         char argstr[nargs+1];
                         char* portname_end = portname + strlen(portname);
 
-                        for(size_t arr_idx = 0; arr_idx < max; ++arr_idx)
+                        for(size_t arr_idx = 0; arr_idx < max && ok; ++arr_idx)
                         {
                             for(int i = 0; i < nargs; ++i) {
                                 vals[i] = arg_val_ptr[arr_idx + i].val;
@@ -1375,7 +1377,7 @@ int rtosc::dispatch_printed_messages(const char* messages,
                             rtosc_amessage(message, buffersize, portname,
                                            argstr, vals);
 
-                            (*dispatcher)(message);
+                            ok = (*dispatcher)(message);
                         }
                     }
                 }
@@ -1390,13 +1392,11 @@ int rtosc::dispatch_printed_messages(const char* messages,
                 while(*++msg_ptr) ;
             }
             else {
-                // overwrite meaning of msgs_read in order to
-                // inform the user where the read error occurred
-                msgs_read = -rd_total-1;
+                ok = false;
             }
         }
     }
-    return msgs_read;
+    return ok ? msgs_read : -rd_total-1;
 }
 
 std::string rtosc::save_to_file(const Ports &ports, void *runtime,

@@ -333,46 +333,67 @@ void savefiles()
 
     struct my_dispatcher_t : public rtosc::savefile_dispatcher_t
     {
+
+        int modify(char* portname,
+                   size_t maxargs, size_t nargs, rtosc_arg_val_t* args,
+                   bool round2)
+        {
+            int newsize = nargs;
+
+            if(round2)
+            {
+                if(rtosc_version_cmp(rtosc_filever,
+                                     rtosc_version{0, 0, 4}) < 0)
+                   /* version < 0.0.4 ? */
+                {
+                    if(rtosc_version_cmp(rtosc_filever,
+                                         rtosc_version{0, 0, 3}) < 0)
+                    {
+                        if(rtosc_version_cmp(rtosc_filever,
+                                             rtosc_version{0, 0, 2}) < 0)
+                        {
+                            {
+                                // dispatch an additional message
+                                char buffer[32];
+                                rtosc_message(buffer, 32,
+                                              "/very_old_version", "T");
+                                operator()(buffer);
+                            }
+
+                            if(nargs == 0 && maxargs >= 1)
+                            {
+                                memcpy(portname+1, "new", 3);
+                                args[0].val.i = 42;
+                                args[0].type = 'i';
+                                newsize = 1;
+                            }
+                            else // wrong argument count or not enough space
+                                newsize = abort;
+                        }
+                        else // i.e. version = 0.0.2
+                            newsize = discard;
+                    }
+                    else // i.e. version = 0.0.3
+                        newsize = abort;
+                }
+                /* for versions >= 0.0.4, we just let "/old_param" pass */
+                /* in order to get a dispatch error */
+            }
+            else {
+                // discard "/old_param" in round 1, since nothing depends on it
+                newsize = discard;
+            }
+
+            return newsize;
+        }
+
         int on_dispatch(size_t, char* portname,
                         size_t maxargs, size_t nargs, rtosc_arg_val_t* args,
                         bool round2, dependency_t dependency)
         {
-            int newsize = nargs;
-
-            if(round2 && !strcmp(portname, "/old_param"))
-            {
-                if(rtosc_version_cmp(rtosc_filever,
-                                     rtosc_version{0, 0, 3}) < 0)
-                {
-                    if(rtosc_version_cmp(rtosc_filever,
-                                         rtosc_version{0, 0, 2}) < 0)
-                    {
-                        {
-                            // dispatch an additional message
-                            char buffer[32];
-                            rtosc_message(buffer, 32, "/very_old_version", "T");
-                            operator()(buffer);
-                        }
-
-                        if(nargs == 0 && maxargs >= 1)
-                        {
-                            memcpy(portname+1, "new", 3);
-                            args[0].val.i = 42;
-                            args[0].type = 'i';
-                            newsize = 1;
-                        }
-                        else // wrong argument count or not enough space
-                            newsize = abort;
-                    }
-                    else // i.e. version = 0.0.2
-                        newsize = discard;
-                }
-                else // i.e. version >= 0.0.3
-                    newsize = abort;
-            }
-            else newsize = default_response(nargs, round2, dependency);
-
-            return newsize;
+            return (portname[1] == 'o' && !strcmp(portname, "/old_param"))
+                ? modify(portname, maxargs, nargs, args, round2)
+                : default_response(nargs, round2, dependency);
         }
     };
 
@@ -411,13 +432,25 @@ void savefiles()
                   "further parameter is being dispatched for v0.0.2", __LINE__);
 
     reset_savefile(sft);
+    // test with v0.0.3
+    // abort explicitly (see savefile dispatcher implementation)
     rval = load_from_file(MAKE_TESTFILE("v0.0.3"),
                           savefile_test_ports, &sft,
                           "savefiletest", rtosc_version {1, 2, 3},
                           &my_dispatcher);
-    assert_int_eq(-58, rval, "savefile: 1 error for v0.0.3", __LINE__);
+    assert_int_eq(-59, rval, "savefile: 1 error for v0.0.3", __LINE__);
     assert_int_eq(123, sft.further_param,
                   "no further parameter is being dispatched for v0.0.3",
+                  __LINE__);
+    // test with v0.0.4
+    // abort implicitly (the port is unknown)
+    rval = load_from_file(MAKE_TESTFILE("v0.0.4"),
+                          savefile_test_ports, &sft,
+                          "savefiletest", rtosc_version {1, 2, 3},
+                          &my_dispatcher);
+    assert_int_eq(-59, rval, "savefile: 1 error for v0.0.4", __LINE__);
+    assert_int_eq(123, sft.further_param,
+                  "no further parameter is being dispatched for v0.0.4",
                   __LINE__);
 
 #undef MAKE_TESTFILE

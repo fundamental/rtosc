@@ -1190,16 +1190,16 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
                                                       &delta,
                                                       llhsarg_is_useless);
 
-                    if(infinite_range && num == -1)
-                    {
-                        has_delta = false;
-                    }
                     if(num == -1)
                     {
                         if(infinite_range)
-                            --*skipped;
+                        {
+                            has_delta = false;
+                        }
                         else
+                        {
                             break;
+                        }
                     }
                 }
 
@@ -1275,11 +1275,13 @@ const char* parse_identifier(const char* src, rtosc_arg_val_t *arg,
         arg->val.s = buffer_for_strings;
         for(; *src == '_' || isalnum(*src); ++src)
         {
-            assert((*bufsize)--);
+            assert(*bufsize);
+            (*bufsize)--;
             *buffer_for_strings = *src;
             ++buffer_for_strings;
         }
-        assert((*bufsize)--);
+        assert(*bufsize);
+        (*bufsize)--;
         *buffer_for_strings = 0;
         ++buffer_for_strings;
     }
@@ -1492,11 +1494,13 @@ size_t rtosc_scan_arg_val(const char* src,
                 arg->val.s = buffer_for_strings;
                 for(; *src == '_' || isalnum(*src); ++src)
                 {
-                    assert((*bufsize)--);
+                    assert(*bufsize);
+                    (*bufsize)--;
                     *buffer_for_strings = *src;
                     ++buffer_for_strings;
                 }
-                assert((*bufsize)--);
+                assert(*bufsize);
+                (*bufsize)--;
                 *buffer_for_strings = 0;
                 ++buffer_for_strings;
             }
