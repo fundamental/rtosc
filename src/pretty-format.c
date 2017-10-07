@@ -700,7 +700,9 @@ static const char* skip_word(const char* exp, const char** str)
     size_t explen = strlen(exp);
     const char* cur = *str;
     int match = (!strncmp(exp, cur, explen) &&
-                 (!cur[explen] || cur[explen] == '/' || cur[explen] == ']'
+                 (   !cur[explen]
+                  || cur[explen] == '/' || cur[explen] == ']'
+                  || cur[explen] == '.'
                   || isspace(cur[explen])));
     if(match) {
         *str += explen;
@@ -793,7 +795,16 @@ static int is_range_multiplier(const char* s)
     return rval;
 }
 
-static const char* allowed_range_types() { return "cihfd"; }
+char arraytypes_match(char type1, char type2)
+{
+    return (type1 == type2) ||
+           type1 == '-' || type2 == '-' || // ranges match everything
+                                           // (TODO: actually a bug)
+           (type1 == 'T' && type2 == 'F') ||
+           (type1 == 'F' && type2 == 'T');
+}
+
+static const char* numeric_range_types() { return "cihfd"; }
 
 const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
                                         char* type, const char* llhssrc,
@@ -926,7 +937,7 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
                     for( ; isspace(*src); ++src) ;
                 if(!arraytype)
                     arraytype = arraytype_cur;
-                else if(arraytype != arraytype_cur && arraytype_cur != '-')
+                else if(!arraytypes_match(arraytype, arraytype_cur))
                     src = NULL;
                 *skipped += skipped2;
             }
@@ -1085,9 +1096,8 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
                 while(isspace(*++rhssrc)) ;
 
                 char lhstype_arr[2] = { lhstype, 0 };
-                if(! strpbrk(lhstype_arr, allowed_range_types()))
-                    break;
-
+                bool numeric_range = strpbrk(lhstype_arr,
+                                             numeric_range_types());
                 bool infinite_range = false;
                 const char* endsrc;
                 if(*rhssrc == ']')
@@ -1100,11 +1110,16 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
                 }
                 else
                 {
+                    // non-infinite ranges are numeric, so check the type
+                    if(!numeric_range)
+                        break;
+
                     endsrc = rtosc_skip_next_printed_arg(rhssrc, &rhsskipped,
                                                          rhstype, NULL, 0,
                                                          inside_bundle);
                     if(!endsrc)
                         break;
+
                     rtosc_scan_arg_val(rhssrc, &rhsarg, 1, NULL, &zero, 0, 0);
                 }
 
@@ -1116,8 +1131,10 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
                     // types must be equal
                     break;
                 }
-                rtosc_scan_arg_val(lhssrc, &lhsarg, 1,
-                                   NULL, &zero, 0, 0);
+
+                if(numeric_range)
+                    rtosc_scan_arg_val(lhssrc, &lhsarg, 1,
+                                       NULL, &zero, 0, 0);
 
                 /*
                  * is llhs given and useful?
@@ -1161,7 +1178,7 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
                 /*
                     compute delta and check if it matches
                 */
-                if(infinite_range && llhsarg_is_useless)
+                if(infinite_range && (llhsarg_is_useless || !numeric_range))
                 {
                     has_delta = false;
                 }
@@ -1173,16 +1190,16 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
                                                       &delta,
                                                       llhsarg_is_useless);
 
-                    if(infinite_range && num == -1)
-                    {
-                        has_delta = false;
-                    }
                     if(num == -1)
                     {
                         if(infinite_range)
-                            --*skipped;
+                        {
+                            has_delta = false;
+                        }
                         else
+                        {
                             break;
+                        }
                     }
                 }
 
@@ -1258,11 +1275,13 @@ const char* parse_identifier(const char* src, rtosc_arg_val_t *arg,
         arg->val.s = buffer_for_strings;
         for(; *src == '_' || isalnum(*src); ++src)
         {
-            assert((*bufsize)--);
+            assert(*bufsize);
+            (*bufsize)--;
             *buffer_for_strings = *src;
             ++buffer_for_strings;
         }
-        assert((*bufsize)--);
+        assert(*bufsize);
+        (*bufsize)--;
         *buffer_for_strings = 0;
         ++buffer_for_strings;
     }
@@ -1475,11 +1494,13 @@ size_t rtosc_scan_arg_val(const char* src,
                 arg->val.s = buffer_for_strings;
                 for(; *src == '_' || isalnum(*src); ++src)
                 {
-                    assert((*bufsize)--);
+                    assert(*bufsize);
+                    (*bufsize)--;
                     *buffer_for_strings = *src;
                     ++buffer_for_strings;
                 }
-                assert((*bufsize)--);
+                assert(*bufsize);
+                (*bufsize)--;
                 *buffer_for_strings = 0;
                 ++buffer_for_strings;
             }

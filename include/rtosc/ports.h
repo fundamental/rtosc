@@ -315,7 +315,7 @@ int get_default_value(const char* port_name, const char *port_args,
  */
 std::string get_changed_values(const Ports& ports, void* runtime);
 
-//! @brief Class to modify messages loaded from savefiles
+//! @brief Class to modify and dispatch messages loaded from savefiles
 //!
 //! Object of this class shall be passed to savefile loading routines. You can
 //! inherit to change the behaviour, e.g. to modify or discard such messages.
@@ -343,7 +343,7 @@ protected:
                   app_curver; //!< current app version
 
     //! call this to dispatch a message
-    void operator()(const char* msg);
+    bool operator()(const char* msg) { return do_dispatch(msg); }
 
     static int default_response(size_t nargs, bool first_round,
                                 dependency_t dependency);
@@ -355,6 +355,8 @@ private:
                             size_t maxargs, size_t nargs,
                             rtosc_arg_val_t* args,
                             bool round2, dependency_t dependency);
+    //! call this to dispatch a message
+    virtual bool do_dispatch(const char* msg);
 
     friend int dispatch_printed_messages(const char* messages,
                                          const Ports& ports, void* runtime,

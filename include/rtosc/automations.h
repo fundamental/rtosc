@@ -108,7 +108,7 @@ class AutomationMgr
 
         bool handleMidi(int channel, int cc, int val);
 
-        void set_ports(const class Ports &p);
+        void set_ports(const struct Ports &p);
 
         void set_instance(void *v);
 

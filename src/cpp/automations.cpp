@@ -245,7 +245,7 @@ bool AutomationMgr::handleMidi(int channel, int cc, int val)
     return 0;
 }
 
-void AutomationMgr::set_ports(const class Ports &p_) {
+void AutomationMgr::set_ports(const struct Ports &p_) {
     p = &p_;
 };
 //
