@@ -1,4 +1,4 @@
-#include "../../include/rtosc/ports.h"
+﻿#include "../../include/rtosc/ports.h"
 #include "../../include/rtosc/rtosc.h"
 #include "../../include/rtosc/pretty-format.h"
 
@@ -1061,8 +1061,9 @@ int rtosc::get_default_value(const char* port_name, const char* port_args,
 template<class F>
 void bundle_foreach(const Port& p, char* old_end,
                     const char* name_buffer, const Ports& base,
-                    void* data, void* runtime, F& ftor,
-                    bool expand_bundles = true)
+                    void* data, void* runtime, const F& ftor, // TODO: noconst?
+                    bool expand_bundles = true,
+                    bool cut_afterwards = true)
 {
     const char *name = p.name;
     char       *pos  = old_end;
@@ -1070,22 +1071,24 @@ void bundle_foreach(const Port& p, char* old_end,
     const unsigned max = atoi(name+1);
     while(isdigit(*++name)) ;
 
+    char* pos2;
+
     if(expand_bundles)
     for(unsigned i=0; i<max; ++i)
     {
-        char* pos_after_num = pos + sprintf(pos,"%d",i);
         const char* name2_2 = name;
+        pos2 = pos + sprintf(pos,"%d",i);
 
         // append everything behind the '#' (for cases like a#N/b)
         while(*name2_2 && *name2_2 != ':')
-            *pos_after_num++ = *name2_2++;
+            *pos2++ = *name2_2++;
 
         ftor(&p, name_buffer, old_end, base, data, runtime);
     }
     else
     {
         const char* name2_2 = name;
-        char* pos2 = pos;
+        pos2 = pos;
 
         // append everything behind the '#' (for cases like a#N/b)
         while(*name2_2 && *name2_2 != ':')
@@ -1094,7 +1097,10 @@ void bundle_foreach(const Port& p, char* old_end,
         ftor(&p, name_buffer, old_end, base, data, runtime);
     }
 
-    *pos = 0;
+    if(cut_afterwards)
+        *old_end = 0;
+    else
+        *pos2 = 0;
 }
 
 std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
@@ -1113,6 +1119,13 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
     {
         assert(runtime);
         const Port::MetaContainer meta = p->meta();
+#if 0
+// practical for debugging if a parameter was changed, but not saved
+        if(!strncmp(port_buffer, "/part0/partefx2/Phaser/", 23))
+        {
+            puts("break here");
+        }
+#endif
 
         if((p->name[strlen(p->name)-1] != ':' && !strstr(p->name, "::"))
             || meta.find("parameter") == meta.end())
@@ -1122,7 +1135,7 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
             return;
         }
         else
-        {
+        { // TODO: duplicate to above? (colon[1])
             const char* colon = strchr(p->name, ':');
             if(!colon || !colon[1])
             {
@@ -1141,7 +1154,12 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
 
         std::string* res = (std::string*)data;
         assert(strlen(port_buffer) + 1 < buffersize);
-        strncpy(loc, port_buffer, buffersize); // TODO: +-1?
+        // copy the path until before the message
+        strncpy(loc, port_buffer, std::min((ptrdiff_t)buffersize,
+                                           port_from_base - port_buffer));
+        char* loc_end = loc + (port_from_base - port_buffer);
+        size_t loc_remain_size = buffersize - (port_from_base - port_buffer);
+        *loc_end = 0;
 
         const char* portargs = strchr(p->name, ':');
         if(!portargs)
@@ -1170,11 +1188,17 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
         {
             size_t nargs_runtime = 0;
 
-            auto ftor = [&](const Port* p,const char* name_buffer,
+            auto ftor = [&](const Port* p, const char* name_buffer,
                             const char* old_end,
                             const Ports& ,void* ,void* runtime)
             {
+                // TODO: strncpy is slow, replace it everywhere
                 strncpy(buffer_with_port, p->name, buffersize);
+
+                // the caller of ftor (in some cases bundle_foreach) has
+                // already filled old_end correctly, but we have to copy this
+                // over to loc_end
+                strncpy(loc_end, old_end, loc_remain_size);
 
                 size_t
                 nargs_runtime_cur = get_value_from_runtime(runtime,
@@ -1191,25 +1215,28 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
 
             if(strchr(p->name, '#'))
             {
-                // We assure to not overwrite anything above (i.e. with a lower
-                // address than the beginning of the substring of) the array port.
-                // Basically, that just does what walk_ports would have done if we
-                // would have used expand_bundles=true.
-                // This might also be solved by walk_ports giving noconst access
-                // to only the last part (lowest subport) of port_buffer.
-                char* port_buffer_no_const = const_cast<char*>(port_buffer);
+                // idea:
+                //                    p/a/b
+                // bundle_foreach =>  p/a#0/b, p/a#1/b, ... p/a#n/b, p
+                // bundle_foreach =>  p/a/b
+                // => justification for const_cast
 
                 // Skip the array element (type 'a') for now...
                 ++nargs_runtime;
 
                 // Start filling at arg_vals_runtime + 1
-
-                char* old_end = /*strrchr(port_buffer_no_const, '/');
-                old_end = old_end ? old_end + 1 : port_buffer_no_const;*/
-                const_cast<char*>(port_from_base);
-                bundle_foreach(*p, old_end, port_buffer + 1,
+                char* old_end_noconst = const_cast<char*>(port_from_base);
+                bundle_foreach(*p, old_end_noconst, port_buffer + 1,
                                base, data, runtime,
                                ftor, true);
+
+                // glue the old end behind old_end_noconst
+                bundle_foreach(*p, old_end_noconst, NULL,
+                               base, NULL, NULL,
+                               [](const Port*, const char*, const char*,
+                                  const Ports&, void*, void*){},
+                                  // TODO: extra function: bundle_foreach_do_nothing
+                               false, false);
 
                 // "Go back" to fill arg_vals_runtime + 0
                 arg_vals_runtime[0].type = 'a';
@@ -1218,6 +1245,14 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
             }
             else
                 ftor(p, port_buffer, port_from_base, base, NULL, runtime);
+
+#if 0
+// practical for debugging if a parameter was changed, but not saved
+            if(!strncmp(port_buffer, "/part0/partefx2/Phaser/", 23))
+            {
+                puts("break here");
+            }
+#endif
 
             canonicalize_arg_vals(arg_vals_default, nargs_default,
                                   strchr(p->name, ':'), meta);

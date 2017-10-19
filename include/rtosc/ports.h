@@ -311,6 +311,10 @@ int get_default_value(const char* port_name, const char *port_args,
  * corresponding to the rDefault macro
  * @param ports The static ports structure
  * @param runtime The runtime object
+ * @note This function is not realtime save (It uses std::string), which is
+ *   usually OK, since this function is being run inside a non-RT thread. If you
+ *   need this to be realtime save, add a template parameter for a functor that
+ *   replaces the std::string handling.
  * @return The list of ports and their changed values, linewise
  */
 std::string get_changed_values(const Ports& ports, void* runtime);
