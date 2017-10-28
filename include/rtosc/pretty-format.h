@@ -95,7 +95,7 @@ size_t rtosc_print_message(const char* address,
 /**
  * @brief Skip characters from a string until one argument value
  *   would have been scanned
- * @param src The string
+ * @param src The current position
  * @param skipped The number of arg_vals that would be skipped when scanning,
  *   typically 1 (though not for arrays)
  * @param type The skipped type
@@ -103,7 +103,7 @@ size_t rtosc_print_message(const char* address,
  *   (it will get the left of left hand sign of this argument)
  * @param follow_ellipsis Whether an argument followed by an ellipsis is
  *   interpreted as a range start or as only the argument itself
- * @param inside_bundle TODO
+ * @param inside_bundle Whether the current position is inside a bundle
  * @return The first character after that argument value, or NULL if a
  *   parsing error occurred
  */

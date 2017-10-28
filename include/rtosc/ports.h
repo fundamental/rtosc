@@ -383,6 +383,7 @@ private:
  *   You can overwrite its virtual functions, and you should specify any of the
  *   version structs if needed. All other members shall not be initialized.
  * @return The number of messages read, or, if there was a read error,
+ *   or the dispatcher did refuse to dispatch,
  *   the number of bytes read until the read error occured minus one
  */
 int dispatch_printed_messages(const char* messages,

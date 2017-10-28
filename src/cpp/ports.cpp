@@ -1058,10 +1058,13 @@ int rtosc::get_default_value(const char* port_name, const char* port_args,
     return nargs;
 }
 
+// TODO: pass base as pointer, so it can be null?
 template<class F>
 void bundle_foreach(const Port& p, char* old_end,
+                    /* data which is only being used by the ftors */
                     const char* name_buffer, const Ports& base,
-                    void* data, void* runtime, const F& ftor, // TODO: noconst?
+                    void* data, void* runtime, const F& ftor,
+                    /* options */
                     bool expand_bundles = true,
                     bool cut_afterwards = true)
 {
@@ -1102,6 +1105,10 @@ void bundle_foreach(const Port& p, char* old_end,
     else
         *pos2 = 0;
 }
+
+// use this function if you don't want to do anything in bundle_foreach
+void bundle_foreach_do_nothing(const Port*, const char*, const char*,
+                               const Ports&, void*, void*){}
 
 std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
 {
@@ -1213,6 +1220,13 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
                 nargs_runtime += nargs_runtime_cur;
             };
 
+            auto refix_old_end = [&base](const Port* _p, char* _old_end)
+            { // TODO: remove base capture
+                bundle_foreach(*_p, _old_end, NULL,
+                               base, NULL, NULL, bundle_foreach_do_nothing,
+                               false, false);
+            };
+
             if(strchr(p->name, '#'))
             {
                 // idea:
@@ -1230,13 +1244,8 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
                                base, data, runtime,
                                ftor, true);
 
-                // glue the old end behind old_end_noconst
-                bundle_foreach(*p, old_end_noconst, NULL,
-                               base, NULL, NULL,
-                               [](const Port*, const char*, const char*,
-                                  const Ports&, void*, void*){},
-                                  // TODO: extra function: bundle_foreach_do_nothing
-                               false, false);
+                // glue the old end behind old_end_noconst again
+                refix_old_end(p, old_end_noconst);
 
                 // "Go back" to fill arg_vals_runtime + 0
                 arg_vals_runtime[0].type = 'a';
@@ -1253,25 +1262,65 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
                 puts("break here");
             }
 #endif
-
             canonicalize_arg_vals(arg_vals_default, nargs_default,
                                   strchr(p->name, ':'), meta);
-            if(!rtosc_arg_vals_eq(arg_vals_default,
-                                  arg_vals_runtime,
-                                  nargs_default,
-                                  nargs_runtime,
-                                  NULL))
+
+            auto write_msg = [&res, &meta, &port_buffer]
+                                 (const rtosc_arg_val_t* arg_vals_default,
+                                  rtosc_arg_val_t* arg_vals_runtime,
+                                  int nargs_default, size_t nargs_runtime)
             {
-                char cur_value_pretty[buffersize] = " ";
+                if(!rtosc_arg_vals_eq(arg_vals_default,
+                                      arg_vals_runtime,
+                                      nargs_default,
+                                      nargs_runtime,
+                                      NULL))
+                {
+                    char cur_value_pretty[buffersize] = " ";
 
-                map_arg_vals(arg_vals_runtime, nargs_runtime, meta);
-                rtosc_print_arg_vals(arg_vals_runtime, nargs_runtime,
-                                     cur_value_pretty + 1, buffersize - 1,
-                                     NULL, strlen(port_buffer) + 1);
+                    map_arg_vals(arg_vals_runtime, nargs_runtime, meta);
 
-                *res += port_buffer;
-                *res += cur_value_pretty;
-                *res += "\n";
+                    rtosc_print_arg_vals(arg_vals_runtime, nargs_runtime,
+                                         cur_value_pretty + 1, buffersize - 1,
+                                         NULL, strlen(port_buffer) + 1);
+                    *res += port_buffer;
+                    *res += cur_value_pretty;
+                    *res += "\n";
+                }
+            }; // functor write_msg
+
+            if(arg_vals_runtime[0].type == 'a' &&
+               strchr(port_from_base, '/'))
+            {
+                // These are grouped as an array, but the port structure
+                // implicits that they shall be handled as single values
+                // inside their subtrees
+                //  => We don't print this as an array
+                //  => All arrays in savefiles have their numbers after
+                //     the last port separator ('/')
+#if 0
+                int count = 0;
+                auto write_msg_adaptor = [&](const Port* p,
+                    const char* port_buffer, const char* old_end,
+                    const Ports&, void*, void*)
+                {
+                    ++count;
+                    write_msg();
+                }
+
+                // iterate over the whole array
+                bundle_foreach(*p, old_end_noconst, port_buffer,
+                               base, NULL, NULL,
+                               write_msg_adaptor, true);
+
+                // glue the old end behind old_end_noconst again
+                refix_old_end(p, old_end_noconst);
+#endif
+            }
+            else
+            {
+                write_msg(arg_vals_default, arg_vals_runtime,
+                          nargs_default, nargs_runtime);
             }
         }
     };
@@ -1676,8 +1725,9 @@ MergePorts::MergePorts(std::initializer_list<const rtosc::Ports*> c)
  * @param loc The absolute path of @p port
  * @param loc_size The maximum usable size of @p loc
  * @param ports The Ports object containing @p port
- * @param runtime TODO
- * @return TODO
+ * @param runtime The runtime object (optional)
+ * @return True if no runtime is provided or @p port has no enabled property.
+ *         Otherwise, the state of the "enabled by" toggle
  */
 bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
                      const Ports& base, void *runtime)
@@ -1720,7 +1770,6 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
             char* collapsed_loc = Ports::collapsePath(loc);
             loc_size -= (collapsed_loc - loc);
 
-// TODO: collapse, use .. only in one case
             /*
                 receive the "enabled" property
              */
