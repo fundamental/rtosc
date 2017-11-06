@@ -50,6 +50,9 @@ struct rtosc_hack_decltype_t
 //Helper for documenting varargs
 #define IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,N, ...) N
 #define LAST_IMP(...) IMPL(__VA_ARGS__,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,0,0,0)
+#define DOC_IMP12(a,b,c,d,e,f,g,h,i,j,k,l) a b c d e f g h i j k rDoc(l)
+#define DOC_IMP11(a,b,c,d,e,f,g,h,i,j,k) a b c d e f g h i j rDoc(k)
+#define DOC_IMP10(a,b,c,d,e,f,g,h,i,j) a b c d e f g h i rDoc(j)
 #define DOC_IMP9(a,b,c,d,e,f,g,h,i) a b c d e f g h rDoc(i)
 #define DOC_IMP8(a,b,c,d,e,f,g,h)   a b c d e f g rDoc(h)
 #define DOC_IMP7(a,b,c,d,e,f,g)     a b c d e f rDoc(g)
@@ -85,31 +88,31 @@ struct rtosc_hack_decltype_t
 
 //Helper for applying macro on varargs
 //arguments: counting offset, macro, macro args
-#define MAC_EACH_0(o, m, x, ...) INSUFFICIENT_ARGUMENTS_PROVIDED_TO_MAC_EACH
-#define MAC_EACH_1(o, m, x, ...) m(o, x)
-#define MAC_EACH_2(o, m, x, ...) m(o, x) MAC_EACH_1(rINC(o), m, __VA_ARGS__)
-#define MAC_EACH_3(o, m, x, ...) m(o, x) MAC_EACH_2(rINC(o), m, __VA_ARGS__)
-#define MAC_EACH_4(o, m, x, ...) m(o, x) MAC_EACH_3(rINC(o), m, __VA_ARGS__)
-#define MAC_EACH_5(o, m, x, ...) m(o, x) MAC_EACH_4(rINC(o), m, __VA_ARGS__)
-#define MAC_EACH_6(o, m, x, ...) m(o, x) MAC_EACH_5(rINC(o), m, __VA_ARGS__)
-#define MAC_EACH_7(o, m, x, ...) m(o, x) MAC_EACH_6(rINC(o), m, __VA_ARGS__)
-#define MAC_EACH_8(o, m, x, ...) m(o, x) MAC_EACH_7(rINC(o), m, __VA_ARGS__)
-#define MAC_EACH_9(o, m, x, ...) m(o, x) MAC_EACH_8(rINC(o), m, __VA_ARGS__)
-#define MAC_EACH_10(o, m, x, ...) m(o, x) MAC_EACH_9(rINC(o), m, __VA_ARGS__)
-#define MAC_EACH_11(o, m, x, ...) m(o, x) MAC_EACH_10(rINC(o), m, __VA_ARGS__)
-#define MAC_EACH_12(o, m, x, ...) m(o, x) MAC_EACH_11(rINC(o), m, __VA_ARGS__)
-#define MAC_EACH_13(o, m, x, ...) m(o, x) MAC_EACH_12(rINC(o), m, __VA_ARGS__)
-#define MAC_EACH_14(o, m, x, ...) m(o, x) MAC_EACH_13(rINC(o), m, __VA_ARGS__)
-#define MAC_EACH_15(o, m, x, ...) m(o, x) MAC_EACH_14(rINC(o), m, __VA_ARGS__)
-#define MAC_EACH_16(o, m, x, ...) m(o, x) MAC_EACH_15(rINC(o), m, __VA_ARGS__)
+#define MAC_EACH_0(o,m,d,x, ...) INSUFFICIENT_ARGUMENTS_PROVIDED_TO_MAC_EACH
+#define MAC_EACH_1(o,m,d,x, ...) m(o,d,x)
+#define MAC_EACH_2(o,m,d,x, ...) m(o,d,x) MAC_EACH_1(rINC(o),m,d, __VA_ARGS__)
+#define MAC_EACH_3(o,m,d,x, ...) m(o,d,x) MAC_EACH_2(rINC(o),m,d, __VA_ARGS__)
+#define MAC_EACH_4(o,m,d,x, ...) m(o,d,x) MAC_EACH_3(rINC(o),m,d, __VA_ARGS__)
+#define MAC_EACH_5(o,m,d,x, ...) m(o,d,x) MAC_EACH_4(rINC(o),m,d, __VA_ARGS__)
+#define MAC_EACH_6(o,m,d,x, ...) m(o,d,x) MAC_EACH_5(rINC(o),m,d, __VA_ARGS__)
+#define MAC_EACH_7(o,m,d,x, ...) m(o,d,x) MAC_EACH_6(rINC(o),m,d, __VA_ARGS__)
+#define MAC_EACH_8(o,m,d,x, ...) m(o,d,x) MAC_EACH_7(rINC(o),m,d, __VA_ARGS__)
+#define MAC_EACH_9(o,m,d,x, ...) m(o,d,x) MAC_EACH_8(rINC(o),m,d, __VA_ARGS__)
+#define MAC_EACH_10(o,m,d,x, ...) m(o,d,x) MAC_EACH_9(rINC(o),m,d, __VA_ARGS__)
+#define MAC_EACH_11(o,m,d,x, ...) m(o,d,x) MAC_EACH_10(rINC(o),m,d, __VA_ARGS__)
+#define MAC_EACH_12(o,m,d,x, ...) m(o,d,x) MAC_EACH_11(rINC(o),m,d, __VA_ARGS__)
+#define MAC_EACH_13(o,m,d,x, ...) m(o,d,x) MAC_EACH_12(rINC(o),m,d, __VA_ARGS__)
+#define MAC_EACH_14(o,m,d,x, ...) m(o,d,x) MAC_EACH_13(rINC(o),m,d, __VA_ARGS__)
+#define MAC_EACH_15(o,m,d,x, ...) m(o,d,x) MAC_EACH_14(rINC(o),m,d, __VA_ARGS__)
+#define MAC_EACH_16(o,m,d,x, ...) m(o,d,x) MAC_EACH_15(rINC(o),m,d, __VA_ARGS__)
 
-#define MAC_EACH_IMP(off, mac, count, ...) \
-    MAC_EACH_ ##count(off, mac,__VA_ARGS__)
-#define MAC_EACH_I(off, mac, count, ...) \
-    MAC_EACH_IMP(off, mac, count, __VA_ARGS__)
-#define MAC_EACH_OFF(off, mac, ...) \
-    MAC_EACH_I(off, mac, LAST_IMP(__VA_ARGS__), __VA_ARGS__)
-#define MAC_EACH(mac, ...) MAC_EACH_OFF(0, mac, __VA_ARGS__)
+#define MAC_EACH_IMP(off, mac, data, count, ...) \
+    MAC_EACH_ ##count(off, mac, data, __VA_ARGS__)
+#define MAC_EACH_I(off, mac, data, count, ...) \
+    MAC_EACH_IMP(off, mac, data, count, __VA_ARGS__)
+#define MAC_EACH_OFF(off, mac, data, ...) \
+    MAC_EACH_I(off, mac, data, LAST_IMP(__VA_ARGS__), __VA_ARGS__)
+#define MAC_EACH(mac, data, ...) MAC_EACH_OFF(0, mac, data, __VA_ARGS__)
 
 //                    1 2 3 4 5 6 7 8 910111213141516
 #define OPTIONS_IMP16(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p) \
@@ -265,7 +268,10 @@ template<class T> constexpr T spice(T*t) {return *t;}
 //#define rDefaultArr(default_value_, idx_) rMap(default[idx_], default_value_)
 #define rPreset(no, default_value) \
     ":default " STRINGIFY(no) "\0=" STRINGIFY(default_value) "\0"
-#define rPresetsAt(offs, ...) MAC_EACH_OFF(offs, rPreset, __VA_ARGS__)
+#define _rPreset(no, data, default_value) rPreset(no, default_value)
+#define rPresetsAt(offs, ...) MAC_EACH_OFF(offs, _rPreset, offs, __VA_ARGS__)
+#define _rPreset2(offs, data, preset_no) rPreset(preset_no, data)
+#define rPresetAtMulti(val, ...) MAC_EACH_OFF(0, _rPreset2, val, __VA_ARGS__)
 #define rPresets(...) rPresetsAt(0, __VA_ARGS__)
 #define rDefaultDepends(dep_path_) rMap(default depends, dep_path_)
 #define rDefaultMissing "" // macro to denote yet missing default values

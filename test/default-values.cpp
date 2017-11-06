@@ -17,6 +17,16 @@ void port_sugar()
                   "Port sugar for presets (3)", __LINE__);
     assert_str_eq("=2", presets_str+25,
                   "Port sugar for presets (4)", __LINE__);
+
+    const char* multi_str = rPresetAtMulti(false, 0, 2);
+    assert_str_eq(":default 0", multi_str,
+                  "Port sugar for presets (1)", __LINE__);
+    assert_str_eq("=false", multi_str+11,
+                  "Port sugar for presets (2)", __LINE__);
+    assert_str_eq(":default 2", multi_str+18,
+                  "Port sugar for presets (3)", __LINE__);
+    assert_str_eq("=false", multi_str+29,
+                  "Port sugar for presets (4)", __LINE__);
 }
 
 static const Ports ports = {
