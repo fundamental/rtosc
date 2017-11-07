@@ -8,6 +8,7 @@
 
 #include <rtosc/rtosc.h>
 #include <rtosc/pretty-format.h>
+#include <rtosc/rtosc-time.h>
 #include <rtosc/arg-val-math.h>
 
 /**
@@ -164,13 +165,12 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
             break;
         case 't': // write to ISO 8601 date
         {
-            if(val->t == 1)
+            if(rtosc_arg_val_is_immediatelly(arg))
                 wrt = asnprintf(buffer, bs, "immediately");
             else
             {
-                time_t t = (time_t)(val->t >> 32);
-                int32_t secfracs = val->t & (0xffffffff);
-                struct tm* m_tm = localtime(&t);
+                struct tm* m_tm = rtosct_params_from_arg_val(arg);
+                int32_t secfracs = rtosct_secfracs_from_arg_val(arg);
 
                 const char* strtimefmt = (secfracs || m_tm->tm_sec)
                                   ? "%Y-%m-%d %H:%M:%S"
@@ -183,17 +183,12 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
 
                 if(secfracs)
                 {
-                    int rd = 0;
                     int prec = opt->floating_point_precision;
                     assert(prec>=0);
                     assert(prec<100);
 
                     // convert fractions -> float
-                    char lossless[16];
-                    asnprintf(lossless, 16, "0x%xp-32", secfracs);
-                    float flt;
-                    sscanf(lossless, "%f%n", &flt, &rd);
-                    assert(rd);
+                    float flt = rtosc_secfracs2float(secfracs);
 
                     // append float
                     char fmtstr[8];
@@ -1308,8 +1303,7 @@ size_t rtosc_scan_arg_val(const char* src,
             // timestamps "immediately" or "now"?
             if(skip_word("immediately", &src) || skip_word("now", &src))
             {
-                arg->type = 't';
-                arg->val.t = 1;
+                rtosc_arg_val_immediatelly(arg);
             }
             else if(skip_word("nil", &src)   ||
                     skip_word("inf", &src)   ||
@@ -1528,12 +1522,14 @@ size_t rtosc_scan_arg_val(const char* src,
                 if(rd)
                  src+=rd;
 
+                uint64_t secfracs;
+
                 // lossless format is appended in parantheses?
                 //  => take it directly from there
                 if(skip_fmt(&src, "%*f (%n"))
                 {
                     sscanf(src, " ... + 0x%8"PRIx64"p-32 s )%n",
-                           &arg->val.t, &rd);
+                           &secfracs, &rd);
                     src += rd;
                 }
                 // float number, but not lossless?
@@ -1543,37 +1539,15 @@ size_t rtosc_scan_arg_val(const char* src,
                     sscanf(src, "%f%n", &secfracsf, &rd);
                     src += rd;
 
-                    // convert float -> secfracs
-                    char secfracs_as_hex[16];
-                    asnprintf(secfracs_as_hex, 16, "%a", secfracsf);
-                    assert(secfracs_as_hex[3]=='.'); // 0x?.
-                    secfracs_as_hex[3] = secfracs_as_hex[2]; // remove '.'
-                    uint64_t secfracs;
-                    int exp;
-                    sscanf(secfracs_as_hex + 3,
-                           "%"PRIx64"p-%i", &secfracs, &exp);
-                    const char* p = strchr(secfracs_as_hex, 'p');
-                    assert(p);
-                    int lshift = 32-exp-((int)(p-(secfracs_as_hex+4))<<2);
-                    assert(lshift > 0);
-                    secfracs <<= lshift;
-                    assert((secfracs & 0xFFFFFFFF) == secfracs);
-
-                    arg->val.t = secfracs;
+                    secfracs = rtosc_float2secfracs(secfracsf);
                 }
                 else
                 {
                     // no fractional / floating seconds part
+                    secfracs = 0;
                 }
 
-                // adjust ranges to be POSIX conform
-                m_tm.tm_year -= 1900;
-                --m_tm.tm_mon;
-                // don't mess around with Daylight Saving Time
-                m_tm.tm_isdst = -1;
-
-                arg->val.t |= (((uint64_t)mktime(&m_tm)) << ((uint64_t)32));
-                arg->type = 't';
+                rtosc_arg_val_from_params(arg, &m_tm, secfracs);
             }
             else
             {
@@ -1645,89 +1619,58 @@ size_t rtosc_scan_arg_val(const char* src,
 
         int infinite_range = (*src == ']');
 
-/*        if(*src == ']')
+        if(!infinite_range)
+            src += rtosc_scan_arg_val(src, &rhs, 1, NULL, &zero, 0, 0);
+
+        /*
+            these shall be conforming to delta_from_arg_vals,
+            i.e. if ranges,    the last elements of the ranges
+                 if no ranges, the elements themselves
+         */
+        // find llhs position
+        rtosc_arg_val_t tmp;
+        // argument "-2" could be a delta arg
+        rtosc_arg_val_t* llhsarg = (args_before > 2 &&
+                                    arg[-3].type == '-' &&
+                                    arg[-3].val.r.has_delta)
+                      // -2 is a delta arg (followin a range arg)?
+                      ? rtosc_arg_val_range_arg(arg-3, arg[-3].val.r.num-1,
+                                                &tmp)
+                      : (args_before > 1 && arg[-2].type == '-')
+                      // -2 is a range arg (without delta)?
+                      ? arg-1
+                      : arg-1; // normal case
+
+        bool llhsarg_is_useless =
+            (args_before < 1 ||
+            lhsarg.type == '-' || llhsarg->type != lhsarg.type
+            /* this includes llhsarg == '-' */ );
+
+        bool has_delta = true;
+        int32_t num;
+        if(infinite_range && llhsarg_is_useless)
         {
-            arg->type = '-';
-            arg->val.r.num = 0; // = infinite
-            arg->val.r.has_delta = 0;
-            *++arg = delta;
-            *++arg = lhsarg;
-            // don't skip the ']' now, the caller will do it
+            has_delta = false;
         }
-        else*/ // TODO: remove and indent
+        else
         {
-            if(!infinite_range)
-                src += rtosc_scan_arg_val(src, &rhs, 1, NULL, &zero, 0, 0);
+            num = delta_from_arg_vals(llhsarg, &lhsarg,
+                                      infinite_range ? NULL : &rhs,
+                                      &delta, llhsarg_is_useless);
 
-            /*
-                these shall be conforming to delta_from_arg_vals,
-                i.e. if ranges,    the last elements of the ranges
-                     if no ranges, the elements themselves
-             */
-            // find llhs position
-            rtosc_arg_val_t tmp;
-            // argument "-2" could be a delta arg
-            rtosc_arg_val_t* llhsarg = (args_before > 2 &&
-                                        arg[-3].type == '-' &&
-                                        arg[-3].val.r.has_delta)
-                          // -2 is a delta arg (followin a range arg)?
-                          ? rtosc_arg_val_range_arg(arg-3, arg[-3].val.r.num-1,
-                                                    &tmp)
-                          : (args_before > 1 && arg[-2].type == '-')
-                          // -2 is a range arg (without delta)?
-                          ? arg-1
-                          : arg-1; // normal case
-
-#if 0
-            bool must_be_unity = false;
-
-            if(!infinite_range)
-            // infinite ranges never allow unity, because they have no rhs
-            // (rhs is required for getting the delta in this case)
-            {
-                if(args_before < 1)
-                {
-                    must_be_unity = true;
-                }
-                else
-                {
-                    if(lhsarg.type == '-' || llhsarg->type != lhsarg.type )
-                        // this includes llhsarg = '-'
-                        must_be_unity = true;
-                }
-            }
-#endif
-            bool llhsarg_is_useless =
-                (args_before < 1 ||
-                lhsarg.type == '-' || llhsarg->type != lhsarg.type
-                /* this includes llhsarg == '-' */ );
-
-            bool has_delta = true;
-            int32_t num;
-            if(infinite_range && llhsarg_is_useless)
+            assert(infinite_range || num > 0);
+            if(infinite_range && num == -1)
             {
                 has_delta = false;
             }
-            else
-            {
-                num = delta_from_arg_vals(llhsarg, &lhsarg,
-                                          infinite_range ? NULL : &rhs,
-                                          &delta, llhsarg_is_useless);
-
-                assert(infinite_range || num > 0);
-                if(infinite_range && num == -1)
-                {
-                    has_delta = false;
-                }
-            }
-
-            arg->type = '-';
-            arg->val.r.num = has_delta ? num : 0;
-            arg->val.r.has_delta = has_delta;
-            if(has_delta)
-                *++arg = delta;
-            *++arg = lhsarg;
         }
+
+        arg->type = '-';
+        arg->val.r.num = has_delta ? num : 0;
+        arg->val.r.has_delta = has_delta;
+        if(has_delta)
+            *++arg = delta;
+        *++arg = lhsarg;
     }
 
     return (size_t)(src-start);
