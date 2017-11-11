@@ -150,6 +150,39 @@ typedef struct
     double float_tolerance;
 } rtosc_cmp_options;
 
+typedef struct
+{
+    const rtosc_arg_val_t* av; //!< the arg val referenced
+    size_t i;                  //!< position of this arg val
+    int range_i;               //!< position of this arg val in its range
+} rtosc_arg_val_t_const_itr;
+
+/*
+ * arg val iterators
+ */
+void rtosc_arg_val_itr_init(rtosc_arg_val_t_const_itr* itr,
+                            const rtosc_arg_val_t* av);
+const rtosc_arg_val_t* rtosc_arg_val_itr_get(
+    const rtosc_arg_val_t_const_itr* itr,
+    rtosc_arg_val_t* buffer);
+void rtosc_arg_val_itr_next(rtosc_arg_val_t_const_itr* itr);
+
+/*
+ * arg val comparing helpers
+ */
+int rtosc_arg_vals_cmp_has_next(const rtosc_arg_val_t_const_itr* litr,
+                                const rtosc_arg_val_t_const_itr* ritr,
+                                size_t lsize, size_t rsize);
+int rtosc_arg_vals_eq_after_abort(const rtosc_arg_val_t_const_itr* litr,
+                                  const rtosc_arg_val_t_const_itr* ritr,
+                                  size_t lsize, size_t rsize);
+int rtosc_arg_vals_eq_single(const rtosc_arg_val_t* _lhs,
+                             const rtosc_arg_val_t* _rhs,
+                             const rtosc_cmp_options* opt);
+int rtosc_arg_vals_cmp_single(const rtosc_arg_val_t* _lhs,
+                              const rtosc_arg_val_t* _rhs,
+                              const rtosc_cmp_options* opt);
+
 /**
  * @brief Check if two arrays of rtosc_arg_val_t are equal
  *

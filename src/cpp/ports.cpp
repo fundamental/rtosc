@@ -1270,11 +1270,8 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
                                   rtosc_arg_val_t* arg_vals_runtime,
                                   int nargs_default, size_t nargs_runtime)
             {
-                if(!rtosc_arg_vals_eq(arg_vals_default,
-                                      arg_vals_runtime,
-                                      nargs_default,
-                                      nargs_runtime,
-                                      NULL))
+                if(!rtosc_arg_vals_eq(arg_vals_default, arg_vals_runtime,
+                                      nargs_default, nargs_runtime, nullptr))
                 {
                     char cur_value_pretty[buffersize] = " ";
 
@@ -1289,8 +1286,7 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
                 }
             }; // functor write_msg
 
-            if(arg_vals_runtime[0].type == 'a' &&
-               strchr(port_from_base, '/'))
+            if(arg_vals_runtime[0].type == 'a' && strchr(port_from_base, '/'))
             {
                 // These are grouped as an array, but the port structure
                 // implicits that they shall be handled as single values
@@ -1298,15 +1294,40 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
                 //  => We don't print this as an array
                 //  => All arrays in savefiles have their numbers after
                 //     the last port separator ('/')
-#if 0
-                int count = 0;
-                auto write_msg_adaptor = [&](const Port* p,
+
+                // used if the value of lhs or rhs is range-computed:
+                rtosc_arg_val_t rlhs, rrhs;
+
+                rtosc_arg_val_t_const_itr litr, ritr;
+                rtosc_arg_val_itr_init(&litr, arg_vals_default+1);
+                rtosc_arg_val_itr_init(&ritr, arg_vals_runtime+1);
+
+                auto write_msg_adaptor = [&litr, &ritr,&rlhs,&rrhs,&write_msg](
+                    const Port* p,
                     const char* port_buffer, const char* old_end,
                     const Ports&, void*, void*)
                 {
-                    ++count;
-                    write_msg();
-                }
+                    const rtosc_arg_val_t
+                        * lcur = rtosc_arg_val_itr_get(&litr, &rlhs),
+                        * rcur = rtosc_arg_val_itr_get(&ritr, &rrhs);
+
+                    if(!rtosc_arg_vals_eq_single(
+                            rtosc_arg_val_itr_get(&litr, &rlhs),
+                            rtosc_arg_val_itr_get(&ritr, &rrhs), nullptr))
+                    {
+                        auto get_sz = [](const rtosc_arg_val_t* a) {
+                            return a->type == 'a' ? (a->val.a.len + 1) : 1; };
+                        // the const-ness does not matter
+                        write_msg(lcur,
+                            const_cast<rtosc_arg_val_t*>(rcur),
+                            get_sz(lcur), get_sz(rcur));
+                    }
+
+                    rtosc_arg_val_itr_next(&litr);
+                    rtosc_arg_val_itr_next(&ritr);
+                };
+
+                char* old_end_noconst = const_cast<char*>(port_from_base);
 
                 // iterate over the whole array
                 bundle_foreach(*p, old_end_noconst, port_buffer,
@@ -1315,7 +1336,7 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
 
                 // glue the old end behind old_end_noconst again
                 refix_old_end(p, old_end_noconst);
-#endif
+
             }
             else
             {

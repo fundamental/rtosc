@@ -236,331 +236,353 @@ static size_t vsosc_null(const char        *address,
 static const rtosc_cmp_options* default_cmp_options
  = &((rtosc_cmp_options) { 0.0 });
 
-//! helper function for arg val comparing
-//! this usually just returns the value from operand, except for range operands,
-//! where the value is being interpolated
-static const rtosc_arg_val_t* get_operand_pointer(const
-                                                  rtosc_arg_val_t* operand,
-                                                  rtosc_arg_val_t* buffer,
-                                                  int range_i)
+void rtosc_arg_val_itr_init(rtosc_arg_val_t_const_itr* itr,
+                            const rtosc_arg_val_t* av)
 {
-    const rtosc_arg_val_t* result;
-    if(operand->type == '-')
-    {
-        if(operand->val.r.has_delta)
-            rtosc_arg_val_range_arg(operand, range_i, buffer);
-        else
-            *buffer = operand[1];
-        result = buffer;
-    }
-    else result = operand;
-    return result;
+    itr->av = av;
+    itr->i = itr->range_i = 0;
 }
 
 //! helper function for arg val comparing
-static const rtosc_arg_val_t* increase_counters(const rtosc_arg_val_t* operand,
-                                                size_t* i, int* range_i)
+//! this usually just returns the value from operand, except for range operands,
+//! where the value is being interpolated
+const rtosc_arg_val_t* rtosc_arg_val_itr_get(
+    const rtosc_arg_val_t_const_itr* itr,
+    rtosc_arg_val_t* buffer)
+{
+    const rtosc_arg_val_t* result;
+    if(itr->av->type == '-')
+    {
+        if(itr->av->val.r.has_delta)
+            rtosc_arg_val_range_arg(itr->av, itr->range_i, buffer);
+        else
+            *buffer = itr->av[1];
+        result = buffer;
+    }
+    else result = itr->av;
+    return result;
+}
+
+void rtosc_arg_val_itr_next(rtosc_arg_val_t_const_itr* itr)
 {
     // increase the range index
-    if(operand->type == '-')
+    if(itr->av->type == '-')
     {
         // increase if the limit was reached, and the limit was not infinity (=0)
-        if(++*range_i >= operand->val.r.num && operand->val.r.num)
+        if(++itr->range_i >= itr->av->val.r.num && itr->av->val.r.num)
         {
-            if(operand->val.r.has_delta)
+            if(itr->av->val.r.has_delta)
             {
-                ++operand;
-                ++*i;
+                ++itr->av;
+                ++itr->i;
             }
-            ++operand;
-            ++*i;
-            *range_i = 0;
+            ++itr->av;
+            ++itr->i;
+            itr->range_i = 0;
         }
     }
 
-    // if not inside a range, increase the index
-    if(!*range_i)
+    // if not inside a range (or at its beginning), increase the index
+    if(!itr->range_i)
     {
-        if(operand->type == 'a')
+        if(itr->av->type == 'a')
         {
-            *i += operand->val.a.len;
-            operand += operand->val.a.len;
+            itr->i += itr->av->val.a.len;
+            itr->av += itr->av->val.a.len;
         }
-        else
-        {
-            ++*i;
-            ++operand;
-        }
+        ++itr->i;
+        ++itr->av;
     }
-    return operand;
+}
+
+// abort only if one side was finished, or if both are infinite ranges
+int rtosc_arg_vals_cmp_has_next(const rtosc_arg_val_t_const_itr* litr,
+                                const rtosc_arg_val_t_const_itr* ritr,
+                                size_t lsize, size_t rsize)
+{
+    return     (litr->i < lsize) && (ritr->i < rsize)
+            && (litr->av->type != '-' || ritr->av->type != '-' ||
+                litr->av->val.r.num || ritr->av->val.r.num);
+}
+
+// arrays are equal by now, but is one longer?
+// each array must have either been completely passed, or it must
+// have reached an infinite range
+int rtosc_arg_vals_eq_after_abort(const rtosc_arg_val_t_const_itr* litr,
+                                  const rtosc_arg_val_t_const_itr* ritr,
+                                  size_t lsize, size_t rsize)
+{
+    return    (litr->i == lsize ||
+                  (litr->av->type == '-' && !litr->av->val.r.num))
+           && (ritr->i == rsize ||
+                  (ritr->av->type == '-' && !ritr->av->val.r.num));
+}
+
+// compare single elements, ranges excluded
+int rtosc_arg_vals_eq_single(const rtosc_arg_val_t* _lhs,
+                             const rtosc_arg_val_t* _rhs,
+                             const rtosc_cmp_options* opt)
+{
+#define mfabs(val) (((val) >= 0) ? (val) : -(val))
+    int rval;
+
+    if(!opt)
+        opt = default_cmp_options;
+
+    if(_lhs->type == _rhs->type)
+    switch(_lhs->type)
+    {
+        case 'i':
+        case 'c':
+        case 'r':
+            rval = _lhs->val.i == _rhs->val.i;
+            break;
+        case 'I':
+        case 'T':
+        case 'F':
+        case 'N':
+            rval = 1;
+            break;
+        case 'f':
+            rval = (opt->float_tolerance == 0.0)
+                   ? _lhs->val.f == _rhs->val.f
+                   : mfabs(_lhs->val.f - _rhs->val.f) <=
+                   (float)opt->float_tolerance;
+            break;
+        case 'd':
+            rval = (opt->float_tolerance == 0.0)
+                   ? _lhs->val.d == _rhs->val.d
+                   : mfabs(_lhs->val.d - _rhs->val.d) <=
+                   opt->float_tolerance;
+            break;
+        case 'h':
+            rval = _lhs->val.h == _rhs->val.h;
+            break;
+        case 't':
+            rval = _lhs->val.t == _rhs->val.t;
+            break;
+        case 'm':
+            rval = 0 == memcmp(_lhs->val.m, _rhs->val.m, 4);
+            break;
+        case 's':
+        case 'S':
+            rval = (_lhs->val.s == NULL || _rhs->val.s == NULL)
+                 ? _lhs->val.s == _rhs->val.s
+                 : (0 == strcmp(_lhs->val.s, _rhs->val.s));
+            break;
+        case 'b':
+        {
+            int32_t lbs = _lhs->val.b.len,
+                    rbs = _rhs->val.b.len;
+            rval = lbs == rbs;
+            if(rval)
+                rval = 0 == memcmp(_lhs->val.b.data, _rhs->val.b.data, lbs);
+            break;
+        }
+        case 'a':
+        {
+            if(     _lhs->val.a.type != _rhs->val.a.type
+               && !(_lhs->val.a.type == 'T' && _rhs->val.a.type == 'F')
+               && !(_lhs->val.a.type == 'F' && _rhs->val.a.type == 'T'))
+                rval = 0;
+            else
+                rval = rtosc_arg_vals_eq(_lhs+1, _rhs+1,
+                                         _lhs->val.a.len, _rhs->val.a.len,
+                                         opt);
+            break;
+        }
+        case '-':
+            assert(false);
+            break;
+    }
+    else
+    {
+        rval = 0;
+    }
+    return rval;
+#undef mfabs
 }
 
 int rtosc_arg_vals_eq(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
                       size_t lsize, size_t rsize,
                       const rtosc_cmp_options* opt)
 {
-#define mfabs(val) (((val) >= 0) ? (val) : -(val))
-
     // used if the value of lhs or rhs is range-computed:
     rtosc_arg_val_t rlhs, rrhs;
-    int lhsi=0, rhsi=0;
+
+    rtosc_arg_val_t_const_itr litr, ritr;
+    rtosc_arg_val_itr_init(&litr, lhs);
+    rtosc_arg_val_itr_init(&ritr, rhs);
+
+    int rval = 1;
 
     if(!opt)
         opt = default_cmp_options;
 
-    int rval = 1;
-    size_t li = 0, ri = 0;
-
-    int elements_left = lsize && rsize;
-    while(elements_left && rval)
+    for( ; rtosc_arg_vals_cmp_has_next(&litr, &ritr, lsize, rsize) && rval;
+        rtosc_arg_val_itr_next(&litr),
+        rtosc_arg_val_itr_next(&ritr))
     {
-        const rtosc_arg_val_t* _lhs = get_operand_pointer(lhs, &rlhs, lhsi),
-                             * _rhs = get_operand_pointer(rhs, &rrhs, rhsi);
-
-        if(_lhs->type == _rhs->type)
-        switch(_lhs->type)
-        {
-            case 'i':
-            case 'c':
-            case 'r':
-                rval = _lhs->val.i == _rhs->val.i;
-                break;
-            case 'I':
-            case 'T':
-            case 'F':
-            case 'N':
-                rval = 1;
-                break;
-            case 'f':
-                rval = (opt->float_tolerance == 0.0)
-                       ? _lhs->val.f == _rhs->val.f
-                       : mfabs(_lhs->val.f - _rhs->val.f) <=
-                       (float)opt->float_tolerance;
-                break;
-            case 'd':
-                rval = (opt->float_tolerance == 0.0)
-                       ? _lhs->val.d == _rhs->val.d
-                       : mfabs(_lhs->val.d - _rhs->val.d) <=
-                       opt->float_tolerance;
-                break;
-            case 'h':
-                rval = _lhs->val.h == _rhs->val.h;
-                break;
-            case 't':
-                rval = _lhs->val.t == _rhs->val.t;
-                break;
-            case 'm':
-                rval = 0 == memcmp(_lhs->val.m, _rhs->val.m, 4);
-                break;
-            case 's':
-            case 'S':
-                rval = (_lhs->val.s == NULL || _rhs->val.s == NULL)
-                     ? _lhs->val.s == _rhs->val.s
-                     : (0 == strcmp(_lhs->val.s, _rhs->val.s));
-                break;
-            case 'b':
-            {
-                int32_t lbs = _lhs->val.b.len,
-                        rbs = _rhs->val.b.len;
-                rval = lbs == rbs;
-                if(rval)
-                    rval = 0 == memcmp(_lhs->val.b.data, _rhs->val.b.data, lbs);
-                break;
-            }
-            case 'a':
-            {
-                if(     _lhs->val.a.type != _rhs->val.a.type
-                   && !(_lhs->val.a.type == 'T' && _rhs->val.a.type == 'F')
-                   && !(_lhs->val.a.type == 'F' && _rhs->val.a.type == 'T'))
-                    rval = 0;
-                else
-                    return rtosc_arg_vals_eq(_lhs+1, _rhs+1,
-                                             _lhs->val.a.len, _rhs->val.a.len,
-                                             opt);
-                break;
-            }
-            case '-':
-                // is being handled above
-                break;
-        }
-        else
-        {
-            rval = 0;
-        }
-
-        lhs = increase_counters(lhs, &li, &lhsi);
-        rhs = increase_counters(rhs, &ri, &rhsi);
-
-        // abort only if one side was finished, or if both are infinite ranges
-        elements_left = (li < lsize)
-                    && (ri < rsize) && (lhs->type != '-' || rhs->type != '-'
-                    || lhs->val.r.num || rhs->val.r.num);
+        rval = rtosc_arg_vals_eq_single(rtosc_arg_val_itr_get(&litr, &rlhs),
+                                        rtosc_arg_val_itr_get(&ritr, &rrhs),
+                                        opt);
     }
 
-    if(!rval)
-        return rval;
-    else {
-        // arrays are equal by now, but is one longer?
-        // each array must have either been completely passed, or it must
-        // have reached an infinite range
-        return    (li == lsize || (lhs->type == '-' && !lhs->val.r.num))
-               && (ri == rsize || (rhs->type == '-' && !rhs->val.r.num));
-    }
-#undef mfabs
+    return rval
+        ? rtosc_arg_vals_eq_after_abort(&litr, &ritr, lsize, rsize)
+        : rval;
 }
 
-int rtosc_arg_vals_cmp(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
-                       size_t lsize, size_t rsize,
-                       const rtosc_cmp_options* opt)
+// compare single elements, ranges excluded
+int rtosc_arg_vals_cmp_single(const rtosc_arg_val_t* _lhs,
+                              const rtosc_arg_val_t* _rhs,
+                              const rtosc_cmp_options* opt)
 {
 #define cmp_3way(val1,val2) (((val1) == (val2)) \
                             ? 0 \
                             : (((val1) > (val2)) ? 1 : -1))
 #define mfabs(val) (((val) >= 0) ? (val) : -(val))
 
-    // used if the value of lhs or rhs is range-computed:
-    rtosc_arg_val_t rlhs, rrhs;
-    int lhsi=0, rhsi=0;
+    int rval;
 
     if(!opt)
         opt = default_cmp_options;
 
-    size_t rval = 0;
-
-    size_t li = 0, ri = 0;
-
-    int elements_left = lsize && rsize;
-    while(elements_left && !rval)
+    if(_lhs->type == _rhs->type)
+    switch(_lhs->type)
     {
-        const rtosc_arg_val_t* _lhs = get_operand_pointer(lhs, &rlhs, lhsi),
-                             * _rhs = get_operand_pointer(rhs, &rrhs, rhsi);
-
-        if(_lhs->type == _rhs->type)
-        switch(_lhs->type)
+        case 'i':
+        case 'c':
+        case 'r':
+            rval = cmp_3way(_lhs->val.i, _rhs->val.i);
+            break;
+        case 'I':
+        case 'T':
+        case 'F':
+        case 'N':
+            rval = 0;
+            break;
+        case 'f':
+            rval = (opt->float_tolerance == 0.0)
+                   ? cmp_3way(_lhs->val.f, _rhs->val.f)
+                   : (mfabs(_lhs->val.f - _rhs->val.f)
+                      <= (float)opt->float_tolerance)
+                      ? 0
+                      : ((_lhs->val.f > _rhs->val.f) ? 1 : -1);
+            break;
+        case 'd':
+            rval = (opt->float_tolerance == 0.0)
+                   ? cmp_3way(_lhs->val.d, _rhs->val.d)
+                   : (mfabs(_lhs->val.d - _rhs->val.d)
+                      <= opt->float_tolerance)
+                      ? 0
+                      : ((_lhs->val.d > _rhs->val.d) ? 1 : -1);
+            break;
+        case 'h':
+            rval = cmp_3way(_lhs->val.h, _rhs->val.h);
+            break;
+        case 't':
+            // immediately is considered lower than everything else
+            // this means if you send two events to a client,
+            // one being "immediately" and one being different, the
+            // immediately-event has the higher priority, event if the
+            // other one is in the past
+            rval = (_lhs->val.t == 1)
+                   ? (_rhs->val.t == 1)
+                     ? 0
+                     : -1 // _lhs has higher priority => _lhs < _rhs
+                   : (_rhs->val.t == 1)
+                     ? 1
+                     : cmp_3way(_lhs->val.t, _rhs->val.t);
+            break;
+        case 'm':
+            rval = memcmp(_lhs->val.m, _rhs->val.m, 4);
+            break;
+        case 's':
+        case 'S':
+            rval = (_lhs->val.s == NULL || _rhs->val.s == NULL)
+                 ? cmp_3way(_lhs->val.s, _rhs->val.s)
+                 : strcmp(_lhs->val.s, _rhs->val.s);
+            break;
+        case 'b':
         {
-            case 'i':
-            case 'c':
-            case 'r':
-                rval = cmp_3way(_lhs->val.i, _rhs->val.i);
-                break;
-            case 'I':
-            case 'T':
-            case 'F':
-            case 'N':
-                rval = 0;
-                break;
-            case 'f':
-                rval = (opt->float_tolerance == 0.0)
-                       ? cmp_3way(_lhs->val.f, _rhs->val.f)
-                       : (mfabs(_lhs->val.f - _rhs->val.f)
-                          <= (float)opt->float_tolerance)
-                          ? 0
-                          : ((_lhs->val.f > _rhs->val.f) ? 1 : -1);
-                break;
-            case 'd':
-                rval = (opt->float_tolerance == 0.0)
-                       ? cmp_3way(_lhs->val.d, _rhs->val.d)
-                       : (mfabs(_lhs->val.d - _rhs->val.d)
-                          <= opt->float_tolerance)
-                          ? 0
-                          : ((_lhs->val.d > _rhs->val.d) ? 1 : -1);
-                break;
-            case 'h':
-                rval = cmp_3way(_lhs->val.h, _rhs->val.h);
-                break;
-            case 't':
-                // immediately is considered lower than everything else
-                // this means if you send two events to a client,
-                // one being "immediately" and one being different, the
-                // immediately-event has the higher priority, event if the
-                // other one is in the past
-                rval = (_lhs->val.t == 1)
-                       ? (_rhs->val.t == 1)
-                         ? 0
-                         : -1 // _lhs has higher priority => _lhs < _rhs
-                       : (_rhs->val.t == 1)
-                         ? 1
-                         : cmp_3way(_lhs->val.t, _rhs->val.t);
-                break;
-            case 'm':
-                rval = memcmp(_lhs->val.m, _rhs->val.m, 4);
-                break;
-            case 's':
-            case 'S':
-                rval = (_lhs->val.s == NULL || _rhs->val.s == NULL)
-                     ? cmp_3way(_lhs->val.s, _rhs->val.s)
-                     : strcmp(_lhs->val.s, _rhs->val.s);
-                break;
-            case 'b':
+            int32_t lbs = _lhs->val.b.len,
+                    rbs = _rhs->val.b.len;
+            int32_t minlen = (lbs < rbs) ? lbs : rbs;
+            rval = memcmp(_lhs->val.b.data, _rhs->val.b.data, minlen);
+            if(lbs != rbs && !rval)
             {
-                int32_t lbs = _lhs->val.b.len,
-                        rbs = _rhs->val.b.len;
-                int32_t minlen = (lbs < rbs) ? lbs : rbs;
-                rval = memcmp(_lhs->val.b.data, _rhs->val.b.data, minlen);
-                if(lbs != rbs && !rval)
-                {
-                    // both equal until here
-                    // the string that ends here is lexicographically smaller
-                    rval = (lbs > rbs)
-                           ? _lhs->val.b.data[minlen]
-                           : -_rhs->val.b.data[minlen];
-                }
-                else
-                    return rval;
-                break;
+                // both equal until here
+                // the string that ends here is lexicographically smaller
+                rval = (lbs > rbs)
+                       ? _lhs->val.b.data[minlen]
+                       : -_rhs->val.b.data[minlen];
             }
-            case 'a':
-            {
-                int32_t llen = _lhs->val.a.len, rlen = _rhs->val.a.len;
-                if(     _lhs->val.a.type != _rhs->val.a.type
-                   && !(_lhs->val.a.type == 'T' && _rhs->val.a.type == 'F')
-                   && !(_lhs->val.a.type == 'F' && _rhs->val.a.type == 'T'))
-                    rval = (_lhs->val.a.type > _rhs->val.a.type) ? 1 : -1;
-                else
-                {
-                    // the arg vals differ in this array => compare and return
-                    return rtosc_arg_vals_cmp(_lhs+1, _rhs+1, llen, rlen, opt);
-                }
-                break;
-            }
-            case '-':
-                // is being handled above
-                break;
+
+            break;
         }
-        else
+        case 'a':
         {
-            rval = (_lhs->type > _rhs->type) ? 1 : -1;
+            int32_t llen = _lhs->val.a.len, rlen = _rhs->val.a.len;
+            if(     _lhs->val.a.type != _rhs->val.a.type
+               && !(_lhs->val.a.type == 'T' && _rhs->val.a.type == 'F')
+               && !(_lhs->val.a.type == 'F' && _rhs->val.a.type == 'T'))
+                rval = (_lhs->val.a.type > _rhs->val.a.type) ? 1 : -1;
+            else
+            {
+                // the arg vals differ in this array => compare and return
+                rval = rtosc_arg_vals_cmp(_lhs+1, _rhs+1, llen, rlen, opt);
+            }
+            break;
         }
-
-        lhs = increase_counters(lhs, &li, &lhsi);
-        rhs = increase_counters(rhs, &ri, &rhsi);
-
-        // abort only if one side was finished, or if both are infinite ranges
-        elements_left = (li < lsize)
-                    && (ri < rsize) && (lhs->type != '-' || rhs->type != '-'
-                    || lhs->val.r.num || rhs->val.r.num);
+        case '-':
+            assert(false);
+            break;
+    }
+    else
+    {
+        rval = (_lhs->type > _rhs->type) ? 1 : -1;
     }
 
-    if(rval)
-        return rval;
-    else {
-        // arrays are equal by now, but is one longer?
-        // each array must have either been completely passed, or it must
-        // have reached an infinite range
-        if(       (li == lsize || (lhs->type == '-' && !lhs->val.r.num))
-               && (ri == rsize || (rhs->type == '-' && !rhs->val.r.num)))
-        {
-            return 0;
-        }
-        else
-        {
-            // they're equal until here, so one array must have elements left
-            return (lsize-li > rsize-ri) ? 1 : -1;
-        }
-    }
+    return rval;
 
 #undef mfabs
 #undef cmp_3way
+}
+
+int rtosc_arg_vals_cmp(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
+                       size_t lsize, size_t rsize,
+                       const rtosc_cmp_options* opt)
+{
+    // used if the value of lhs or rhs is range-computed:
+    rtosc_arg_val_t rlhs, rrhs;
+
+    rtosc_arg_val_t_const_itr litr, ritr;
+    rtosc_arg_val_itr_init(&litr, lhs);
+    rtosc_arg_val_itr_init(&ritr, rhs);
+
+    int rval = 0;
+
+    if(!opt)
+        opt = default_cmp_options;
+
+    for( ; rtosc_arg_vals_cmp_has_next(&litr, &ritr, lsize, rsize) && !rval;
+        rtosc_arg_val_itr_next(&litr),
+        rtosc_arg_val_itr_next(&ritr))
+    {
+        rval = rtosc_arg_vals_cmp_single(rtosc_arg_val_itr_get(&litr, &rlhs),
+                                         rtosc_arg_val_itr_get(&ritr, &rrhs),
+                                         opt);
+    }
+
+    return rval ? rval
+                : (rtosc_arg_vals_eq_after_abort(&litr, &ritr, lsize, rsize))
+                    ? 0
+                    // they're equal until here, so one array must have
+                    // elements left:
+                    : (lsize-(litr.i) > rsize-(ritr.i))
+                        ? 1
+                        : -1;
 }
 
 void rtosc_v2args(rtosc_arg_t* args, size_t nargs, const char* arg_str,

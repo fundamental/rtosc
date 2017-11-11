@@ -308,8 +308,8 @@ void ranges()
     cmp_1(eq, l, r, 5, 4, NULL,
           "infinite range", "infinite_range", __LINE__);
 
-    // let l+1 = 1 1 1
-    // and r+1 = 1 1 ...
+    // let l = 1 1 1
+    // and r = 1 1 ...
     l[1].val.i = 1;
     l[2].type = 'i';
     l[2].val.i = 1;
@@ -319,20 +319,30 @@ void ranges()
     cmp_1(eq, l, r, 3, 3, NULL,
       "numbers", "infinite_range (no delta)", __LINE__);
 
-    // let      l+1 = 1
-    // and keep r+1 = 1 1 ...
+    // let      l = 1
+    // and keep r = 1 1 ...
     cmp_1(eq, l, r, 1, 3, NULL,
       "nothing", "infinite_range (no delta)", __LINE__);
 
-    // let      r+1 = 1 ...
-    // and keep l+1 = 1 1 ...
+    // let      l = 1 ...
+    // and keep r = 1 1 ...
     l[0].type = '-';
     l[0].val.r.num = 0;
     l[0].val.r.has_delta = 0;
     l[1].type = 'i';
-    l[2].val.i = 1;
+    l[1].val.i = 1;
     cmp_1(eq, l, r, 2, 3, NULL,
       "infinite_range (no delta)", "infinite_range (no delta)", __LINE__);
+
+
+    // keep     l = 1 ...
+    // and let  r = 1 ...
+    r[0].type = '-';
+    r[0].val.r.num = 0;
+    r[0].val.r.has_delta = 0;
+    r[1].type = 'i';
+    r[1].val.i = 1;
+    cmp_1(eq, l, r, 2, 2, NULL, "1 ...", "1 ...", __LINE__);
 }
 
 void different_types()
