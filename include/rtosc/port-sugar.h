@@ -255,6 +255,9 @@ template<class T> constexpr T spice(T*t) {return *t;}
 #define rProp(name)       ":" STRINGIFY(name) "\0"
 
 //Scaling property
+//This property describes the variable's input scale, which is in most cases
+//(not always) equal to the perception. Thus, if 0 is in the input scale, and
+//has no special meaning, rLinear shall be used.
 #define rLinear(min_, max_) rMap(min, min_) rMap(max, max_) rMap(scale, linear)
 #define rLog(min_, max_) rMap(min, min_) rMap(max, max_) rMap(scale, logarithmic)
 
