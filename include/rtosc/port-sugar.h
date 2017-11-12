@@ -300,9 +300,9 @@ template<class T> constexpr T spice(T*t) {return *t;}
 #define rBOIL_END }
 
 #define rLIMIT(var, convert) \
-    if(prop["min"] && var < convert(prop["min"])) \
+    if(prop["min"] && var < (decltype(var)) convert(prop["min"])) \
         var = convert(prop["min"]);\
-    if(prop["max"] && var > convert(prop["max"])) \
+    if(prop["max"] && var > (decltype(var)) convert(prop["max"])) \
         var = convert(prop["max"]);
 
 #define rTYPE(n) decltype(obj->n)
@@ -505,7 +505,8 @@ template<class T> constexpr T spice(T*t) {return *t;}
         if(!strcmp("", args)) {\
             data.reply(loc, "s", obj->name); \
         } else { \
-            strncpy(obj->name, rtosc_argument(msg, 0).s, length); \
+            strncpy(obj->name, rtosc_argument(msg, 0).s, length-1); \
+            obj->name[length-1] = '\0'; \
             data.broadcast(loc, "s", obj->name);\
             rChangeCb \
         } rBOIL_END

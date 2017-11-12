@@ -233,8 +233,7 @@ static size_t vsosc_null(const char        *address,
     return pos;
 }
 
-static const rtosc_cmp_options* default_cmp_options
- = &((rtosc_cmp_options) { 0.0 });
+static const rtosc_cmp_options default_cmp_options = { 0.0 };
 
 void rtosc_arg_val_itr_init(rtosc_arg_val_t_const_itr* itr,
                             const rtosc_arg_val_t* av)
@@ -327,7 +326,7 @@ int rtosc_arg_vals_eq_single(const rtosc_arg_val_t* _lhs,
     int rval;
 
     if(!opt)
-        opt = default_cmp_options;
+        opt = &default_cmp_options;
 
     if(_lhs->type == _rhs->type)
     switch(_lhs->type)
@@ -417,7 +416,7 @@ int rtosc_arg_vals_eq(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
     int rval = 1;
 
     if(!opt)
-        opt = default_cmp_options;
+        opt = &default_cmp_options;
 
     for( ; rtosc_arg_vals_cmp_has_next(&litr, &ritr, lsize, rsize) && rval;
         rtosc_arg_val_itr_next(&litr),
@@ -446,7 +445,7 @@ int rtosc_arg_vals_cmp_single(const rtosc_arg_val_t* _lhs,
     int rval;
 
     if(!opt)
-        opt = default_cmp_options;
+        opt = &default_cmp_options;
 
     if(_lhs->type == _rhs->type)
     switch(_lhs->type)
@@ -564,7 +563,7 @@ int rtosc_arg_vals_cmp(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
     int rval = 0;
 
     if(!opt)
-        opt = default_cmp_options;
+        opt = &default_cmp_options;
 
     for( ; rtosc_arg_vals_cmp_has_next(&litr, &ritr, lsize, rsize) && !rval;
         rtosc_arg_val_itr_next(&litr),

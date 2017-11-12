@@ -4,20 +4,23 @@
 using namespace rtosc;
 
 AutomationMgr::AutomationMgr(int slots, int per_slot, int control_points)
-    :nslots(slots), per_slot(per_slot), active_slot(0), p(NULL), learn_queue_len(0), damaged(0)
+    :nslots(slots), per_slot(per_slot), active_slot(0), learn_queue_len(0), p(NULL), damaged(0)
 {
     this->slots = new AutomationSlot[slots];
     memset(this->slots, 0, sizeof(AutomationSlot)*slots);
     for(int i=0; i<slots; ++i) {
-        sprintf(this->slots[i].name, "Slot %d", i);
-        this->slots[i].midi_cc  = -1;
-        this->slots[i].learning = -1;
+        auto &s = this->slots[i];
+        sprintf(s.name, "Slot %d", i);
+        s.midi_cc  = -1;
+        s.learning = -1;
 
-        this->slots[i].automations = new Automation[per_slot];
-        memset(this->slots[i].automations, 0, sizeof(Automation)*per_slot);
+        s.automations = new Automation[per_slot];
+        memset(s.automations, 0, sizeof(Automation)*per_slot);
         for(int j=0; j<per_slot; ++j) {
-            this->slots[i].automations[j].map.control_points = new float[control_points];
-            this->slots[i].automations[j].map.npoints = control_points;
+            s.automations[j].map.control_points = new float[control_points];
+            s.automations[j].map.npoints = control_points;
+            s.automations[j].map.gain   = 100.0;
+            s.automations[j].map.offset = 0.0;
         }
     }
 
@@ -36,7 +39,13 @@ void AutomationMgr::createBinding(int slot, const char *path, bool start_midi_le
     }
     auto meta = port->meta();
     if(!(meta.find("min") && meta.find("max"))) {
-        fprintf(stderr, "No bounds for '%s' known\n", path);
+        if(!strstr(port->name, ":T")) {
+            fprintf(stderr, "No bounds for '%s' known\n", path);
+            return;
+        }
+    }
+    if(meta.find("internal") || meta.find("no learn")) {
+        fprintf(stderr, "[Warning] port '%s' is unlearnable\n", path);
         return;
     }
     int ind = -1;
@@ -47,17 +56,27 @@ void AutomationMgr::createBinding(int slot, const char *path, bool start_midi_le
         }
     }
 
+    if(ind == -1)
+        return;
+
     slots[slot].used = true;
 
     auto &au = slots[slot].automations[ind];
 
     au.used   = true;
     au.active = true;
-    au.param_min = atof(meta["min"]);
-    au.param_max = atof(meta["max"]);
     au.param_type = 'i';
     if(strstr(port->name, ":f"))
         au.param_type = 'f';
+    else if(strstr(port->name, ":T"))
+        au.param_type = 'T';
+    if(au.param_type == 'T') {
+        au.param_min = 0.0;
+        au.param_max = 1.0;
+    } else {
+        au.param_min = atof(meta["min"]);
+        au.param_max = atof(meta["max"]);
+    }
     strncpy(au.param_path, path, sizeof(au.param_path));
 
     au.map.gain   = 100.0;
@@ -73,6 +92,10 @@ void AutomationMgr::createBinding(int slot, const char *path, bool start_midi_le
 
 void AutomationMgr::updateMapping(int slot_id, int sub)
 {
+    if(slot_id >= nslots || slot_id < 0 || sub >= per_slot || sub < 0)
+        return;
+
+
     auto &au = slots[slot_id].automations[sub];
 
     float mn = au.param_min;
@@ -89,6 +112,8 @@ void AutomationMgr::updateMapping(int slot_id, int sub)
 
 void AutomationMgr::setSlot(int slot_id, float value)
 {
+    if(slot_id >= nslots || slot_id < 0)
+        return;
     for(int i=0; i<per_slot; ++i)
         setSlotSub(slot_id, i, value);
 
@@ -97,6 +122,8 @@ void AutomationMgr::setSlot(int slot_id, float value)
 
 void AutomationMgr::setSlotSub(int slot_id, int par, float value)
 {
+    if(slot_id >= nslots || slot_id < 0 || par >= per_slot || par < 0)
+        return;
     auto &au = slots[slot_id].automations[par];
     if(au.used == false)
         return;
@@ -143,12 +170,16 @@ void AutomationMgr::setSlotSub(int slot_id, int par, float value)
 
 float AutomationMgr::getSlot(int slot_id)
 {
+    if(slot_id >= nslots || slot_id < 0)
+        return 0.0;
     return slots[slot_id].current_state;
 }
 
 
 void AutomationMgr::clearSlot(int slot_id)
 {
+    if(slot_id >= nslots || slot_id < 0)
+        return;
     auto &s = slots[slot_id];
     s.active = false;
     s.used   = false;
@@ -169,6 +200,8 @@ void AutomationMgr::clearSlot(int slot_id)
 
 void AutomationMgr::clearSlotSub(int slot_id, int sub)
 {
+    if(slot_id >= nslots || slot_id < 0 || sub >= per_slot || sub < 0)
+        return;
     auto &a = slots[slot_id].automations[sub];
     a.used    = false;
     a.active  = false;
@@ -179,38 +212,52 @@ void AutomationMgr::clearSlotSub(int slot_id, int sub)
     a.param_min  = 0;
     a.param_max  = 0;
     a.param_step = 0;
+    a.map.gain   = 100;
+    a.map.offset = 0;
 
     damaged = true;
 }
 
 void  AutomationMgr::setSlotSubGain(int slot_id, int sub, float f)
 {
+    if(slot_id >= nslots || slot_id < 0 || sub >= per_slot || sub < 0)
+        return;
     auto &m = slots[slot_id].automations[sub].map;
     m.gain = f;
 }
 float AutomationMgr::getSlotSubGain(int slot_id, int sub)
 {
+    if(slot_id >= nslots || slot_id < 0 || sub >= per_slot || sub < 0)
+        return 0.0;
     auto &m = slots[slot_id].automations[sub].map;
     return m.gain;
 }
 void  AutomationMgr::setSlotSubOffset(int slot_id, int sub, float f)
 {
+    if(slot_id >= nslots || slot_id < 0 || sub >= per_slot || sub < 0)
+        return;
     auto &m = slots[slot_id].automations[sub].map;
     m.offset = f;
 }
 float AutomationMgr::getSlotSubOffset(int slot_id, int sub)
 {
+    if(slot_id >= nslots || slot_id < 0 || sub >= per_slot || sub < 0)
+        return 0.0;
     auto &m = slots[slot_id].automations[sub].map;
     return m.offset;
 }
 
 void AutomationMgr::setName(int slot_id, const char *msg)
 {
+    if(slot_id >= nslots || slot_id < 0)
+        return;
     strncpy(slots[slot_id].name, msg, sizeof(slots[slot_id].name));
     damaged = 1;
 }
 const char *AutomationMgr::getName(int slot_id)
 {
+    if(slot_id >= nslots || slot_id < 0)
+        return "";
     return slots[slot_id].name;
 }
 bool AutomationMgr::handleMidi(int channel, int cc, int val)
@@ -259,6 +306,8 @@ void AutomationMgr::set_instance(void *v)
 
 void AutomationMgr::simpleSlope(int slot_id, int par, float slope, float offset)
 {
+    if(slot_id >= nslots || slot_id < 0 || par >= per_slot || par < 0)
+        return;
     auto &map = slots[slot_id].automations[par].map;
     map.upoints = 2;
     map.control_points[0] = 0;

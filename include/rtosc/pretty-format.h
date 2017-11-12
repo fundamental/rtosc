@@ -46,7 +46,7 @@ typedef struct
 } rtosc_print_options;
 
 /**
- * @brief Pretty-print rtosct_arg_val_t structure into buffer
+ * Pretty-print rtosct_arg_val_t structure into buffer
  *
  * @param arg Pointer to the structure that shall be printed
  * @param buffer The buffer to write to
@@ -61,7 +61,7 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t* arg, char* buffer,
                            int* cols_used);
 
 /**
- * @brief Pretty-print rtosct_arg_val_t array into buffer
+ * Pretty-print rtosct_arg_val_t array into buffer
  *
  * @see rtosc_print_message
  * @warning in case of possible line breaks (almost always), buffer[-1] must
@@ -73,7 +73,7 @@ size_t rtosc_print_arg_vals(const rtosc_arg_val_t *args, size_t n,
                             int cols_used);
 
 /**
- * @brief Pretty-print OSC message into string buffer
+ * Pretty-print OSC message into string buffer
  *
  * A newline will be appended.
  *
@@ -93,7 +93,7 @@ size_t rtosc_print_message(const char* address,
                            int cols_used);
 
 /**
- * @brief Skip characters from a string until one argument value
+ * Skip characters from a string until one argument value
  *   would have been scanned
  * @param src The current position
  * @param skipped The number of arg_vals that would be skipped when scanning,
@@ -112,9 +112,9 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
                                         int follow_ellipsis, int inside_bundle);
 
 /**
- * @brief Count arguments that would be scanned and do a complete syntax check
+ * Count arguments that would be scanned and do a complete syntax check
  *
- * This functions should be run before rtosc_scan_arg_vals() in order
+ * This function should be run before rtosc_scan_arg_vals() in order
  * to know the number of argument values. Also, rtosc_scan_arg_vals() does
  * no complete syntax check.
  *
@@ -126,7 +126,7 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
 int rtosc_count_printed_arg_vals(const char* src);
 
 /**
- * @brief Count arguments of a message that would be scanned and
+ * Count arguments of a message that would be scanned and
  *   do a complete syntax check
  *
  * @param msg The message to scan from
@@ -137,7 +137,7 @@ int rtosc_count_printed_arg_vals(const char* src);
 int rtosc_count_printed_arg_vals_of_msg(const char* msg);
 
 /**
- * @brief Scans one argument value from a string
+ * Scan one argument value from a string
  *
  * This function does no complete syntaxcheck. Call
  * rtosc_count_printed_arg_vals() before.
@@ -161,7 +161,7 @@ size_t rtosc_scan_arg_val(const char* src,
                           size_t args_before, int follow_ellipsis);
 
 /**
- * @brief Scan a fixed number of argument values from a string.
+ * Scan a fixed number of argument values from a string
  *
  * This function does no complete syntaxcheck. Call
  * rtosc_count_printed_arg_vals() before. This will also give you the @p n
@@ -174,7 +174,7 @@ size_t rtosc_scan_arg_vals(const char* src,
                            char* buffer_for_strings, size_t bufsize);
 
 /**
- * @brief Scan an OSC message from a string.
+ * Scan an OSC message from a string
  *
  * This function does no complete syntaxcheck. Call
  * rtosc_count_printed_arg_vals() before. This will also give you the @p n

@@ -31,8 +31,15 @@ Status
 - C++ Serialization System
 - C++ Syntax Sugar
 
+Documentation
+-------------
+
+- To see the guide, you can use `asciidoctor Guide.adoc` in the doc directory
+- To build doxygen docs, use `make rtosc-doc` in your build directory
+
 Todo
 ----
 
 - Increase test coverage over C++ layer
 - Provide standard compliant path/pattern matching algorithms
+

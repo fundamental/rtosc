@@ -133,8 +133,6 @@ bool rtosc_match(const char *pattern,
                  const char *msg, const char** path_end)
 {
     const char *arg_pattern = rtosc_match_path(pattern, msg, path_end);
-    if(!strcmp(msg, "VoicePar0/Enabled") && arg_pattern && *arg_pattern)
-        printf("EN: %s %s %s\n", pattern, msg, arg_pattern);
     if(!arg_pattern)
         return false;
     else if(*arg_pattern == ':')
