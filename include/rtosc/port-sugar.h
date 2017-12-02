@@ -310,8 +310,8 @@ template<class T> constexpr T spice(T*t) {return *t;}
 
 #define rTYPE(n) decltype(obj->n)
 
-//#define rAPPLY(n,t) if(obj->n != var) data.reply("undo_change", "s" #t #t, data.loc, obj->n, var); obj->n = var;
-#define rCAPPLY(getcode, t, setcode) if(getcode != var) data.reply("undo_change", "s" #t #t, data.loc, getcode, var); setcode;
+//#define rAPPLY(n,t) if(obj->n != var) data.reply("/undo_change", "s" #t #t, data.loc, obj->n, var); obj->n = var;
+#define rCAPPLY(getcode, t, setcode) if(getcode != var) data.reply("/undo_change", "s" #t #t, data.loc, getcode, var); setcode;
 #define rAPPLY(n,t) rCAPPLY(obj->n, t, obj->n = var)
 
 #define rParamCb(name) rBOIL_BEGIN \

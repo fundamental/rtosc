@@ -675,11 +675,8 @@ class CapturePretty : public RtData
         assert(wrt);
     }*/
 
-    void reply(const char *, const char *args, ...) override
-    {        
-        va_list va;
-        va_start(va,args);
-
+    void reply_va(const char *args, va_list va)
+    {
         size_t nargs = strlen(args);
         rtosc_arg_val_t arg_vals[nargs];
 
@@ -688,9 +685,23 @@ class CapturePretty : public RtData
         size_t wrt = rtosc_print_arg_vals(arg_vals, nargs,
                                           buffer, buffersize, NULL,
                                           cols_used);
-        (void) wrt;
-        va_end(va);
         assert(wrt);
+    }
+
+    void broadcast(const char *, const char *args, ...) override
+    {
+        va_list va;
+        va_start(va,args);
+        reply_va(args, va);
+        va_end(va);
+    }
+
+    void reply(const char *, const char *args, ...) override
+    {        
+        va_list va;
+        va_start(va,args);
+        reply_va(args, va);
+        va_end(va);
     }
 
 public:
@@ -772,16 +783,27 @@ class Capture : public RtData
         nargs = cur_idx;
     }
 
-    void reply(const char *, const char *args, ...) override
+    void reply_va(const char *args, va_list va)
     {
-        va_list va;
-        va_start(va,args);
-
         nargs = strlen(args);
         assert((size_t)nargs <= max_args);
 
         rtosc_v2argvals(arg_vals, nargs, args, va);
+    }
 
+    void broadcast(const char *, const char *args, ...) override
+    {
+        va_list va;
+        va_start(va, args);
+        reply_va(args, va);
+        va_end(va);
+    }
+
+    void reply(const char *, const char *args, ...) override
+    {
+        va_list va;
+        va_start(va,args);
+        reply_va(args, va);
         va_end(va);
     }
 public:
@@ -1421,7 +1443,7 @@ int rtosc::dispatch_printed_messages(const char* messages,
             nargs = rtosc_count_printed_arg_vals_of_msg(msg_ptr);
             if(nargs >= 0)
             {
-                // nargs << 1 is usually too much, but it allows to user to use
+                // nargs << 1 is usually too much, but it allows the user to use
                 // these values (using on_dispatch())
                 size_t maxargs = std::max(nargs << 1, 16);
                 rtosc_arg_val_t arg_vals[maxargs];
