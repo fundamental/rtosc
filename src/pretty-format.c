@@ -954,6 +954,7 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
     if(!type)
         type = &dummy;
     assert(skipped);
+    assert(src);
     *skipped = 1; // in almost all cases
 
     char deltaless_range_type = 0;
@@ -1093,9 +1094,11 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
         }
         case 'B':
         {
+            const char* oldsrc = src;
             skip_fmt_null(&src, "BLOB [ %n");
             if(src)
             {
+                *type = 'b';
                 int rd = 0, blobsize = 0;
                 sscanf(src, "%i %n", &blobsize, &rd);
                 src = rd ? (src + rd) : NULL;
@@ -1108,9 +1111,13 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
                     src = NULL;
                 if(src)
                     src = (*src == ']') ? (src + 1) : NULL;
-                break;
             }
-            *type = 'b';
+            else
+            {
+                *type = 'S';
+                src = skip_identifier(oldsrc);
+            }
+            break;
         }
         default:
         {
@@ -1585,21 +1592,26 @@ size_t rtosc_scan_arg_val(const char* src,
         {
             arg->type = 'b';
             sscanf(src, "BLOB [ %"PRIi32" %n", &arg->val.b.len, &rd);
-            src +=rd;
-
-            assert(*bufsize >= (size_t)arg->val.b.len);
-            *bufsize -= (size_t)arg->val.b.len;
-            arg->val.b.data = (uint8_t*)buffer_for_strings;
-            for(int32_t i = 0; i < arg->val.b.len; ++i)
+            if(rd)
             {
-                int32_t tmp;
-                int rd;
-                sscanf(src, "0x%x %n", &tmp, &rd);
-                arg->val.b.data[i] = tmp;
-                src+=rd;
-            }
+                src +=rd;
 
-            ++src; // skip ']'
+                assert(*bufsize >= (size_t)arg->val.b.len);
+                *bufsize -= (size_t)arg->val.b.len;
+                arg->val.b.data = (uint8_t*)buffer_for_strings;
+                for(int32_t i = 0; i < arg->val.b.len; ++i)
+                {
+                    int32_t tmp;
+                    int rd;
+                    sscanf(src, "0x%x %n", &tmp, &rd);
+                    arg->val.b.data[i] = tmp;
+                    src+=rd;
+                }
+
+                ++src; // skip ']'
+            }
+            else
+                src = parse_identifier(src, arg, buffer_for_strings, bufsize);
             break;
         }
         default:
