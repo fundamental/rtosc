@@ -235,7 +235,7 @@ static size_t vsosc_null(const char        *address,
 
 static const rtosc_cmp_options default_cmp_options = { 0.0 };
 
-void rtosc_arg_val_itr_init(rtosc_arg_val_t_const_itr* itr,
+void rtosc_arg_val_itr_init(rtosc_arg_val_itr* itr,
                             const rtosc_arg_val_t* av)
 {
     itr->av = av;
@@ -245,8 +245,7 @@ void rtosc_arg_val_itr_init(rtosc_arg_val_t_const_itr* itr,
 //! helper function for arg val comparing
 //! this usually just returns the value from operand, except for range operands,
 //! where the value is being interpolated
-const rtosc_arg_val_t* rtosc_arg_val_itr_get(
-    const rtosc_arg_val_t_const_itr* itr,
+const rtosc_arg_val_t* rtosc_arg_val_itr_get(const rtosc_arg_val_itr *itr,
     rtosc_arg_val_t* buffer)
 {
     const rtosc_arg_val_t* result;
@@ -262,7 +261,7 @@ const rtosc_arg_val_t* rtosc_arg_val_itr_get(
     return result;
 }
 
-void rtosc_arg_val_itr_next(rtosc_arg_val_t_const_itr* itr)
+void rtosc_arg_val_itr_next(rtosc_arg_val_itr *itr)
 {
     // increase the range index
     if(itr->av->type == '-')
@@ -295,8 +294,8 @@ void rtosc_arg_val_itr_next(rtosc_arg_val_t_const_itr* itr)
 }
 
 // abort only if one side was finished, or if both are infinite ranges
-int rtosc_arg_vals_cmp_has_next(const rtosc_arg_val_t_const_itr* litr,
-                                const rtosc_arg_val_t_const_itr* ritr,
+int rtosc_arg_vals_cmp_has_next(const rtosc_arg_val_itr* litr,
+                                const rtosc_arg_val_itr* ritr,
                                 size_t lsize, size_t rsize)
 {
     return     (litr->i < lsize) && (ritr->i < rsize)
@@ -307,8 +306,8 @@ int rtosc_arg_vals_cmp_has_next(const rtosc_arg_val_t_const_itr* litr,
 // arrays are equal by now, but is one longer?
 // each array must have either been completely passed, or it must
 // have reached an infinite range
-int rtosc_arg_vals_eq_after_abort(const rtosc_arg_val_t_const_itr* litr,
-                                  const rtosc_arg_val_t_const_itr* ritr,
+int rtosc_arg_vals_eq_after_abort(const rtosc_arg_val_itr* litr,
+                                  const rtosc_arg_val_itr* ritr,
                                   size_t lsize, size_t rsize)
 {
     return    (litr->i == lsize ||
@@ -409,7 +408,7 @@ int rtosc_arg_vals_eq(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
     // used if the value of lhs or rhs is range-computed:
     rtosc_arg_val_t rlhs, rrhs;
 
-    rtosc_arg_val_t_const_itr litr, ritr;
+    rtosc_arg_val_itr litr, ritr;
     rtosc_arg_val_itr_init(&litr, lhs);
     rtosc_arg_val_itr_init(&ritr, rhs);
 
@@ -556,7 +555,7 @@ int rtosc_arg_vals_cmp(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
     // used if the value of lhs or rhs is range-computed:
     rtosc_arg_val_t rlhs, rrhs;
 
-    rtosc_arg_val_t_const_itr litr, ritr;
+    rtosc_arg_val_itr litr, ritr;
     rtosc_arg_val_itr_init(&litr, lhs);
     rtosc_arg_val_itr_init(&ritr, rhs);
 

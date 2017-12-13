@@ -43,17 +43,29 @@ typedef struct {
     uint8_t *data;
 } rtosc_blob_t;
 
+//! arg val element indicating an array, or a block of "nothing"
+//! blocks of "nothing" are just for internal use and indicate that the
+//! following array_start_t::len blocks must be ignored
+//! (they can contain rubbish)
 typedef struct {
     char type;               //!< common type of the elements
-    int32_t len;             //!< number of arg_val_t contained
+    int32_t len;             //!< number of arg_val_t (or "nothing") contained
 } array_start_t;
 
 //! a repeater is being followed by a delta argument (unless has_delta is 0)
 typedef struct
 {
-    int32_t       num;       //!< how often the element is being repeated
+    //! how often the first element is being repeated, including itself
+    int32_t       num;
     int32_t       has_delta; //!< if not 0, the next argument is the delta
 } repeater_t;
+
+//! indicates that the next nothing_t::len blocks count as if nonexistant
+//! they might contain rubbish
+typedef struct
+{
+    int32_t len;
+} nothing_t;
 
 typedef union {
 // types that can be used in messages
@@ -67,7 +79,7 @@ typedef union {
     const char   *s;   //s,S
     rtosc_blob_t  b;   //b
 // types that can *not* be used in messages
-    array_start_t a;   //a
+    array_start_t a;   //a,' '
     repeater_t    r;   //-
 } rtosc_arg_t;
 
@@ -151,31 +163,39 @@ typedef struct
     double float_tolerance;
 } rtosc_cmp_options;
 
+/*
+ * arg val iterators
+ */
+/**
+ * Iterator over arg values
+ *
+ * Always use this iterator for iterating because it automatically skips
+ * to the next offset, even in case of arrays etc.
+ * Also, it walks through ranges, as if they were not existing.
+ */
 typedef struct
 {
     const rtosc_arg_val_t* av; //!< the arg val referenced
     size_t i;                  //!< position of this arg val
     int range_i;               //!< position of this arg val in its range
-} rtosc_arg_val_t_const_itr;
+} rtosc_arg_val_itr;
 
-/*
- * arg val iterators
- */
-void rtosc_arg_val_itr_init(rtosc_arg_val_t_const_itr* itr,
+void rtosc_arg_val_itr_init(rtosc_arg_val_itr* itr,
                             const rtosc_arg_val_t* av);
+//! @param buffer Temporary. Don't access it afterwards.
 const rtosc_arg_val_t* rtosc_arg_val_itr_get(
-    const rtosc_arg_val_t_const_itr* itr,
+    const rtosc_arg_val_itr* itr,
     rtosc_arg_val_t* buffer);
-void rtosc_arg_val_itr_next(rtosc_arg_val_t_const_itr* itr);
+void rtosc_arg_val_itr_next(rtosc_arg_val_itr* itr);
 
 /*
  * arg val comparing helpers
  */
-int rtosc_arg_vals_cmp_has_next(const rtosc_arg_val_t_const_itr* litr,
-                                const rtosc_arg_val_t_const_itr* ritr,
+int rtosc_arg_vals_cmp_has_next(const rtosc_arg_val_itr* litr,
+                                const rtosc_arg_val_itr* ritr,
                                 size_t lsize, size_t rsize);
-int rtosc_arg_vals_eq_after_abort(const rtosc_arg_val_t_const_itr* litr,
-                                  const rtosc_arg_val_t_const_itr* ritr,
+int rtosc_arg_vals_eq_after_abort(const rtosc_arg_val_itr* litr,
+                                  const rtosc_arg_val_itr* ritr,
                                   size_t lsize, size_t rsize);
 int rtosc_arg_vals_eq_single(const rtosc_arg_val_t* _lhs,
                              const rtosc_arg_val_t* _rhs,

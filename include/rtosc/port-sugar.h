@@ -182,15 +182,13 @@ struct rtosc_hack_decltype_t
 //Array operators
 #define rArrayF(name, length, ...) \
 {STRINGIFY(name) "#" STRINGIFY(length) "::f", rProp(parameter) DOC(__VA_ARGS__), NULL, rArrayFCb(name)}
-#define rArray(name, length, ...) \
-{STRINGIFY(name) "#" STRINGIFY(length) "::c:i", rProp(parameter) DOC(__VA_ARGS__), NULL, rArrayCb(name)}
 #define rArrayT(name, length, ...) \
 {STRINGIFY(name) "#" STRINGIFY(length) "::T:F", rProp(parameter) DOC(__VA_ARGS__), NULL, rArrayTCb(name)}
 #define rArrayI(name, length, ...) \
 {STRINGIFY(name) "#" STRINGIFY(length) "::i", rProp(parameter) DOC(__VA_ARGS__), NULL, rArrayICb(name)}
 #define rArrayOption(name, length, ...) \
 {STRINGIFY(name) "#" STRINGIFY(length) "::i:c:S", rProp(parameter) DOC(__VA_ARGS__), NULL, rArrayOptionCb(name)}
-
+#define rArray rArrayI
 
 //Method callback Actions
 #define rAction(name, ...) \
@@ -440,17 +438,6 @@ template<class T> constexpr T spice(T*t) {return *t;}
 
 #define rBOILS_END rBOIL_END
 
-
-#define rArrayCb(name) rBOILS_BEGIN \
-        if(!strcmp("", args)) {\
-            data.reply(loc, "c", obj->name[idx]); \
-        } else { \
-            char var = rtosc_argument(msg, 0).i; \
-            rLIMIT(var, atoi) \
-            rAPPLY(name[idx], c) \
-            data.broadcast(loc, "c", obj->name[idx]);\
-            rChangeCb \
-        } rBOILS_END
 
 #define rArrayFCb(name) rBOILS_BEGIN \
         if(!strcmp("", args)) {\

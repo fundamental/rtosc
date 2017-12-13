@@ -46,7 +46,8 @@ typedef struct
 } rtosc_print_options;
 
 /**
- * Pretty-print rtosct_arg_val_t structure into buffer
+ * Pretty-print rtosct_arg_val_t structure into buffer.
+ * Ranges are not being compressed (use rtosc_print_arg_vals instead).
  *
  * @param arg Pointer to the structure that shall be printed
  * @param buffer The buffer to write to
@@ -61,7 +62,8 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t* arg, char* buffer,
                            int* cols_used);
 
 /**
- * Pretty-print rtosct_arg_val_t array into buffer
+ * Pretty-print rtosct_arg_val_t array into buffer.
+ * Ranges are being compressed if opt->compress_ranges is true.
  *
  * @see rtosc_print_message
  * @warning in case of possible line breaks (almost always), buffer[-1] must
@@ -75,6 +77,7 @@ size_t rtosc_print_arg_vals(const rtosc_arg_val_t *args, size_t n,
 /**
  * Pretty-print OSC message into string buffer
  *
+ * Ranges are being compressed if opt->compress_ranges is true.
  * A newline will be appended.
  *
  * @param address OSC pattern to send message to
@@ -197,6 +200,6 @@ size_t rtosc_scan_message(const char* src,
                           char* buffer_for_strings, size_t bufsize);
 
 #ifdef __cplusplus
-};
+}
 #endif
 #endif // PRETTYFORMAT_H

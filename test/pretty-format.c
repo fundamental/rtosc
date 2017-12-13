@@ -301,10 +301,10 @@ void ranges()
               "    15 17\n"
               "    19");
     check_alt("[ 1 ... 3 ]", &uncompressed,
-              "range with delta 1 in an array (1)", __LINE__,
+              "range with delta 1 in an array", __LINE__,
               "[1 2 3]");
     check_alt("[3...0]", &uncompressed,
-              "range with delta 1 in an array (2)", __LINE__,
+              "range with delta -1 in an array", __LINE__,
               "[3 2 1 0]");
 
     /*
@@ -315,6 +315,11 @@ void ranges()
               __LINE__, "[0.420\n    0.420]");
     check_alt("2x[0 1]", &uncompressed,
               "range of arrays", __LINE__, "[0 1] [0\n    1]");
+    check("[127 104 64 106 7x64 101 64 64 64 92 112x64]", NULL,
+          "long array", __LINE__);
+    check_alt("[127 104 64 106 64 64 64 64 64 64 64 101 64 64 64 92 112x64]", NULL,
+          "long array", __LINE__, "[127 104 64 106 7x64 101 64 64 64 92 112x64]");
+
     /*
         combined
      */
@@ -334,15 +339,88 @@ void ranges()
     /*
         endless ranges
      */
-    check("[1 ...]", NULL, "delta-less infinite range (1)", __LINE__);
-    check("[\"Next Effect\"S ...]", NULL,
+    check("[1 ... ]", NULL, "delta-less infinite range (1)", __LINE__);
+    check("[\"Next Effect\"S ... ]", NULL,
           "delta-less infinite range (2)", __LINE__);
     check_alt("[false...]", NULL, "delta-less infinite range (3)", __LINE__,
-              "[false ...]");
-    check("[1 0 0 ...]", NULL, "delta-less infinite range (4)", __LINE__);
-    check("[0 1 ...]", NULL, "infinite range with delta", __LINE__);
-    check("[true false false ...]", NULL,
+              "[false ... ]");
+    check("[1 0 0 ... ]", NULL, "delta-less infinite range (4)", __LINE__);
+    check("[0 1 ... ]", NULL, "infinite range with delta", __LINE__);
+    check("[true false false ... ]", NULL,
           "endless range after \"true false false\"", __LINE__);
+    check("[[0 1] ... ]", NULL, "range of arrays", __LINE__);
+}
+
+// most tests here are reverse to those in ranges()
+void scan_ranges()
+{
+    /*
+        no range conversion
+     */
+    rtosc_print_options uncompressed = ((rtosc_print_options) { false, 3, " ",
+                                                                80, false });
+    rtosc_print_options simplefloats = ((rtosc_print_options) { false, 2, " ",
+                                                                80, true });
+    check("0 1 2 3", NULL, "too less args for range conversion", __LINE__);
+    check("0.00 1.00 2.00 3.00 4.00", &simplefloats,
+          "wrong type for range conversion", __LINE__);
+    check("0 1 2 3 4", &uncompressed,
+          "no range conversion due to opts", __LINE__);
+
+    /*
+        with delta
+     */
+    check_alt("1 2 3 4 5 6 7", NULL,
+              "convert to simple upwards integer range", __LINE__,
+              "1 ... 7");
+    check_alt("-3 -4 -5 -6 -7", NULL,
+              "convert to simple downwards integer range", __LINE__,
+              "-3 ... -7");
+    check_alt("'z' 'x' 'v' 't' 'r'", NULL,
+              "convert to simple downward char range", __LINE__,
+              "'z' ... 'r'");
+    check_alt("[4 3 2 1 0]", NULL,
+              "convert to downward range in an array", __LINE__,
+              "[4 ... 0]");
+    check_alt("1 3 5 7 9 13 15 17 19 21", NULL,
+              "convert to two almost subsequent ranges", __LINE__,
+              "1 ... 9 13 ... 21");
+    check_alt("[ 1 2 3 4 5 ]", NULL,
+              "convert to range with delta 1 in an array", __LINE__,
+              "[1 ... 5]");
+    check_alt("[5 4 3 2 1 0]", NULL,
+              "convert to range with delta -1 in an array", __LINE__,
+              "[5 ... 0]");
+
+    /*
+        without delta
+     */
+    check_alt("0 0 0 0 0", NULL,
+              "convert to range of 5 zeros", __LINE__, "5x0");
+    check_alt("[ 0h 0h 0h 0h 0h ]", NULL,
+              "convert to array with range of 5 huge ints", __LINE__, "[5x0h]");
+    check_alt("[0 1] [0 1] [0 1] [0 1] [0 1]", NULL,
+              "convert to range of arrays", __LINE__, "5x[0 1]");
+    /*
+        combined
+     */
+    check_alt("0.5 0.5 0.5 0.5 0.5 'a' 'b' 'c' 'd' 'e'", NULL,
+              "convert to combined ranges", __LINE__,
+              "5x0.50 (0x1p-1) 'a' ... 'e'");
+    /* combined, but not yet implemented: */
+#if 0
+    check_alt("-6 -6 -6 -6 -6 -6 -5 -4 ... 0", NULL,
+              "convert to combined ranges (2)", __LINE__,
+              "6x-6 -5 ... 0");
+    check_alt("'a' 'b' 'c' 'd' 'e' 'f' 'f' 'f' 'f' 'f' 'f'", NULL,
+              "convert to combined ranges (3)", __LINE__,
+              "'a' ... 'f' 6x'f'");
+#endif
+
+    /*
+        endless ranges
+     */
+    // (you cannot convert fixed size ranges to endless ranges)
 }
 
 void fail_at_arg(const char* arg_val_str, int exp_fail, int line)
@@ -558,6 +636,7 @@ int main()
     scan_and_print_single();
     scan_and_print_mulitple();
     arrays();
+    scan_ranges();
     ranges();
 
     messages();

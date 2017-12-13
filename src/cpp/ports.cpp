@@ -854,7 +854,7 @@ const char* rtosc::get_default_value(const char* port_name, const Ports& ports,
                                      void* runtime, const Port* port_hint,
                                      int32_t idx, int recursive)
 {
-    constexpr std::size_t buffersize = 1024;
+    constexpr std::size_t buffersize = 8192;
     char buffer[buffersize];
     char loc[buffersize] = "";
 
@@ -1114,11 +1114,11 @@ void bundle_foreach_do_nothing(const Port*, const char*, const char*,
 std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
 {
     std::string res;
-    constexpr std::size_t buffersize = 1024;
+    constexpr std::size_t buffersize = 8192;
     char port_buffer[buffersize];
     memset(port_buffer, 0, buffersize); // requirement for walk_ports
 
-    const size_t max_arg_vals = 256;
+    const size_t max_arg_vals = 2048;
 
     auto on_reach_port =
             [](const Port* p, const char* port_buffer,
@@ -1129,7 +1129,8 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
         const Port::MetaContainer meta = p->meta();
 #if 0
 // practical for debugging if a parameter was changed, but not saved
-        if(!strncmp(port_buffer, "/part0/partefx2/Phaser/", 23))
+        const char* cmp = "/part15/kit0/adpars/GlobalPar/Reson/Prespoints";
+        if(!strncmp(port_buffer, cmp, strlen(cmp)))
         {
             puts("break here");
         }
@@ -1258,7 +1259,8 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
 
 #if 0
 // practical for debugging if a parameter was changed, but not saved
-            if(!strncmp(port_buffer, "/part0/partefx2/Phaser/", 23))
+            const char* cmp = "/part15/kit0/adpars/GlobalPar/Reson/Prespoints";
+            if(!strncmp(port_buffer, cmp, strlen(cmp)))
             {
                 puts("break here");
             }
@@ -1299,7 +1301,7 @@ std::string rtosc::get_changed_values(const Ports& ports, void* runtime)
                 // used if the value of lhs or rhs is range-computed:
                 rtosc_arg_val_t rlhs, rrhs;
 
-                rtosc_arg_val_t_const_itr litr, ritr;
+                rtosc_arg_val_itr litr, ritr;
                 rtosc_arg_val_itr_init(&litr, arg_vals_default+1);
                 rtosc_arg_val_itr_init(&ritr, arg_vals_runtime+1);
 
@@ -1394,7 +1396,7 @@ int rtosc::dispatch_printed_messages(const char* messages,
                                      const Ports& ports, void* runtime,
                                      savefile_dispatcher_t* dispatcher)
 {
-    constexpr std::size_t buffersize = 1024;
+    constexpr std::size_t buffersize = 8192;
     char portname[buffersize], message[buffersize], strbuf[buffersize];
     int rd, rd_total = 0;
     int nargs;
@@ -1449,33 +1451,75 @@ int rtosc::dispatch_printed_messages(const char* messages,
                 {
                     if(nargs != savefile_dispatcher_t::discard)
                     {
-                        size_t max;
                         const rtosc_arg_val_t* arg_val_ptr;
                         bool is_array;
                         if(nargs && arg_vals[0].type == 'a')
                         {
                             is_array = true;
-                            max = arg_vals[0].val.a.len;
-                            nargs = 1; // overwrite nargs
+                            // arrays of arrays are not yet supported -
+                            // neither by rtosc_*message, nor by the inner for
+                            // loop below.
+                            // arrays will probably have an 'a' (or #)
+                            assert(arg_vals[0].val.a.type != 'a' &&
+                                   arg_vals[0].val.a.type != '#');
+                            // we won't read the array arg val anymore
+                            --nargs;
                             arg_val_ptr = arg_vals + 1;
                         }
                         else {
                             is_array = false;
-                            max = 1;
                             arg_val_ptr = arg_vals;
                         }
 
-                        rtosc_arg_t vals[nargs];
-                        char argstr[nargs+1];
                         char* portname_end = portname + strlen(portname);
 
-                        for(size_t arr_idx = 0; arr_idx < max && ok; ++arr_idx)
+                        rtosc_arg_val_itr itr;
+                        rtosc_arg_val_t buffer;
+                        const rtosc_arg_val_t* cur;
+
+                        rtosc_arg_val_itr_init(&itr, arg_val_ptr);
+
+                        // for bundles, send each element separately
+                        // for non-bundles, send all elements at once
+                        for(size_t arr_idx = 0;
+                            itr.i < (size_t)std::max(nargs,1) && ok; ++arr_idx)
                         {
-                            for(int i = 0; i < nargs; ++i) {
-                                vals[i] = arg_val_ptr[arr_idx + i].val;
-                                argstr[i] = arg_val_ptr[arr_idx + i].type;
+                            // this will fail for arrays of arrays,
+                            // since it only copies one arg val
+                            // (arrays are not yet specified)
+                            size_t i;
+                            const size_t last_pos = itr.i;
+                            const size_t elem_limit = is_array
+                                  ? 1 : std::numeric_limits<int>::max();
+
+                            // equivalent to the for loop below, in order to
+                            // find out the array size
+                            size_t val_max = 0;
+                            {
+                                rtosc_arg_val_itr itr2 = itr;
+                                for(val_max = 0;
+                                    itr2.i - last_pos < (size_t)nargs &&
+                                        val_max < elem_limit;
+                                    ++val_max)
+                                {
+                                    rtosc_arg_val_itr_next(&itr2);
+                                }
                             }
-                            argstr[nargs] = 0;
+                            rtosc_arg_t vals[val_max];
+                            char argstr[val_max+1];
+
+                            for(i = 0;
+                                itr.i - last_pos < (size_t)nargs &&
+                                    i < elem_limit;
+                                ++i)
+                            {
+                                cur = rtosc_arg_val_itr_get(&itr, &buffer);
+                                vals[i] = cur->val;
+                                argstr[i] = cur->type;
+                                rtosc_arg_val_itr_next(&itr);
+                            }
+
+                            argstr[i] = 0;
 
                             if(is_array)
                                 snprintf(portname_end, 8, "%d", (int)arr_idx);
