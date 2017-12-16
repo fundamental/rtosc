@@ -1,4 +1,4 @@
-#include <assert.h>
+﻿#include <assert.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <ctype.h>
@@ -143,10 +143,31 @@ static int rtosc_print_range(const rtosc_arg_val_t* arg,
     {
         if(val->r.has_delta || !val->r.num)
         {
-            int tmp = rtosc_print_arg_val(arg+1+!!val->r.has_delta,
-                                          buffer, bs,
+            // delta or endless range (endless has no delta)
+
+            const rtosc_arg_val_t* first_arg = arg+1+!!val->r.has_delta;
+            int tmp = rtosc_print_arg_val(first_arg, buffer, bs,
                                           opt, cols_used);
             COUNT_UP(tmp);
+
+            if(val->r.has_delta)
+            {
+                rtosc_arg_val_t one, m_one;
+                rtosc_arg_val_from_int(  &one, first_arg->type,  1);
+                rtosc_arg_val_from_int(&m_one, first_arg->type, -1);
+                if(   !rtosc_arg_vals_eq_single(arg+1,   &one, NULL)
+                   && !rtosc_arg_vals_eq_single(arg+1, &m_one, NULL))
+                {
+                    asnprintf(buffer, bs, " ");
+                    COUNT_UP_COL(1);
+
+                    rtosc_arg_val_t second;
+                    rtosc_arg_val_range_arg(arg, 1, &second);
+                    tmp = rtosc_print_arg_val(&second, buffer, bs,
+                                              opt, cols_used);
+                    COUNT_UP(tmp);
+                }
+            }
 
             asnprintf(buffer, bs, " ... ");
             COUNT_UP_COL(5);

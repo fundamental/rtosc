@@ -378,13 +378,13 @@ void scan_ranges()
               "-3 ... -7");
     check_alt("'z' 'x' 'v' 't' 'r'", NULL,
               "convert to simple downward char range", __LINE__,
-              "'z' ... 'r'");
+              "'z' 'x' ... 'r'");
     check_alt("[4 3 2 1 0]", NULL,
               "convert to downward range in an array", __LINE__,
               "[4 ... 0]");
     check_alt("1 3 5 7 9 13 15 17 19 21", NULL,
               "convert to two almost subsequent ranges", __LINE__,
-              "1 ... 9 13 ... 21");
+              "1 3 ... 9 13 15 ... 21");
     check_alt("[ 1 2 3 4 5 ]", NULL,
               "convert to range with delta 1 in an array", __LINE__,
               "[1 ... 5]");
