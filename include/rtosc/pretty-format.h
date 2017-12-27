@@ -27,8 +27,8 @@
  * @brief Header for pretty printer and scanner
  */
 
-#ifndef PRETTYFORMAT_H
-#define PRETTYFORMAT_H
+#ifndef RTOSC_PRETTY_FORMAT
+#define RTOSC_PRETTY_FORMAT
 
 #include <rtosc/rtosc.h>
 
@@ -202,4 +202,4 @@ size_t rtosc_scan_message(const char* src,
 #ifdef __cplusplus
 }
 #endif
-#endif // PRETTYFORMAT_H
+#endif // RTOSC_PRETTY_FORMAT

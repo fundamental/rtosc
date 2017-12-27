@@ -1,5 +1,7 @@
 #include <rtosc/rtosc.h>
 #include <rtosc/ports.h>
+#include <rtosc/default-value.h>
+#include <rtosc/savefile.h>
 #include <rtosc/port-sugar.h>
 
 #include "common.h"

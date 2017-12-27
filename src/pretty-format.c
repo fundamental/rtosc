@@ -10,6 +10,7 @@
 #include <rtosc/pretty-format.h>
 #include <rtosc/rtosc-time.h>
 #include <rtosc/arg-val-math.h>
+#include <rtosc/arg-val-cmp.h>
 
 /**
     @file pretty-format.c

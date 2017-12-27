@@ -6,6 +6,7 @@ set(VERSION_MINOR 1)
 set(VERSION_PATCH 0)
 
 option(PERF_TEST "Run Performance Timing Tests" OFF)
+option(RTOSC_INCLUDE_WHAT_YOU_USE "Check for useless includes" OFF)
 
 include("cmake/ColorMessage.cmake")
 SET(BUILD_RTOSC_EXAMPLES FALSE CACHE BOOL
@@ -46,18 +47,46 @@ if(CMAKE_COMPILER_IS_GNUCC)
     endif()
 endif()
 
+if(${CMAKE_VERSION} VERSION_LESS "3.3.0")
+    set(IWYU_ERR "disabled (cmake < 3.3.0)")
+else()
+    if(RTOSC_INCLUDE_WHAT_YOU_USE)
+        find_program(RTOSC_IWYU_PATH NAMES include-what-you-use iwyu)
+        if(NOT RTOSC_IWYU_PATH)
+            set(IWYU_ERR "package NOT found")
+        endif()
+    else()
+        set(IWYU_ERR "disabled (RTOSC_INCLUDE_WHAT_YOU_USE=OFF)")
+    endif()
+endif()
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CPP_FLAGS} ${CXX11_FLAG}")
 
 add_library(rtosc STATIC src/rtosc.c src/dispatch.c src/pretty-format.c
-            src/arg-val-math.c src/rtosc-time.c
+            src/arg-val-math.c src/arg-val-cmp.c src/rtosc-time.c
             ${CMAKE_CURRENT_BINARY_DIR}/version.c)
-add_library(rtosc-cpp STATIC src/cpp/ports.cpp src/cpp/miditable.cpp
+add_library(rtosc-cpp STATIC src/cpp/ports.cpp src/cpp/ports-runtime.cpp
+    src/cpp/default-value.cpp src/cpp/savefile.cpp
+    src/cpp/miditable.cpp
     src/cpp/automations.cpp
     src/cpp/midimapper.cpp
     src/cpp/thread-link.cpp
     src/cpp/undo-history.cpp
     src/cpp/subtree-serialize.cpp)
 target_link_libraries(rtosc-cpp rtosc)
+
+if(IWYU_ERR)
+    message (STATUS "Include what you use: ${IWYU_ERR}")
+else()
+    set(RTOSC_IWYU_PATH_AND_OPTIONS
+        ${RTOSC_IWYU_PATH}
+        -Xiwyu
+        --no_comments)
+    set_property(TARGET rtosc PROPERTY C_INCLUDE_WHAT_YOU_USE
+                 ${RTOSC_IWYU_PATH_AND_OPTIONS})
+    set_property(TARGET rtosc-cpp PROPERTY CXX_INCLUDE_WHAT_YOU_USE
+                 ${RTOSC_IWYU_PATH_AND_OPTIONS})
+endif()
 
 # Example Code
 find_package(FLTK)

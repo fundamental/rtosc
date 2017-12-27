@@ -182,56 +182,13 @@ typedef struct
 
 void rtosc_arg_val_itr_init(rtosc_arg_val_itr* itr,
                             const rtosc_arg_val_t* av);
+//! this usually just returns the value from operand, except for range operands,
+//! where the value is being interpolated
 //! @param buffer Temporary. Don't access it afterwards.
 const rtosc_arg_val_t* rtosc_arg_val_itr_get(
     const rtosc_arg_val_itr* itr,
     rtosc_arg_val_t* buffer);
 void rtosc_arg_val_itr_next(rtosc_arg_val_itr* itr);
-
-/*
- * arg val comparing helpers
- */
-int rtosc_arg_vals_cmp_has_next(const rtosc_arg_val_itr* litr,
-                                const rtosc_arg_val_itr* ritr,
-                                size_t lsize, size_t rsize);
-int rtosc_arg_vals_eq_after_abort(const rtosc_arg_val_itr* litr,
-                                  const rtosc_arg_val_itr* ritr,
-                                  size_t lsize, size_t rsize);
-int rtosc_arg_vals_eq_single(const rtosc_arg_val_t* _lhs,
-                             const rtosc_arg_val_t* _rhs,
-                             const rtosc_cmp_options* opt);
-int rtosc_arg_vals_cmp_single(const rtosc_arg_val_t* _lhs,
-                              const rtosc_arg_val_t* _rhs,
-                              const rtosc_cmp_options* opt);
-
-/**
- * Check if two arrays of rtosc_arg_val_t are equal
- *
- * @param lsize Array size of lhs, e.g. 3 if lhs is just one counting range
- * @param opt Comparison options or NULL for default options
- * @return One if they are equal, zero if not
- */
-int rtosc_arg_vals_eq(const rtosc_arg_val_t *lhs, const rtosc_arg_val_t *rhs,
-                      size_t lsize, size_t rsize,
-                      const rtosc_cmp_options* opt);
-
-/**
- * Compare two arrays of rtosc_arg_val_t.
- * Whether an argument value is less or greater than another is computed
- * - using memcmp for blobs
- * - using strcmp for strings and identifiers
- * - using numerical comparison for all other types.
- * As an exception, the timestamp "immediately" is defined to be smaller than
- * every other timestamp.
- *
- * @param opt Comparison options or NULL for default options
- * @param lsize Array size of lhs, e.g. 3 if lhs is just one counting range
- * @return An integer less than, equal to, or greater than zero if lhs is found,
- *         respectively, to be less than, to match, or be greater than rhs.
- */
-int rtosc_arg_vals_cmp(const rtosc_arg_val_t *lhs, const rtosc_arg_val_t *rhs,
-                       size_t lsize, size_t rsize,
-                       const rtosc_cmp_options* opt);
 
 //! va_list container, required for passing va_list as pointers to functions
 typedef struct { va_list a; } rtosc_va_list_t;

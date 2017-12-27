@@ -26,10 +26,14 @@
  * @file arg-val-math.h
  */
 
-#ifndef ARG_VAL_MATH_H
-#define ARG_VAL_MATH_H
+#ifndef RTOSC_ARG_VAL_MATH
+#define RTOSC_ARG_VAL_MATH
 
 #include <rtosc/rtosc.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 int rtosc_arg_val_null(rtosc_arg_val_t* av, char type);
 int rtosc_arg_val_from_int(rtosc_arg_val_t* av, char type, int number);
@@ -49,4 +53,7 @@ int rtosc_arg_val_to_int(const rtosc_arg_val_t *av, int* res);
 rtosc_arg_val_t *rtosc_arg_val_range_arg(const rtosc_arg_val_t* range_arg,
                                          int ith, rtosc_arg_val_t *result);
 
-#endif // ARG_VAL_MATH_H
+#ifdef __cplusplus
+};
+#endif
+#endif // RTOSC_ARG_VAL_MATH

@@ -24,6 +24,7 @@
 
 #include <assert.h>
 #include <type_traits>
+#include <cstring>
 
 #ifndef RTOSC_PORT_SUGAR
 #define RTOSC_PORT_SUGAR

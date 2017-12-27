@@ -1,4 +1,5 @@
 #include <rtosc/automations.h>
+#include <cstring>
 #include <cmath>
 
 using namespace rtosc;

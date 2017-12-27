@@ -28,8 +28,8 @@
  * @note the implementation is in version.c.in
  */
 
-#ifndef RTOSC_VERSION_H
-#define RTOSC_VERSION_H
+#ifndef RTOSC_VERSION
+#define RTOSC_VERSION
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,5 +64,5 @@ void rtosc_version_print_to_12byte_str(const rtosc_version* v,
 };
 #endif
 
-#endif
+#endif // RTOSC_VERSION
 

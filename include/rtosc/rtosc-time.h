@@ -22,8 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef RTOSCTIME_H
-#define RTOSCTIME_H
+#ifndef RTOSC_TIME
+#define RTOSC_TIME
 
 #include <stdint.h>
 #include <time.h>
@@ -62,4 +62,4 @@ float rtosc_secfracs2float(uint64_t secfracs);
 #ifdef __cplusplus
 };
 #endif
-#endif // RTOSCTIME_H
+#endif // RTOSC_TIME
