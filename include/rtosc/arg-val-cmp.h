@@ -24,6 +24,9 @@
 
  /**
  * @file arg-val-cmp.h
+ * Two- and three-way comparison of argument values
+ *
+ * @test arg-val-cmp.c
  */
 
 #ifndef ARG_VAL_CMP

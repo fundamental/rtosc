@@ -162,7 +162,8 @@ endmacro(maketestcpp)
 
 maketest(version)
 maketest(osc-spec)
-maketest(cmp-arg-vals)
+maketest(arg-val-cmp)
+maketest(arg-val-math)
 maketest(pretty-format)
 maketest(simple-messages)
 maketest(null-messages)
@@ -185,7 +186,7 @@ endif()
 
 maketestcpp(test-midi-mapper)
 maketestcpp(metadata)
-maketestcpp(default-values)
+maketestcpp(default-value)
 maketestcpp(headerlib)
 maketestcpp(test-walker)
 

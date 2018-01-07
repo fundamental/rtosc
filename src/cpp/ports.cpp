@@ -962,7 +962,7 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
                 *ask_port, loc_size, collapsed_loc, ask_port_str,
                 buf, 0, 1, &rval);
             assert(rval.type == 'T' || rval.type == 'F');
-            return rval.val.T == 'T';
+            return rval.type == 'T';
         }
         else // Port has no "enabled" property, so it is always enabled
             return true;

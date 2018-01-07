@@ -25,6 +25,11 @@
 #ifndef RTOSC_TIME
 #define RTOSC_TIME
 
+/**
+ * @file rtosc-time.h
+ * Functions and helper functions for conversion between time and arg vals
+ */
+
 #include <stdint.h>
 #include <time.h>
 
@@ -60,6 +65,6 @@ bool rtosc_arg_val_is_immediatelly(const rtosc_arg_val_t* arg);
 float rtosc_secfracs2float(uint64_t secfracs);
 
 #ifdef __cplusplus
-};
+}
 #endif
 #endif // RTOSC_TIME

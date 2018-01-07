@@ -22,6 +22,13 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file savefile.h
+ * Functions for reading and loading rtosc savefiles
+ *
+ * @test default-value.cpp
+ */
+
 #ifndef RTOSC_SAVEFILE
 #define RTOSC_SAVEFILE
 

@@ -77,7 +77,11 @@ void ints()
 
 void asn_special(rtosc_arg_val_t* l, rtosc_arg_val_t* r, char type)
 {
-    l->type = l->val.T = r->type = r->val.T = type;
+    l->type = r->type = type;
+    if(type == 'T')
+        l->val.T = r->val.T = 1;
+    else if(type == 'F')
+        l->val.T = r->val.T = 0;
 }
 
 void special()
@@ -362,7 +366,7 @@ void multiple_args()
     l[0].type = r[0].type = 'i';
     l[0].val.i = r[0].val.i = 42;
     l[1].type = r[1].type = 'T';
-    l[1].val.T = r[1].val.T = 'I';
+    l[1].val.T = r[1].val.T = 1;
     l[2].type = r[2].type = 's';
     l[2].val.s = "1";
     r[2].val.s = "0"; //different values

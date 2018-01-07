@@ -24,6 +24,14 @@
 
 /**
  * @file arg-val-math.h
+ *
+ * Math functions for arg values, respecting their types.
+ * All functions must support all types in "ichfdTF".
+ *
+ * @note Chaining these functions can be inefficient: a+b+c involves (at least)
+ *   two switch statements about the types, though one would suffice.
+ *   Use these functions if runtime is not too critical.
+ * @test arg-val-math.c
  */
 
 #ifndef RTOSC_ARG_VAL_MATH
@@ -37,6 +45,7 @@ extern "C" {
 
 int rtosc_arg_val_null(rtosc_arg_val_t* av, char type);
 int rtosc_arg_val_from_int(rtosc_arg_val_t* av, char type, int number);
+int rtosc_arg_val_from_double(rtosc_arg_val_t* av, char type, double number);
 int rtosc_arg_val_negate(rtosc_arg_val_t *av);
 int rtosc_arg_val_round(rtosc_arg_val_t *av);
 int rtosc_arg_val_add(const rtosc_arg_val_t *lhs, const rtosc_arg_val_t *rhs,

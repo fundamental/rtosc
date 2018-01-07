@@ -3,6 +3,8 @@
 #include <rtosc/pretty-format.h>
 #include "common.h"
 
+rtosc_arg_val_t scanned[32];
+
 /**
  * @brief check_alt like check, but specify an alternative expectation
  * @see check()
@@ -22,8 +24,10 @@ void check_alt(const char* arg_val_str, const rtosc_print_options* opt,
     char strbuf[strbuflen];
 
     int num = rtosc_count_printed_arg_vals(arg_val_str);
-    assert(num > 0);
-    rtosc_arg_val_t scanned[num];
+    assert(num < 32);
+    // note: when using this, the next step is usually
+    //       rtosc_arg_val_t scanned[num];
+    //       in this case, however, we need the variable globally accessible
     size_t rd = rtosc_scan_arg_vals(arg_val_str, scanned, num,
                                     strbuf, strbuflen);
 
@@ -339,7 +343,7 @@ void ranges()
 #endif
 
     /*
-        endless ranges
+        infinite ranges
      */
     check("[1 ... ]", NULL, "delta-less infinite range (1)", __LINE__);
     check("[\"Next Effect\"S ... ]", NULL,
@@ -351,6 +355,12 @@ void ranges()
     check("[true false false ... ]", NULL,
           "endless range after \"true false false\"", __LINE__);
     check("[[0 1] ... ]", NULL, "range of arrays", __LINE__);
+    check("[true false ... ]", NULL, "alternating true-false-range", __LINE__);
+    assert('-' == scanned[2].type);
+    assert_int_eq(0, scanned[2].val.r.num,
+                  "true-false range is inifinite", __LINE__);
+    assert_int_eq(1, scanned[2].val.r.has_delta,
+                  "true-false range has delta", __LINE__);
 }
 
 // most tests here are reverse to those in ranges()
