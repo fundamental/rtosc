@@ -70,7 +70,7 @@ typedef struct
 typedef union {
 // types that can be used in messages
     int32_t       i;   //i,c,r
-    char          T;   //I,T,F,N
+    char          T;   //I,T,F,N (F=>0, T=>1, I=>n/a, N=>n/a)
     float         f;   //f
     double        d;   //d
     int64_t       h;   //h

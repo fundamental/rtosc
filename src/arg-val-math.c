@@ -1,8 +1,6 @@
+#include <assert.h>
 #include <rtosc/arg-val-math.h>
 #include <rtosc/rtosc.h>
-
-// TODO: later commit: move cmp functions here
-// TODO: test these functions
 
 int rtosc_arg_val_null(rtosc_arg_val_t* av, char type)
 {
@@ -18,6 +16,8 @@ int rtosc_arg_val_null(rtosc_arg_val_t* av, char type)
         case 'c':
         case 'i':
         case 'r': av->val.i = 0; return true;
+        case 'T':
+        case 'F': av->type = 'F'; av->val.T = 0; return true;
         default: return false;
     }
 }
@@ -32,6 +32,36 @@ int rtosc_arg_val_from_int(rtosc_arg_val_t* av, char type, int number)
         case 'f': av->val.f = number; return true;
         case 'c':
         case 'i': av->val.i = number; return true;
+        case 'F':
+        case 'T':
+            // note: we discard av->type here!
+            //       it's clear that the decision should be based on "number",
+            //       not on the current type
+            av->val.T = (number != 0.0);
+            av->type = av->val.T ? 'T' : 'F';
+            return true;
+        default: return false;
+    }
+}
+
+int rtosc_arg_val_from_double(rtosc_arg_val_t* av, char type, double number)
+{
+    av->type = type;
+    switch(type)
+    {
+        case 'h': av->val.h = number; return true;
+        case 'd': av->val.d = number; return true;
+        case 'f': av->val.f = number; return true;
+        case 'c':
+        case 'i': av->val.i = number; return true;
+        case 'F':
+        case 'T':
+            // note: we discard av->type here!
+            //       it's clear that the decision should be based on "number",
+            //       not on the current type
+            av->val.T = (number != 0.0);
+            av->type = av->val.T ? 'T' : 'F';
+            return true;
         default: return false;
     }
 }
@@ -45,8 +75,8 @@ int rtosc_arg_val_negate(rtosc_arg_val_t* av)
         case 'f': av->val.f = -av->val.f; return true;
         case 'c':
         case 'i': av->val.i = -av->val.i; return true;
-        case 'T':
-        case 'F': av->val.T = !av->val.T; return true;
+        case 'T': av->val.T = 0; av->type = 'F'; return true;
+        case 'F': av->val.T = 1; av->type = 'T'; return true;
         default: return false;
     }
 }
@@ -58,11 +88,11 @@ int rtosc_arg_val_round(rtosc_arg_val_t* av)
     {
         case 'd':
             tmp = (int)(av->val.d);
-            av->val.d = tmp + (int)(av->val.d - tmp > 0.001);
+            av->val.d = tmp + (int)(av->val.d - tmp >= 0.999);
             return true;
         case 'f':
             tmp = (int)(av->val.f);
-            av->val.f = tmp + (int)(av->val.f - tmp > 0.001f);
+            av->val.f = tmp + (int)(av->val.f - tmp >= 0.999f);
             return true;
         case 'h':
         case 'c':
@@ -79,16 +109,30 @@ int rtosc_arg_val_add(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
                       rtosc_arg_val_t* res)
 {
     if(lhs->type != rhs->type)
-        return false;
-    res->type = lhs->type;
-    switch(lhs->type)
     {
-        case 'd': res->val.d = lhs->val.d + rhs->val.d; return true;
-        case 'f': res->val.f = lhs->val.f + rhs->val.f; return true;
-        case 'h': res->val.h = lhs->val.h + rhs->val.h; return true;
-        case 'c':
-        case 'i': res->val.i = lhs->val.i + rhs->val.i; return true;
-        default: return false;
+        if((lhs->type == 'F' && rhs->type == 'T') ||
+           (lhs->type == 'T' && rhs->type == 'F'))
+        {
+            res->type = 'T';
+            res->val.T = 1;
+            return true;
+        }
+        else return false;
+    }
+    else
+    {
+        res->type = lhs->type;
+        switch(lhs->type)
+        {
+            case 'd': res->val.d = lhs->val.d + rhs->val.d; return true;
+            case 'f': res->val.f = lhs->val.f + rhs->val.f; return true;
+            case 'h': res->val.h = lhs->val.h + rhs->val.h; return true;
+            case 'c':
+            case 'i': res->val.i = lhs->val.i + rhs->val.i; return true;
+            case 'T':
+            case 'F': res->type = 'F'; res->val.T = 0; return true;
+            default: return false;
+        }
     }
 }
 
@@ -96,7 +140,7 @@ int rtosc_arg_val_sub(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
                       rtosc_arg_val_t* res)
 {
     if(lhs->type != rhs->type)
-        return false;
+        return rtosc_arg_val_add(lhs, rhs, res);
     res->type = lhs->type;
     switch(lhs->type)
     {
@@ -105,6 +149,8 @@ int rtosc_arg_val_sub(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
         case 'h': res->val.h = lhs->val.h - rhs->val.h; return true;
         case 'c':
         case 'i': res->val.i = lhs->val.i - rhs->val.i; return true;
+        case 'T':
+        case 'F': res->type = 'F'; res->val.T = 0; return true;
         default: return false;
     }
 }
@@ -113,16 +159,30 @@ int rtosc_arg_val_mult(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
                        rtosc_arg_val_t* res)
 {
     if(lhs->type != rhs->type)
-        return false;
-    res->type = lhs->type;
-    switch(lhs->type)
     {
-        case 'd': res->val.d = lhs->val.d * rhs->val.d; return true;
-        case 'f': res->val.f = lhs->val.f * rhs->val.f; return true;
-        case 'h': res->val.h = lhs->val.h * rhs->val.h; return true;
-        case 'c':
-        case 'i': res->val.i = lhs->val.i * rhs->val.i; return true;
-        default: return false;
+        if((lhs->type == 'F' && rhs->type == 'T') ||
+           (lhs->type == 'T' && rhs->type == 'F'))
+        {
+            res->type = 'F';
+            res->val.T = 0;
+            return true;
+        }
+        else return false;
+    }
+    else
+    {
+        res->type = lhs->type;
+        switch(lhs->type)
+        {
+            case 'd': res->val.d = lhs->val.d * rhs->val.d; return true;
+            case 'f': res->val.f = lhs->val.f * rhs->val.f; return true;
+            case 'h': res->val.h = lhs->val.h * rhs->val.h; return true;
+            case 'c':
+            case 'i': res->val.i = lhs->val.i * rhs->val.i; return true;
+            case 'T': res->type = 'T'; res->val.T = 1; return true;
+            case 'F': res->type = 'F'; res->val.T = 0; return true;
+            default: return false;
+        }
     }
 }
 
@@ -139,6 +199,8 @@ int rtosc_arg_val_div(const rtosc_arg_val_t* lhs, const rtosc_arg_val_t* rhs,
         case 'h': res->val.h = lhs->val.h / rhs->val.h; return true;
         case 'c':
         case 'i': res->val.i = lhs->val.i / rhs->val.i; return true;
+        case 'T': res->type = 'T'; res->val.T = 1; return true;
+        case 'F': assert(false); return false; // divide by 0
         default: return false;
     }
 }
@@ -152,6 +214,9 @@ int rtosc_arg_val_to_int(const rtosc_arg_val_t* av, int* res)
         case 'h': *res = av->val.h; return true;
         case 'c':
         case 'i': *res = av->val.i; return true;
+        case 'T':
+        case 'F':
+            *res = av->val.T; return true;
         default: return false;
     }
 }

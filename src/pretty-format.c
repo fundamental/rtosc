@@ -274,14 +274,14 @@ static void insert_arg_range(rtosc_arg_val_t* arg, int32_t num,
     first_arg->val.r.has_delta = has_delta;
 }
 
-static const char* numeric_range_types() { return "cihfd"; }
+static const char* numeric_range_types() { return "cihfdTF"; }
 
 static const char* numeric_range_convertible_types()
 {
     // note: floats can not be converted to counting ranges safely
     //       (at least, not that I knew):
     // 0.00 0.33 0.67 0.10 => is it a counting range?
-    return "cih";
+    return "cihTF";
 }
 
 //! tries to convert all args starting at @a arg into
@@ -854,7 +854,7 @@ static const char* end_of_printed_string(const char* src)
 /**
  * Skips string @p exp at the current string pointed to by @p str,
  * but only if it's a separated word, i.e. if there's a char after the string,
- * it mus be a slash or whitespace.
+ * it must be a slash or whitespace.
  *
  * @return The position after the word, or NULL if the word was not present
  *   at @p str .
@@ -959,13 +959,18 @@ static int is_range_multiplier(const char* s)
     return rval;
 }
 
-char arraytypes_match(char type1, char type2)
+int types_match(char type1, char type2)
 {
     return (type1 == type2) ||
-           type1 == '-' || type2 == '-' || // ranges match everything
-                                           // (TODO: actually a bug)
            (type1 == 'T' && type2 == 'F') ||
            (type1 == 'F' && type2 == 'T');
+}
+
+int arraytypes_match(char type1, char type2)
+{
+    return type1 == '-' || type2 == '-' || // ranges match everything
+                                           // (TODO: actually a bug)
+           types_match(type1, type2);
 }
 
 const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
@@ -1324,7 +1329,7 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
                     rtosc_skip_next_printed_arg(llhssrc,
                                                 &llhsskipped, &llhstype,
                                                 NULL, 0, inside_bundle);
-                    if(llhstype == lhstype)
+                    if(types_match(llhstype, lhstype))
                     {
                         rtosc_scan_arg_val(llhssrc, &llhsarg, 1,
                                            NULL, &zero, 0, 0);
@@ -1477,12 +1482,16 @@ size_t rtosc_scan_arg_val(const char* src,
             {
                 rtosc_arg_val_immediatelly(arg);
             }
-            else if(skip_word("nil", &src)   ||
-                    skip_word("inf", &src)   ||
-                    skip_word("true", &src)  ||
+            else if(skip_word("true", &src)  ||
                     skip_word("false", &src) )
             {
-                arg->type = arg->val.T = toupper(*src_backup);
+                arg->type = toupper(*src_backup);
+                arg->val.T = (src[-2] == 'u');
+            }
+            else if(skip_word("nil", &src)   ||
+                    skip_word("inf", &src))
+            {
+                arg->type = toupper(*src_backup);
             }
             else
             {
@@ -1822,7 +1831,7 @@ size_t rtosc_scan_arg_val(const char* src,
 
         bool llhsarg_is_useless =
             (args_before < 1 ||
-            lhsarg.type == '-' || llhsarg->type != lhsarg.type
+            lhsarg.type == '-' || !types_match(llhsarg->type, lhsarg.type)
             /* this includes llhsarg == '-' */ );
 
         bool has_delta = true;

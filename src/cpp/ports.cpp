@@ -515,12 +515,9 @@ Ports::~Ports()
 
 void Ports::dispatch(const char *m, rtosc::RtData &d, bool base_dispatch) const
 {
-    if(!strcmp(m, "pointer"))
-    {
-        // rRecur*Cb have already set d.loc to the pointer we need,
-        // so we just return
-        return;
-    }
+    // rRecur*Cb have already set d.loc to the required pointer
+    // in case no port will match, d.loc will not be touched
+    // this enables returning the address of a runtime object
 
     void *obj = d.obj;
 
@@ -962,7 +959,7 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
                 *ask_port, loc_size, collapsed_loc, ask_port_str,
                 buf, 0, 1, &rval);
             assert(rval.type == 'T' || rval.type == 'F');
-            return rval.val.T == 'T';
+            return rval.type == 'T';
         }
         else // Port has no "enabled" property, so it is always enabled
             return true;

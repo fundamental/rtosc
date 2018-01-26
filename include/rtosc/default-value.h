@@ -22,6 +22,13 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file default-value.h
+ * Functions for retrieving default values from metadata (and runtime)
+ *
+ * @test default-value.cpp
+ */
+
 #ifndef RTOSC_DEFAULT_VALUE
 #define RTOSC_DEFAULT_VALUE
 

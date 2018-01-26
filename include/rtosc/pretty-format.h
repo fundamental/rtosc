@@ -24,7 +24,9 @@
 
 /**
  * @file pretty-format.h
- * @brief Header for pretty printer and scanner
+ * Header for pretty printer and scanner
+ *
+ * @test pretty-format.c
  */
 
 #ifndef RTOSC_PRETTY_FORMAT
