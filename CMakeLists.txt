@@ -71,6 +71,7 @@ add_library(rtosc-cpp STATIC src/cpp/ports.cpp src/cpp/ports-runtime.cpp
     src/cpp/automations.cpp
     src/cpp/midimapper.cpp
     src/cpp/thread-link.cpp
+    src/cpp/port-checker.cpp
     src/cpp/undo-history.cpp
     src/cpp/subtree-serialize.cpp)
 target_link_libraries(rtosc-cpp rtosc)
@@ -87,6 +88,13 @@ else()
     set_property(TARGET rtosc-cpp PROPERTY CXX_INCLUDE_WHAT_YOU_USE
                  ${RTOSC_IWYU_PATH_AND_OPTIONS})
 endif()
+
+# Port checker binary
+if(LIBLO_FOUND)
+    add_executable(port-checker test/port-checker-main.cpp)
+    target_link_libraries(port-checker rtosc-cpp rtosc ${LIBLO_LDFLAGS})
+endif()
+
 
 # Example Code
 find_package(FLTK)

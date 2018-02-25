@@ -326,6 +326,23 @@ void walk_ports(const Ports *base,
                 void *runtime = NULL);
 
 /**
+ * @param root see @p m
+ * @param m a valid OSC message requesting the path search. The corresponding
+ *   port args must be of types
+ *   * "s" (location under @p root to look up port, or empty-string to search
+ *          directly at @p root)
+ *   * "s" (needle for port names, or empty-string to match everything)
+ * @param url URL of requestor. Must be liblo-conform.
+ * @param reply_cb Callback (URL, types, args) that should reply the args to
+ *   the requestor given in the URL. The args should be replied in a message
+ *   "/paths ...".
+ */
+void path_search(const rtosc::Ports& root, const char *m, const char *url,
+                 void (*reply_cb)(const char* ,
+                                  const char* , const rtosc_arg_t*)
+                 );
+
+/**
  * Return the index with value @p value from the metadata's enumeration.
  * @param meta The metadata
  * @param value The value to search the key for

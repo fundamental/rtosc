@@ -83,6 +83,11 @@ typedef union {
     repeater_t    r;   //-
 } rtosc_arg_t;
 
+typedef struct {
+    char type;
+    rtosc_arg_t val;
+} rtosc_arg_val_t;
+
 /**
  * Write OSC message to fixed length buffer
  *
@@ -126,6 +131,15 @@ size_t rtosc_vmessage(char   *buffer,
 /**
  * @see rtosc_message()
  */
+size_t rtosc_avmessage(char        *buffer,
+                       size_t       len,
+                       const char  *address,
+                       size_t       nargs,
+                       const rtosc_arg_val_t *args);
+
+/**
+ * @see rtosc_message()
+ */
 size_t rtosc_amessage(char        *buffer,
                       size_t       len,
                       const char  *address,
@@ -151,11 +165,6 @@ typedef struct {
     const char    *type_pos;
     const uint8_t *value_pos;
 } rtosc_arg_itr_t;
-
-typedef struct {
-    char type;
-    rtosc_arg_t val;
-} rtosc_arg_val_t;
 
 typedef struct
 {
