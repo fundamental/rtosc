@@ -515,12 +515,9 @@ Ports::~Ports()
 
 void Ports::dispatch(const char *m, rtosc::RtData &d, bool base_dispatch) const
 {
-    if(!strcmp(m, "pointer"))
-    {
-        // rRecur*Cb have already set d.loc to the pointer we need,
-        // so we just return
-        return;
-    }
+    // rRecur*Cb have already set d.loc to the required pointer
+    // in case no port will match, d.loc will not be touched
+    // this enables returning the address of a runtime object
 
     void *obj = d.obj;
 

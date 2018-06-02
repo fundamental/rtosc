@@ -80,6 +80,13 @@ void AutomationMgr::createBinding(int slot, const char *path, bool start_midi_le
     }
     strncpy(au.param_path, path, sizeof(au.param_path));
 
+    if(meta["scale"] && strstr(meta["scale"], "log")) {
+        au.map.control_scale = 1;
+        au.param_min = logf(au.param_min);
+        au.param_max = logf(au.param_max);
+    } else
+        au.map.control_scale = 0;
+
     au.map.gain   = 100.0;
     au.map.offset = 0;
     updateMapping(slot, ind);
@@ -152,6 +159,9 @@ void AutomationMgr::setSlotSub(int slot_id, int par, float value)
             v = mx;
         else if(v < mn)
             v = mn;
+
+        if(au.map.control_scale == 1)
+            v = expf(v);
 
         rtosc_message(msg, 256, path, "f", v);
     } else if(type == 'T' || type == 'F') {
