@@ -6,10 +6,11 @@
 #include <cstdarg>
 
 #include <rtosc/ports.h>
-#include <rtosc/port-checker.h>
 #include <rtosc/pretty-format.h>
 #include <lo/lo.h>
 #include <lo/lo_lowlevel.h>
+
+#include "port-checker.h"
 
 namespace rtosc {
 
