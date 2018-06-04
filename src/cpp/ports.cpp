@@ -995,6 +995,9 @@ void rtosc::walk_ports(const Ports  *base,
 
                 char buf[1024] = "";
                 fast_strcpy(buf, old_end, sizeof(buf));
+                // there is no "pointer" callback. thus, there will be nothing
+                // dispatched, but the rRecur*Cb already have set r.obj
+                // that way, we get our pointer
                 strncat(buf, "pointer", sizeof(buf) - strlen(buf) - 1);
                 assert(1024 - strlen(buf) >= 8);
                 fast_strcpy(buf + strlen(buf) + 1, ",", 2);
@@ -1154,6 +1157,57 @@ void walk_ports2(const rtosc::Ports *base,
         char *tmp = old_end;
         while(*tmp) *tmp++=0;
     }
+}
+
+void rtosc::path_search(const rtosc::Ports& root,
+                        const char *m, const char *url,
+                        void (*reply_cb)(const char*,const char*,
+                                         const rtosc_arg_t*))
+{
+    using rtosc::Ports;
+    using rtosc::Port;
+
+    //assumed upper bound of 32 ports (may need to be resized)
+    char         types[256+1];
+    rtosc_arg_t  args[256];
+    size_t       pos    = 0;
+    const Ports *ports  = NULL;
+    const char  *str    = rtosc_argument(m,0).s;
+    const char  *needle = rtosc_argument(m,1).s;
+
+    //zero out data
+    memset(types, 0, sizeof(types));
+    memset(args,  0, sizeof(args));
+
+    if(!*str) {
+        ports = &root;
+    } else {
+        const Port *port = root.apropos(rtosc_argument(m,0).s); /* TODO: use str instead of rtosc_argument */
+        if(port)
+            ports = port->ports;
+    }
+
+    if(ports) {
+        //RTness not confirmed here
+        for(const Port &p:*ports) {
+            if(strstr(p.name, needle) != p.name || !p.name)
+                continue;
+            types[pos]    = 's';
+            args[pos++].s = p.name;
+            types[pos]    = 'b';
+            if(p.metadata && *p.metadata) {
+                args[pos].b.data = (unsigned char*) p.metadata;
+                auto tmp = rtosc::Port::MetaContainer(p.metadata);
+                args[pos++].b.len  = tmp.length();
+            } else {
+                args[pos].b.data = (unsigned char*) NULL;
+                args[pos++].b.len  = 0;
+            }
+        }
+    }
+
+    //Reply to requester [wow, these messages are getting huge...]
+    reply_cb(url, types, args);
 }
 
 static void units(std::ostream &o, const char *u)

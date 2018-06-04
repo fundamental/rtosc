@@ -88,6 +88,7 @@ else()
                  ${RTOSC_IWYU_PATH_AND_OPTIONS})
 endif()
 
+
 # Example Code
 find_package(FLTK)
 if(NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Windows"))
@@ -209,6 +210,11 @@ endif()
 maketestcpp(path-collapse)
 
 maketestcpp(test-automation)
+
+if(LIBLO_FOUND)
+    add_executable(port-checker test/port-checker.cpp test/port-checker-main.cpp)
+    target_link_libraries(port-checker rtosc-cpp rtosc ${LIBLO_LDFLAGS})
+endif()
 
 # Documentation
 find_package(Doxygen)
