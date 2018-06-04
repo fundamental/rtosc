@@ -54,7 +54,8 @@ void test_add(char type, double arg1, double arg2, double exp)
 void test_mult(char type, double arg1, double arg2, double exp)
 {
     test_binary(type, rtosc_arg_val_mult, '*', arg1, arg2, exp);
-    test_binary(type, rtosc_arg_val_div, '/', exp, arg1, arg2);
+    if(arg2 != 0.0)
+        test_binary(type, rtosc_arg_val_div, '/', exp, arg1, arg2);
 }
 
 void test_to_int(char type, double arg)
@@ -65,14 +66,14 @@ void test_to_int(char type, double arg)
     rtosc_arg_val_from_int(&a, type, arg);
     rtosc_arg_val_to_int(&a, &res);
 
-    char str[16];
-    snprintf(str, 16, "(int)'%c'", type);
+    char str[20];
+    snprintf(str, 20, "(int)'%c'", type);
     assert_int_eq(arg, res, str, __LINE__);
 
     rtosc_arg_val_from_double(&a, type, arg);
     rtosc_arg_val_to_int(&a, &res);
 
-    snprintf(str, 16, "(int)(double)'%c'", type);
+    snprintf(str, 20, "(int)(double)'%c'", type);
     assert_int_eq(arg, res, str, __LINE__);
 }
 

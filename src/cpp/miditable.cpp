@@ -1,3 +1,4 @@
+#include "../util.h"
 #include <math.h>
 #include <rtosc/miditable.h>
 
@@ -120,7 +121,7 @@ void MidiTable::addElm(uint8_t ch, uint8_t ctl, const char *path)
     }
 
     if(MidiAddr *e = this->get(ch,ctl)) {
-        strncpy(e->path,path,impl->len);
+        fast_strcpy(e->path,path,impl->len);
         if(!mash_port(*e, *port)) {
             e->ch  = RTOSC_INVALID_MIDI;
             e->ctl = RTOSC_INVALID_MIDI;
@@ -134,7 +135,7 @@ void MidiTable::addElm(uint8_t ch, uint8_t ctl, const char *path)
         if(e.ch == RTOSC_INVALID_MIDI) {//free spot
             e.ch  = ch;
             e.ctl = ctl;
-            strncpy(e.path,path,impl->len);
+            fast_strcpy(e.path,path,impl->len);
             if(!mash_port(e, *port)) {
                 e.ch  = RTOSC_INVALID_MIDI;
                 e.ctl = RTOSC_INVALID_MIDI;
@@ -162,7 +163,7 @@ void MidiTable::learn(const char *s)
         return;
     }
     clear_entry(s);
-    strncpy(unhandled_path, s, MAX_UNHANDLED_PATH);
+    fast_strcpy(unhandled_path, s, MAX_UNHANDLED_PATH);
     unhandled_path[MAX_UNHANDLED_PATH-1] = '\0';
     check_learn();
 }

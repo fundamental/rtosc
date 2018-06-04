@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cstring>
 
+#include "../util.h"
 #include <rtosc/arg-val-cmp.h>
 #include <rtosc/pretty-format.h>
 #include <rtosc/bundle-foreach.h>
@@ -65,8 +66,9 @@ std::string get_changed_values(const Ports& ports, void* runtime)
         std::string* res = (std::string*)data;
         assert(strlen(port_buffer) + 1 < buffersize);
         // copy the path until before the message
-        strncpy(loc, port_buffer, std::min((ptrdiff_t)buffersize,
-                                           port_from_base - port_buffer));
+        fast_strcpy(loc, port_buffer, std::min((ptrdiff_t)buffersize,
+                                               port_from_base - port_buffer + 1
+                                               ));
         char* loc_end = loc + (port_from_base - port_buffer);
         size_t loc_remain_size = buffersize - (port_from_base - port_buffer);
         *loc_end = 0;
@@ -98,17 +100,16 @@ std::string get_changed_values(const Ports& ports, void* runtime)
         {
             size_t nargs_runtime = 0;
 
-            auto ftor = [&](const Port* p, const char* name_buffer,
+            auto ftor = [&](const Port* p, const char* ,
                             const char* old_end,
                             const Ports& ,void* ,void* runtime)
             {
-                // TODO: strncpy is slow, replace it everywhere
-                strncpy(buffer_with_port, p->name, buffersize);
+                fast_strcpy(buffer_with_port, p->name, buffersize);
 
                 // the caller of ftor (in some cases bundle_foreach) has
                 // already filled old_end correctly, but we have to copy this
                 // over to loc_end
-                strncpy(loc_end, old_end, loc_remain_size);
+                fast_strcpy(loc_end, old_end, loc_remain_size);
 
                 size_t nargs_runtime_cur =
                     helpers::get_value_from_runtime(runtime, *p,

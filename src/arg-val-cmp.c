@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include <rtosc/arg-val-cmp.h>
 #include <rtosc/rtosc.h>
@@ -102,8 +103,12 @@ int rtosc_arg_vals_eq_single(const rtosc_arg_val_t* _lhs,
                                          opt);
             break;
         }
-        case '-':
+        default:
+            rval = -1;
+            // no recovery: the programmer did not pass the right args, and
+            // we don't have a function to compare ranges here
             assert(false);
+            exit(1);
             break;
     }
     else
@@ -247,7 +252,11 @@ int rtosc_arg_vals_cmp_single(const rtosc_arg_val_t* _lhs,
             break;
         }
         case '-':
+            rval = -1;
+            // no recovery: the programmer did not pass the right args, and
+            // we don't have a function to compare ranges here
             assert(false);
+            exit(1);
             break;
     }
     else

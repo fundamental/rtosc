@@ -1,3 +1,4 @@
+#include "../util.h"
 #include <cstdarg>
 #include <cstring>
 #include <cassert>
@@ -48,6 +49,7 @@ class CapturePretty : public RtData
                                           buffer, buffersize, NULL,
                                           cols_used);
         assert(wrt);
+        (void)wrt;
     }
 
     void broadcast(const char *, const char *args, ...) override
@@ -164,6 +166,8 @@ public:
     int size() const { return nargs; }
     Capture(std::size_t max_args, rtosc_arg_val_t* arg_vals) :
         max_args(max_args), arg_vals(arg_vals), nargs(-1) {}
+    //! Silence compiler warnings
+    std::size_t dont_use_this_function() { return max_args; }
 };
 
 size_t get_value_from_runtime(void* runtime, const Port& port,
@@ -172,7 +176,7 @@ size_t get_value_from_runtime(void* runtime, const Port& port,
                               char* buffer_with_port, std::size_t buffersize,
                               std::size_t max_args, rtosc_arg_val_t* arg_vals)
 {
-    strncpy(buffer_with_port, portname_from_base, buffersize);
+    fast_strcpy(buffer_with_port, portname_from_base, buffersize);
     std::size_t addr_len = strlen(buffer_with_port);
 
     Capture d(max_args, arg_vals);

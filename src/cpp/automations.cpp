@@ -1,3 +1,4 @@
+#include "../util.h"
 #include <rtosc/automations.h>
 #include <cstring>
 #include <cmath>
@@ -78,7 +79,7 @@ void AutomationMgr::createBinding(int slot, const char *path, bool start_midi_le
         au.param_min = atof(meta["min"]);
         au.param_max = atof(meta["max"]);
     }
-    strncpy(au.param_path, path, sizeof(au.param_path));
+    fast_strcpy(au.param_path, path, sizeof(au.param_path));
 
     if(meta["scale"] && strstr(meta["scale"], "log")) {
         au.map.control_scale = 1;
@@ -262,7 +263,7 @@ void AutomationMgr::setName(int slot_id, const char *msg)
 {
     if(slot_id >= nslots || slot_id < 0)
         return;
-    strncpy(slots[slot_id].name, msg, sizeof(slots[slot_id].name));
+    fast_strcpy(slots[slot_id].name, msg, sizeof(slots[slot_id].name));
     damaged = 1;
 }
 const char *AutomationMgr::getName(int slot_id)

@@ -1,4 +1,5 @@
-﻿#include <assert.h>
+﻿#include "util.h"
+#include <assert.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <ctype.h>
@@ -112,7 +113,7 @@ static void linebreak_check_after_write(int* cols_used, size_t* wrt,
         // insert "\n    "
         *last_sep = '\n';
         assert(*bs >= 4);
-        memmove(last_sep+5, last_sep+1, inc);
+        memmove(last_sep+5, last_sep+1, 1+inc);
         last_sep[1] = last_sep[2] = last_sep[3] = last_sep[4] = ' ';
         *cols_used = 4 + inc;
         *wrt += 4;
@@ -365,22 +366,22 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
     {
         case 'T':
             assert(bs>4);
-            strncpy(buffer, "true", bs);
+            fast_strcpy(buffer, "true", bs);
             wrt = 4;
             break;
         case 'F':
             assert(bs>5);
-            strncpy(buffer, "false", bs);
+            fast_strcpy(buffer, "false", bs);
             wrt = 5;
             break;
         case 'N':
             assert(bs>3);
-            strncpy(buffer, "nil", bs);
+            fast_strcpy(buffer, "nil", bs);
             wrt = 3;
             break;
         case 'I':
             assert(bs>3);
-            strncpy(buffer, "inf", bs);
+            fast_strcpy(buffer, "inf", bs);
             wrt = 3;
             break;
         case 'h':
@@ -657,7 +658,7 @@ size_t rtosc_print_arg_vals(const rtosc_arg_val_t *args, size_t n,
         {
             assert(sep_len < bs);
             last_sep = buffer;
-            strncpy(buffer, opt->sep, bs);
+            fast_strcpy(buffer, opt->sep, bs);
             cols_used += sep_len;
             wrt += sep_len;
             buffer += sep_len;
@@ -779,7 +780,7 @@ static const char* scanf_fmtstr_scan(const char* src, char* bytes8,
     const char *buf = scanf_fmtstr(src, type);
     assert(buf);
     assert(bytes8);
-    strncpy(bytes8, buf, 8);
+    fast_strcpy(bytes8, buf, 8);
     *++bytes8 = '%'; // transform "%*" to "%"
     return bytes8;
 }

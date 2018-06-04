@@ -1,4 +1,5 @@
-﻿#include "../../include/rtosc/ports.h"
+﻿#include "../util.h"
+#include "../../include/rtosc/ports.h"
 #include "../../include/rtosc/ports-runtime.h"
 #include "../../include/rtosc/bundle-foreach.h"
 
@@ -945,16 +946,12 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
                 receive the "enabled" property
              */
             char buf[loc_size];
-#ifdef NEW_CODE
-            strncpy(buf, collapsed_loc, loc_size);
-#else
             // TODO: try to use portname_from_base, since Ports might
             //       also be of type a#N/b
             const char* last_slash = strrchr(collapsed_loc, '/');
-            strncpy(buf,
-                    last_slash ? last_slash + 1 : collapsed_loc,
-                    loc_size);
-#endif
+            fast_strcpy(buf, last_slash ? last_slash + 1 : collapsed_loc,
+                        loc_size);
+
             helpers::get_value_from_runtime(runtime,
                 *ask_port, loc_size, collapsed_loc, ask_port_str,
                 buf, 0, 1, &rval);
@@ -996,11 +993,11 @@ void rtosc::walk_ports(const Ports  *base,
                 r.obj = runtime;
                 r.port = &p;
 
-                char buf[1024];
-                strncpy(buf, old_end, 1024);
-                strncat(buf, "pointer", 1024 - strlen(buf) - 1);
+                char buf[1024] = "";
+                fast_strcpy(buf, old_end, sizeof(buf));
+                strncat(buf, "pointer", sizeof(buf) - strlen(buf) - 1);
                 assert(1024 - strlen(buf) >= 8);
-                strncpy(buf + strlen(buf) + 1, ",", 2);
+                fast_strcpy(buf + strlen(buf) + 1, ",", 2);
 
                 p.cb(buf, r);
                 runtime = r.obj; // callback has stored the child pointer here

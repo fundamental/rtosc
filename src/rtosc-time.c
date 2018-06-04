@@ -40,6 +40,7 @@ uint64_t rtosc_float2secfracs(float secfracsf)
     int written = snprintf(secfracs_as_hex, 16, "%a", secfracsf);
     assert(written >= 0); // no error
     assert(written < 16); // size suffices
+    (void) written;
     assert(secfracs_as_hex[3]=='.'); // 0x?.
     secfracs_as_hex[3] = secfracs_as_hex[2]; // remove '.'
 
@@ -93,6 +94,7 @@ float rtosc_secfracs2float(uint64_t secfracs)
     int written = snprintf(lossless, 16, "0x%xp-32", (unsigned)secfracs);
     assert(written >= 0); // no error
     assert(written < 16); // size suffices
+    (void) written;
 
     float flt;
     int rd = 0;

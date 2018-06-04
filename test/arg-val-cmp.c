@@ -24,7 +24,8 @@ void cmp_1(int exp,
     printf("cmp1(%c, %c)\n", lhs->type, rhs->type);
     int res = rtosc_arg_vals_cmp(lhs, rhs, lsize, rsize, opt);
 
-    strncpy(tc_full, ldesc, tc_len);
+    *tc_full = 0;
+    strncat(tc_full, ldesc, tc_len-1);
     const char* sgn = "ERROR";
     switch(exp)
     {

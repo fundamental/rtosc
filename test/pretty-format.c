@@ -22,6 +22,7 @@ void check_alt(const char* arg_val_str, const rtosc_print_options* opt,
     char tc_full[tc_len]; // descr. for full testcase name
     int strbuflen = 256;
     char strbuf[strbuflen];
+    memset(strbuf, 0x7f, strbuflen); /* init with rubbish */
 
     int num = rtosc_count_printed_arg_vals(arg_val_str);
     assert(num < 32);
@@ -39,6 +40,7 @@ void check_alt(const char* arg_val_str, const rtosc_print_options* opt,
 
     size_t len = 128;
     char printed[len];
+    memset(printed, 0x7f, len); /* init with rubbish */
     size_t written = rtosc_print_arg_vals(scanned, num, printed, len, opt, 0);
 
     const char* exp_print = _exp_print ? _exp_print : arg_val_str;
@@ -450,14 +452,17 @@ void fail_at_arg(const char* arg_val_str, int exp_fail, int line)
 
 void messages()
 {
+
     int num = rtosc_count_printed_arg_vals_of_msg("not beginning with a '/'");
     assert_int_eq(-1, num, "return -1 if the message does not start"
                            "with a slash", __LINE__);
 
     int strbuflen = 256;
     char strbuf[strbuflen];
+    memset(strbuf, 0x7f, strbuflen); /* init with rubbish */
     int msgbuflen = 256;
     char msgbuf[msgbuflen];
+    memset(msgbuf, 0x7f, msgbuflen); /* init with rubbish */
     const char* input = "%this is a savefile\n"
                         "/noteOn 0 0 0 % a noteOn message";
 
@@ -473,6 +478,7 @@ void messages()
 
     size_t len = 128;
     char printed[len];
+    memset(printed, 0x7f, len); /* init with rubbish */
     rtosc_print_options shortline = ((rtosc_print_options) { true, 3, " ", 7,
                                                              true });
     size_t written = rtosc_print_message("/noteOn", scanned, num,
