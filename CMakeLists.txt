@@ -7,6 +7,7 @@ set(VERSION_PATCH 0)
 
 option(PERF_TEST "Run Performance Timing Tests" OFF)
 option(RTOSC_INCLUDE_WHAT_YOU_USE "Check for useless includes" OFF)
+mark_as_advanced(FORCE RTOSC_INCLUDE_WHAT_YOU_USE)
 
 include("cmake/ColorMessage.cmake")
 SET(BUILD_RTOSC_EXAMPLES FALSE CACHE BOOL

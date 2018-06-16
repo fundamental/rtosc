@@ -774,15 +774,14 @@ static const char* scanf_fmtstr(const char* src, char* type)
 }
 
 /** Return the right format string for reading the next numeric value */
-static const char* scanf_fmtstr_scan(const char* src, char* bytes8,
-                                     char* type)
+static const char* scanf_fmtstr_scan(const char* src, char* bytes16, char* type)
 {
     const char *buf = scanf_fmtstr(src, type);
     assert(buf);
-    assert(bytes8);
-    fast_strcpy(bytes8, buf, 8);
-    *++bytes8 = '%'; // transform "%*" to "%"
-    return bytes8;
+    assert(bytes16);
+    fast_strcpy(bytes16, buf, 16);
+    *++bytes16 = '%'; // transform "%*" to "%"
+    return bytes16;
 }
 
 /** Skip the next numeric at @p src */
@@ -1740,7 +1739,7 @@ size_t rtosc_scan_arg_val(const char* src,
             }
             else
             {
-                char bytes8[8];
+                char bytes16[16];
                 char type = arg->type = 0;
 
                 bool repeat_once = false;
@@ -1748,7 +1747,7 @@ size_t rtosc_scan_arg_val(const char* src,
                 {
                     rd = 0;
 
-                    const char *fmtstr = scanf_fmtstr_scan(src, bytes8,
+                    const char *fmtstr = scanf_fmtstr_scan(src, bytes16,
                                                            &type);
                     if(!arg->type) // the first occurence determins the type
                      arg->type = type;
