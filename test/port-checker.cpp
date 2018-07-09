@@ -4,9 +4,13 @@
 #include <cstring>
 #include <string>
 #include <cstdarg>
+#include <ctime>
+#include <iostream>
+#include <iomanip>
 
 #include <rtosc/ports.h>
 #include <rtosc/pretty-format.h>
+#include <rtosc/arg-val-math.h>
 #include <lo/lo.h>
 #include <lo/lo_lowlevel.h>
 
@@ -14,17 +18,92 @@
 
 namespace rtosc {
 
-port_checker::port_checker()
+static constexpr const issue_t _m_issue_types_arr[(int)issue::number] =
 {
-
+{
+    issue::parameter_not_queryable,
+    "parameter not queryable",
+    "parameters can not be queried",
+    severity::error
+},{
+    issue::parameter_not_replied,
+    "parameter not replied",
+    "parameters are not replied",
+    severity::error
+},{
+    issue::parameter_not_broadcast,
+    "parameter not broadcast",
+    "parameters are not broadcast",
+    severity::warning
+},{
+    issue::option_port_not_si,
+    "option port not \"S\" or \"i\"",
+    "parameter using \"enumerated\" property do not accept \"i\" or \"S\"",
+    severity::error
+},{
+    issue::rdefault_missing,
+    "rDefault missing",
+    "parameters are missing default values",
+    severity::warning,
+},{
+    issue::rdefault_multiple,
+    "multiple rDefault",
+    "parameters have multiple mappings for rDefault",
+    severity::error,
+},{
+    issue::rpreset_multiple,
+    "multiple rPreset",
+    "parameters have multiple rPreset with the same number",
+    severity::error,
+},{
+    issue::rdefault_without_rparameter,
+    "rDefault without rparameter",
+    "ports have rDefault, but not rParameter",
+    severity::hint,
+},{
+    issue::invalid_default_format,
+    "invalid default format",
+    "parameters have default values which could not be parsed",
+    severity::error
+},{
+    issue::bundle_size_not_matching_rdefault,
+    "bundle size not matching rDefault",
+    "bundle parameters have rDefault array with different size",
+    severity::error
+},{
+    issue::rdefault_not_infinite,
+    "rDefault not infinite",
+    "parameters should use ellipsis instead of fixed sizes",
+    severity::hint
+},{
+    issue::default_cannot_canonicalize,
+    "cannot canoncicalize defaults",
+    "parameters have default values with non-existing enumeration values",
+    severity::error
+},{
+    issue::duplicate_mapping,
+    "duplicate mapping",
+    "ports have the same mapping twice (rOptions()?)",
+    severity::error
+},{
+    issue::enabled_port_not_replied,
+    "enabled-port did not reply",
+    "ports have enabled-ports which do not reply",
+    severity::error
+},{
+    issue::enabled_port_bad_reply,
+    "bad reply from enabled-port",
+    "ports have enabled-ports which did not reply \"T\" or \"F\"",
+    severity::error
 }
+};
 
 static void liblo_error_cb(int i, const char *m, const char *loc)
 {
-    fprintf(stderr, "liblo :-( %d-%s@%s\n",i,m,loc);
+    std::cerr << "liblo :-( " << i << "-" << m << "@" << loc << std::endl;
 }
 
-static int handle_st(const char *path, const char *types, lo_arg **argv,
+int handle_st(const char *path, const char *types, lo_arg **argv,
                      int argc, lo_message msg, void *data)
 {
     static_cast<port_checker::server*>(data)->on_recv(path, types,
@@ -32,24 +111,30 @@ static int handle_st(const char *path, const char *types, lo_arg **argv,
     return 0;
 }
 
-void port_checker::server::on_recv(const char *path, const char *types, lo_arg **argv, int argc, lo_message msg)
+void port_checker::server::on_recv(const char *path, const char *types,
+                                   lo_arg **argv, int argc, lo_message msg)
 {
-    printf("on_recv: %s, %d, %s\n", path, waiting,
-           exp_path);
-    if(waiting && exp_path)
+    (void)argv;
+//  std::cout << "on_recv: " << path << ", " << waiting << std::endl;
+//  for(const char** exp_path = exp_paths; *exp_path;
+//      ++exp_path, ++_replied_path)
+//      std::cout << " - exp: " << *exp_path << std::endl;
+    if(waiting && exp_paths && exp_paths[0])
     {
-        if(!strcmp(exp_path, path))
+        _replied_path = 0;
+        for(const char** exp_path = exp_paths; *exp_path;
+            ++exp_path, ++_replied_path)
+        if(!strcmp(*exp_path, path))
         {
             size_t len = lo_message_length(msg, path);
             *last_buffer = std::vector<char>(len);
             size_t written;
             lo_message_serialise(msg, path, last_buffer->data(), &written);
             if(written > last_buffer->size()) // ouch...
-                throw std::runtime_error("can not happen, lo_message_length has been used");
+                throw std::runtime_error("can not happen, "
+                                         "lo_message_length has been used");
 
             last_args->resize(argc);
-            if((size_t)argc > max_args)
-                throw std::runtime_error("too many arguments returned");
             for(int i = 0; i < argc; ++i)
             {
                 (*last_args)[i].val = rtosc_argument(last_buffer->data(), i);
@@ -57,6 +142,7 @@ void port_checker::server::on_recv(const char *path, const char *types, lo_arg *
             }
 
             waiting = false;
+            break;
         }
     }
 }
@@ -69,33 +155,39 @@ void port_checker::server::init(const char* target_url)
         lo_address_get_protocol(target) != LO_UDP)
         throw std::runtime_error("invalid address");
 
-    srv = lo_server_new_with_proto(NULL, LO_UDP, liblo_error_cb);
+    srv = lo_server_new_with_proto(nullptr, LO_UDP, liblo_error_cb);
     if(srv == nullptr)
         throw std::runtime_error("Could not create lo server");
-    lo_server_add_method(srv, NULL, NULL, handle_st, this);
-    rtosc_arg_val_t hi;
-    hi.val.s = "hi"; hi.type = 's';
+    lo_server_add_method(srv, nullptr, nullptr, handle_st, this);
+
+    rtosc_arg_val_t hi[2];
+    hi[0].type = hi[1].type = 's';
+    hi[0].val.s = hi[1].val.s = "";
+    send_msg("/path-search", 2, hi);
     std::vector<rtosc_arg_val_t> reply;
     std::vector<char> buf;
-    send_msg("/echo", 1, &hi);
-    wait_for_reply("/echo", &buf, &reply);
+    wait_for_reply(&buf, &reply, "/paths");
 }
 
-bool port_checker::send_msg(const char* address, size_t nargs, const rtosc_arg_val_t* args)
-{ // TODO: function useless?
+bool port_checker::send_msg(const char* address,
+                            size_t nargs, const rtosc_arg_val_t* args)
+{
     return sender.send_msg(address, nargs, args);
 }
 
-bool port_checker::server::send_msg(const char* address, size_t nargs, const rtosc_arg_val_t* args)
+bool port_checker::server::send_msg(const char* address,
+                                    size_t nargs, const rtosc_arg_val_t* args)
 {
     char buffer[2048];
     int len = rtosc_avmessage(buffer, sizeof(buffer), address, nargs, args);
     int res = 0;
     lo_message msg  = lo_message_deserialise(buffer, len, &res);
-    if(msg == nullptr)
+    if(msg == nullptr) {
+        std::cout << "liblo error code: " << res << std::endl;
         throw std::runtime_error("could not deserialize message");
-    printf("address: %s.\n", address);
-    lo_message_pp(msg);
+    }
+    // std::cout << "send message: " << address << ", args:" << std::endl;
+    // lo_message_pp(msg);
 
     res = lo_send_message_from(target, srv, buffer, msg);
     if(res == -1)
@@ -103,97 +195,436 @@ bool port_checker::server::send_msg(const char* address, size_t nargs, const rto
     return true;
 }
 
-bool port_checker::server::wait_for_reply(const char* _exp_path, std::vector<char>* buffer, std::vector<rtosc_arg_val_t> * args)
+bool port_checker::server::_wait_for_reply(std::vector<char>* buffer,
+                                           std::vector<rtosc_arg_val_t> * args,
+                                           int unused)
 {
-    exp_path = _exp_path;
+    (void)unused;
     last_args = args;
     last_buffer = buffer;
 
-    int tries_left = 100;
-    while(tries_left-->1 && waiting)
+    // allow up to 1000 ports = 1s. never wait more than 0.05 seconds
+    const int timeout_initial = 50;
+    int tries_left = 1000, timeout = timeout_initial;
+    while(tries_left-->1 && timeout-->1 && waiting)
     {
-        lo_server_recv_noblock(srv, 10 /* 0,01 seconds */);
+        int n = lo_server_recv_noblock(srv, 1 /* 0,001 seconds */);
+        if(n)
+            timeout = timeout_initial;
         // message will be dispatched to the server's callback
     }
-    printf("tries left: %d\n", tries_left);
     waiting = true; // prepare for next round
 
-    return tries_left; // TODO
+    return tries_left && timeout;
+}
+
+// loc: path in which that port is, must not end on '/'
+// port: only for printing issues
+bool port_checker::port_is_enabled(const char* loc, const char* port,
+                                   const char* metadata)
+{
+    Port::MetaContainer meta(metadata);
+    const char* enable_port_rel = meta["enabled by"];
+    bool rval = true;
+    if(enable_port_rel)
+    {
+        std::string enable_port = "/";
+        enable_port += loc;
+        enable_port += enable_port_rel;
+
+        const char* collapsed_loc = Ports::collapsePath(&enable_port[0]);
+        send_msg(collapsed_loc, 0, nullptr);
+
+        std::vector<rtosc_arg_val_t> args;
+        std::vector<char> strbuf;
+        if(sender.wait_for_reply(&strbuf, &args, collapsed_loc)) {
+            if(args.size() == 1 &&
+               (args[0].type == 'T' || args[0].type == 'F')) {
+                rval = (args[0].type == 'T');
+            }
+            else
+                m_issues.emplace(issue::enabled_port_bad_reply,
+                               "/" + std::string(loc) + port);
+        } else
+            m_issues.emplace(issue::enabled_port_not_replied,
+                           "/" + std::string(loc) + port);
+    }
+    return rval;
+}
+
+void alternate_arg_val(rtosc_arg_val_t& a)
+{
+    switch(a.type)
+    {
+        case 'h': a.val.h = a.val.h ? 0 : 1; break;
+        case 't': a.val.t = a.val.t + 1; break;
+        case 'd': a.val.d = a.val.d ? 0.0 : 1.0; break;
+        case 'c': a.val.i = a.val.i ? 0 : 'x'; break;
+        case 'i':
+        case 'r': a.val.i = a.val.i ? 0 : 1; break;
+        case 'm': a.val.m[3] = a.val.m[3] ? 0 : 1; break;
+        case 'S':
+        case 's': a.val.s = a.val.s ? "" : "non-empty"; break;
+        case 'b': assert(a.val.b.len);
+            a.val.b.data[0] = a.val.b.data[0] ? 0 : 1; break;
+        case 'f': a.val.f = a.val.f ? 0.0f : 1.0f; break;
+        case 'T': a.val.T = 0; a.type = 'F'; break;
+        case 'F': a.val.T = 1; a.type = 'T'; break;
+    }
 }
 
 void port_checker::check_port(const char* loc, const char* portname,
                               const char* metadata, int meta_len)
 {
+    const char* port_args = strchr(portname, ':');
+    if(!port_args)
+        port_args = portname + strlen(portname);
     std::string full_path = "/"; full_path += loc; full_path += portname;
-    full_path.resize(full_path.find(':'));
-    printf("fp: %s\n", full_path.c_str());
-    rtosc::Port::MetaContainer meta(metadata);
-    if(*metadata && meta_len)
+    std::string::size_type arg_pos = full_path.find(':');
+    if(arg_pos != std::string::npos)
     {
-        bool is_parameter = false;
-        const char* default_val = nullptr, * default_0 = nullptr;
-        for(const auto x : meta)
+        full_path.resize(arg_pos);
+
+        std::string::size_type hash_pos = full_path.find('#');
+        int bundle_size = 0;
+        if(hash_pos != std::string::npos)
         {
-            if(!strcmp(x.title, "parameter"))
-                is_parameter = true;
-            else if(!strcmp(x.title, "default"))
-                default_val = x.value;
-            else if(!strcmp(x.title, "default 0"))
-                default_0 = x.value;
+            bundle_size = atoi(full_path.data() + hash_pos + 1);
+            // .../port#16... -> .../port0
+            full_path[hash_pos] = '0';
+            full_path.resize(hash_pos+1);
         }
 
-        if(is_parameter)
+        rtosc::Port::MetaContainer meta(metadata);
+        if(*metadata && meta_len)
         {
-            const char* args_to_send = portname - 1;
-            do
+            bool is_parameter = false, is_enumerated = false;
+            int n_default_vals = 0;
+
+            std::map<std::string, int> presets;
+            std::map<int, int> mappings; // for rOptions()
+            std::map<std::string, int> mapping_values;
+            std::vector<std::string> default_values;
+
+            for(const auto x : meta)
             {
-                args_to_send = strchr(args_to_send + 1, ':');
+                if(!strcmp(x.title, "parameter"))
+                    is_parameter = true;
+                if(!strcmp(x.title, "enumerated"))
+                    is_enumerated = true;
+                else if(!strcmp(x.title, "default")) {
+                    // x.value;
+                    ++n_default_vals;
+                    default_values.push_back(x.value);
+                }
+                else if(!strncmp(x.title, "default ", strlen("default ")) &&
+                         strcmp(x.title + strlen("default "), "depends")) {
+                    ++presets[x.title + strlen("default ")];
+                    default_values.push_back(x.value);
+                }
+                else if(!strncmp(x.title, "map ", 4)) {
+                    ++mappings[atoi(x.title + 4)];
+                    ++mapping_values[x.value];
+                }
+            }
 
-            } while(args_to_send && args_to_send[1] == ':');
+            auto raise = [this, loc, portname](issue issue_type) {
+                m_issues.emplace(issue_type, "/" + std::string(loc) + portname);
+            };
 
-            if(args_to_send)
+            for(auto pr : mapping_values)
+            if(pr.second > 1) {
+                raise(issue::duplicate_mapping);
+                break;
+            }
+
+            for(std::string pretty : default_values)
             {
-                const char* def_str = default_val
-                                        ? default_val
-                                        : default_0
-                                                ? default_0
-                                                : nullptr;
-
-                if(def_str)
+                int nargs = rtosc_count_printed_arg_vals(pretty.c_str());
+                if(nargs <= 0)
+                    raise(issue::invalid_default_format);
+                else
                 {
-                    int nargs = rtosc_count_printed_arg_vals(def_str);
-                    if(nargs <= 0)
+                    char pretty_strbuf[8096];
+                    rtosc_arg_val_t avs[nargs];
+                    rtosc_scan_arg_vals(pretty.c_str(), avs, nargs,
+                                        pretty_strbuf, sizeof(pretty_strbuf));
+
                     {
-                        // TODO: add issue
-                        assert(nargs > 0); // parse error => error in the metadata?
-                    }
-                    else
-                    {
-                        char strbuf[4096];
-                        rtosc_arg_val_t query_args[nargs];
-                        rtosc_scan_arg_vals(def_str, query_args, nargs, strbuf, sizeof(strbuf));
-                        send_msg(full_path.c_str(), nargs, query_args);
-
-                        std::vector<rtosc_arg_val_t> args;
-                        std::vector<char> strbuf2;
-
-                        int res = sender.wait_for_reply("/paths", &strbuf2, &args);
-/*                        if(!res)
-                            throw std::runtime_error("no reply from path-search");*/
-                        if(res && args.size() % 2)
-                            throw std::runtime_error("bad reply from path-search");
-
+                        int errs_found = canonicalize_arg_vals(avs,
+                                                               nargs,
+                                                               port_args,
+                                                               meta);
+                        if(errs_found)
+                            raise(issue::default_cannot_canonicalize);
+                        else
+                        {
+                            if(avs[0].type == 'a')
+                            {
+                                // How many elements are in the array?
+                                int arrsize = 0;
+                                int cur = 0;
+                                int incsize = 0;
+                                bool infinite = false;
+                                for(rtosc_arg_val_t* ptr = avs + 1;
+                                    ptr - (avs+1) < avs[0].val.a.len;
+                                    ptr += incsize, arrsize += cur)
+                                {
+                                    switch(ptr->type)
+                                    {
+                                        case '-':
+                                            cur = ptr->val.r.num;
+                                            incsize = 2 + ptr->val.r.has_delta;
+                                            if(!cur) infinite = true;
+                                            break;
+                                        case 'a':
+                                            cur = 1;
+                                            incsize = ptr->val.a.len;
+                                            break;
+                                        default:
+                                            cur = 1;
+                                            incsize = 1;
+                                            break;
+                                    }
+                                }
+                                if(!infinite) {
+                                    raise(issue::rdefault_not_infinite);
+                                    if(arrsize != bundle_size)
+                                        raise(issue::bundle_size_not_matching_rdefault);
+                                }
+                            }
+                        }
                     }
                 }
+            }
+
+            if(is_parameter)
+            {
+
+
+                // check metadata
+                if(!n_default_vals && presets.empty())
+                    raise(issue::rdefault_missing);
+                else {
+                    if(n_default_vals > 1)
+                        raise(issue::rdefault_multiple);
+
+                    for(auto pr : presets)
+                    if(pr.second > 1) {
+                            raise(issue::rpreset_multiple);
+                            break;
+                    }
+                }
+
+                if(is_enumerated &&
+                   (!strstr(portname, ":i") || !strstr(portname, ":S"))) {
+                    raise(issue::option_port_not_si);
+                }
+
+                // send and reply...
+                // first, get some useful values
+                send_msg(full_path.c_str(), 0, nullptr);
+                std::vector<rtosc_arg_val_t> args1;
+                std::vector<char> strbuf1;
+                int res = sender.wait_for_reply(&strbuf1, &args1,
+                                                full_path.c_str());
+
+                if(res)
+                {
+                    // alternate the values...
+                    for(rtosc_arg_val_t& a : args1)
+                        alternate_arg_val(a);
+                    // ... and send them back
+                    send_msg(full_path.c_str(), args1.size(), args1.data());
+                    args1.clear();
+                    strbuf1.clear();
+                    res = sender.wait_for_reply(&strbuf1, &args1,
+                                                full_path.c_str(),
+                                                "/undo_change");
+
+                    if(!res)
+                        raise(issue::parameter_not_replied);
+                    else {
+                        if(sender.replied_path() == 1 /* i.e. undo_change */) {
+                            // some apps may reply with undo_change, some may
+                            // already catch those... if we get one: retry
+                            res = sender.wait_for_reply(&strbuf1, &args1,
+                                                        full_path.c_str());
+                        }
+
+                        if(res)
+                        {
+                            res = other.wait_for_reply(&strbuf1, &args1,
+                                                       full_path.c_str());
+                            if(!res)
+                                raise(issue::parameter_not_broadcast);
+                        }
+                        else raise(issue::parameter_not_replied);
+                    }
+                }
+                else {
+                    raise(issue::parameter_not_queryable);
+                }
+            }
+            else {
+                if(default_values.size())
+                    raise(issue::rdefault_without_rparameter);
             }
         }
     }
 }
 
+void port_checker::print_evaluation() const
+{
+    auto sev_str = [](severity s) -> const char* {
+        return s == severity::error ? "**ERROR**"
+                                    : s == severity::warning ? "**WARNING**"
+                                                             : "**HINT**";
+    };
+    std::cout << "# Port evaluation" << std::endl;
+
+    issue last_issue = issue::number;
+    for(const std::pair<issue, std::string>& p : m_issues)
+    {
+        if(last_issue != p.first)
+        {
+            std::cout << std::endl;
+            const issue_t& it = m_issue_types.at(p.first);
+            std::cout << sev_str(it.sev) << ":" << std::endl
+                      << "The following " << it.msg << ":" << std::endl;
+            last_issue = p.first;
+        }
+        std::cout << "* " << p.second << std::endl;
+    }
+    std::cout << std::endl;
+}
+
+std::set<issue> port_checker::issues_not_covered() const
+{
+    std::set<issue> not_covered;
+    for(const auto& t : m_issue_types)
+        not_covered.insert(t.second.issue_id);
+    for(const auto& p : m_issues)
+        not_covered.erase(p.first);
+    return not_covered;
+}
+
+bool port_checker::coverage() const
+{
+    return issues_not_covered().empty();
+}
+
+void port_checker::print_coverage(bool coverage_report) const
+{
+    if(coverage_report) {
+        std::cout << "# Issue Coverage" << std::endl << std::endl;
+        std::cout << "Checking for issues not covered..." << std::endl;
+    }
+    else {
+        std::cout << "# Issues that did not occur" << std::endl << std::endl;
+    }
+    std::set<issue> not_covered;
+    for(const auto& t : m_issue_types)
+        not_covered.insert(t.second.issue_id);
+    for(const auto& p : m_issues)
+        not_covered.erase(p.first);
+    if(not_covered.empty())
+        std::cout << (coverage_report ? "Tests found for all issue types"
+                                      : "None")
+                  << std::endl << std::endl;
+    else
+    {
+        std::cout << (coverage_report ? "The following issue types have not "
+                                        "been tested"
+                                      : "No ports are affected by")
+                  << std::endl;
+        for(const issue& i : not_covered)
+            std::cout << "* " << m_issue_types.at(i).shortmsg << std::endl;
+        std::cout << std::endl;
+    }
+}
+
+void port_checker::print_not_affected() const
+{
+    print_coverage(false);
+}
+
+void port_checker::print_statistics() const
+{
+    double time = finish_time - start_time;
+
+    std::cout << "# Statistics" << std::endl << std::endl;
+    std::cout << "Ports:" << std::endl;
+    std::cout << "* checked (and not disabled): " << ports_checked << std::endl;
+    std::cout << "* disabled: " << ports_disabled << std::endl
+              << std::endl;
+
+    std::cout << "Time (incl. IO wait):"  << std::endl;
+    std::cout << "* total: " << time << "s" << std::endl;
+    std::cout << std::setprecision(3)
+              << "* per port (checked or disabled): "
+              << (time / (ports_checked + ports_disabled))*1000.0 << "ms"
+              << std::endl
+              << std::endl;
+}
+
+const std::map<issue, issue_t> &port_checker::issue_types() const {
+    return m_issue_types; }
+
+const std::multimap<issue, std::string> &port_checker::issues() const {
+    return m_issues; }
+
+int port_checker::errors_found() const
+{
+    int errors = 0;
+    for(const std::pair<issue, std::string>& p : m_issues)
+        errors += (m_issue_types.at(p.first).sev == severity::error);
+    return errors;
+}
+
+void port_checker::m_sanity_checks(std::vector<int>& issue_type_missing) const
+{
+    for(int i = 0; i < (int)issue::number; ++i)
+    {
+        bool found = false;
+        for(const auto& it : _m_issue_types_arr)
+        if((int)it.issue_id == i)
+            found = true;
+        if(!found)
+            issue_type_missing.push_back(i);
+    }
+}
+
+bool port_checker::sanity_checks() const
+{
+    std::vector<int> issue_type_missing;
+    m_sanity_checks(issue_type_missing);
+    return issue_type_missing.empty();
+}
+
+bool port_checker::print_sanity_checks() const
+{
+    std::cout << "# Sanity checks" << std::endl << std::endl;
+    std::cout << "Checking port-checker itself for issues..." << std::endl;
+    std::vector<int> issue_type_missing;
+    m_sanity_checks(issue_type_missing);
+    if(issue_type_missing.size())
+    {
+        std::cout << "* Issue types missing description:" << std::endl;
+        for(int i : issue_type_missing)
+            std::cout << "  - Enumerated issue with number " << i << std::endl;
+    }
+    else
+        std::cout << "* All issue types have descriptions" << std::endl;
+
+    std::cout << std::endl;
+    return issue_type_missing.empty();
+}
+
 void port_checker::do_checks(char* loc, int loc_size)
 {
     char* old_loc = loc + strlen(loc);
-    printf("Checking: \"%s\"...\n", loc);
+//  std::cout << "Checking Ports: \"" << loc << "\"..." << std::endl;
 
     rtosc_arg_val_t query_args[2];
     query_args[0].type = query_args[1].type = 's';
@@ -203,18 +634,36 @@ void port_checker::do_checks(char* loc, int loc_size)
     std::vector<rtosc_arg_val_t> args;
     std::vector<char> strbuf;
 
-    int res = sender.wait_for_reply("/paths", &strbuf, &args);
+    int res = sender.wait_for_reply(&strbuf, &args, "/paths");
     if(!res)
         throw std::runtime_error("no reply from path-search");
     if(args.size() % 2)
         throw std::runtime_error("bad reply from path-search");
 
+    bool self_disabled = false; // disabled by an rSelf() ?
     size_t port_max = args.size() >> 1;
-    //printf("found %lu subports\n", port_max);
+    // std::cout << "found " << port_max << " subports" << std::endl;
     for(size_t port_no = 0; port_no < port_max; ++port_no)
     {
-        if(args[port_no << 1].type != 's' || args[(port_no << 1) + 1].type != 'b')
-            throw std::runtime_error("Invalid paths reply: bad types");
+        if(args[port_no << 1].type != 's' ||
+                args[(port_no << 1) + 1].type != 'b')
+            throw std::runtime_error("Invalid \"paths\" reply: bad types");
+
+        if(!strncmp(args[port_no << 1].val.s, "self:", 5)) {
+            rtosc_blob_t& blob = args[(port_no << 1) + 1].val.b;
+            const char* metadata = (const char*)blob.data;
+            if(!port_is_enabled(loc, args[port_no << 1].val.s, metadata))
+                self_disabled = true;
+        }
+    }
+    if(self_disabled)
+        ++ports_disabled;
+    else
+        ++ports_checked;
+
+    if(!self_disabled)
+    for(size_t port_no = 0; port_no < port_max; ++port_no)
+    {
         const char* portname = args[port_no << 1].val.s;
         int portlen = strlen(portname);
         rtosc_blob_t& blob = args[(port_no << 1) + 1].val.b;
@@ -223,37 +672,50 @@ void port_checker::do_checks(char* loc, int loc_size)
         if(!metadata)
             metadata = "";
         bool has_subports = portname[portlen-1] == '/';
-        //printf("port %s%s (%lu/%lu), has subports: %d\n", loc, portname, port_no, port_max, has_subports);
+/*      std::cout << "port /" << loc << portname
+                  << " (" << port_no << "/" << port_max
+                  << "), has subports: " << std::boolalpha << has_subports
+                  << std::endl;*/
 
-        if(has_subports)
+        if(port_is_enabled(loc, portname, metadata))
         {
-            if(loc_size > portlen)
+            if(has_subports)
             {
-                strcpy(old_loc, portname);
-                char* hashsign = strchr(old_loc, '#');
-                if(hashsign)
+                // statistics: port may still be disabled, see above
+                if(loc_size > portlen)
                 {
-                    // #16 => 000
-                    for(; *hashsign && *hashsign != '/'; ++hashsign)
+                    strcpy(old_loc, portname);
+                    char* hashsign = strchr(old_loc, '#');
+                    if(hashsign)
+                    {
+                        // #16\0 => 0\0
                         *hashsign = '0';
+                        *++hashsign = '/';
+                        *++hashsign = 0;
+                    }
+                    do_checks(loc, loc_size - portlen);
                 }
-                do_checks(loc, loc_size - portlen);
+                else
+                    throw std::runtime_error("portname too long");
             }
-            else
-                throw std::runtime_error("portname too long");
+            else {
+                ++ports_checked;
+                check_port(loc, portname, metadata, meta_len);
+            }
         }
         else
-        {
-            // TODO: not implemented yet
-            // check_port(loc, portname, metadata, meta_len);
-            (void) meta_len;
-        }
+            ++ports_disabled;
         *old_loc = 0;
     }
 }
 
 bool port_checker::operator()(const char* url)
 {
+    for(const issue_t& it : _m_issue_types_arr)
+        m_issue_types.emplace(it.issue_id, it);
+
+    start_time = time(NULL);
+
     sendtourl = url;
 
     sender.init(url);
@@ -262,6 +724,7 @@ bool port_checker::operator()(const char* url)
     char loc_buffer[4096] = { 0 };
     do_checks(loc_buffer, sizeof(loc_buffer));
 
+    finish_time = time(NULL);
     return true;
 }
 

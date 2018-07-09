@@ -215,6 +215,13 @@ maketestcpp(test-automation)
 if(LIBLO_FOUND)
     add_executable(port-checker test/port-checker.cpp test/port-checker-main.cpp)
     target_link_libraries(port-checker rtosc-cpp rtosc ${LIBLO_LDFLAGS})
+    add_executable(port-checker-tester test/port-checker.cpp test/port-checker-tester.cpp)
+    target_link_libraries(port-checker-tester rtosc-cpp rtosc ${LIBLO_LDFLAGS})
+    add_executable(port-checker-testapp test/port-checker-testapp.cpp)
+    target_link_libraries(port-checker-testapp rtosc-cpp rtosc ${LIBLO_LDFLAGS})
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/test-port-checker.rb
+                   ${CMAKE_CURRENT_BINARY_DIR}/test-port-checker.rb COPYONLY)
+    add_test(port-checker test-port-checker.rb)
 endif()
 
 # Documentation

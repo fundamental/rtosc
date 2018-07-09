@@ -124,7 +124,7 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
  * no complete syntax check.
  *
  * @param src The string to scan from
- * @return The number of arguments that can be scanned (>=0), or if the nth arg
+ * @return The number of arguments that can be scanned (>0), or if the nth arg
  *   (range 1...) can not be scanned, -n. Array arguments and array start each
  *   count as one argument. This function never returns 0
  */

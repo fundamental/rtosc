@@ -230,6 +230,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
 //{STRINGIFY(name) ":", rProp(internal), NULL, rRecurPtrCb(name)}
 
 //let this recurring parameter depend on another port
+//the path of the other port must be at the current level or one level above
 #define rEnabledBy(portname) rMap(enabled by, portname)
 #define rEnabledByCondition(cond_name) rEnabledBy(cond_name)
 #define rEnabledCondition(cond_name, condition) \

@@ -197,6 +197,7 @@ void rtosc_arg_val_itr_init(rtosc_arg_val_itr* itr,
 const rtosc_arg_val_t* rtosc_arg_val_itr_get(
     const rtosc_arg_val_itr* itr,
     rtosc_arg_val_t* buffer);
+//! @warning will loop forever on infinite ranges!
 void rtosc_arg_val_itr_next(rtosc_arg_val_itr* itr);
 
 //! va_list container, required for passing va_list as pointers to functions

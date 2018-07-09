@@ -1,13 +1,16 @@
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
 
 #include "port-checker.h"
 
 void usage(const char* progname)
 {
-    printf("usage: %s <URL>\n", progname);
-    puts("Tests ports of the app running on <URL>, if the app\n"
-         "has a \"path-search\" port conforming to rtosc::path_search()");
+    std::cout << "usage: " << progname << " <URL>" << std::endl;
+    std::cout << "Tests ports of the app running on <URL>, if the app"
+              << std::endl
+              << "has a \"path-search\" port conforming to rtosc::path_search()"
+              << std::endl;
 }
 
 int main(int argc, char** argv)
@@ -22,14 +25,25 @@ int main(int argc, char** argv)
     try {
         rtosc::port_checker checker;
         checker(argv[1]);
+
+        if(!checker.print_sanity_checks())
+            rval = EXIT_FAILURE;
+        checker.print_evaluation();
+        if(checker.errors_found())
+            rval = EXIT_FAILURE;
+        checker.print_not_affected();
+        checker.print_statistics();
     }
     catch(const std::exception& e) {
-        printf("Error caught: %s\n", e.what());
+        std::cout << "**Error caught**: " << e.what() << std::endl;
         rval = EXIT_FAILURE;
     }
 
-    printf("port-checker summary: %s!\n", rval == EXIT_SUCCESS ? "SUCCESS"
-                                                               : "FAILURE");
+    std::cout << "# Port checker test summary" << std::endl << std::endl;
+    std::cout << (rval == EXIT_SUCCESS ? "**SUCCESS!**" : "**FAILURE!**")
+              << std::endl;
+    std::cout << std::endl;
+
     return rval;
 }
 

@@ -596,12 +596,30 @@ rToggle(subport_is_enabled, "port that returns if this subtree is enabled")
 
 Another situation where you may want to skip a subtree is if its data should
 never be saved. This can happen if the subtree ...
- * contains parameters of your app that shall not be written into savefiles
+* contains parameters of your app that shall not be written into savefiles
    (e.g. configuration parameters from $HOME/.app)
- * contains parameters that can not be accessed at all or not in reasonable time
- * shall only be synchronized when certain macros are defined
+* contains parameters that can not be accessed at all or not in reasonable time
+* shall only be synchronized when certain macros are defined
 In such a case, simply add the macro "rNoWalk" to the metadata of the port
 containing these subports.
+
+Checking your ports
+~~~~~~~~~~~~~~~~~~~
+
+Once your rtosc app is coded, you can check your ports for common issues.
+Requirements:
+* your app has a UDP port for OSC
+* your app provides the "/path-search" port, see the doxygen comment for the
+  "path_search" function in ports.h
+* rtosc was compiled with liblo support
+
+To do so, you need to
+* start your app
+* extract the UDP port from it (e.g. via stdout)
+* start the port checker with "test/port-checker osc.udp://127.0.0.1/<port>"
+
+This can be automated by a ruby script, see test/check-ports.rb, which starts
+a test app which is used to test the port-checker itself.
 
 Undo Support
 ~~~~~~~~~~~~
