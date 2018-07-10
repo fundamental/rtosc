@@ -54,7 +54,7 @@ const char* get_value_from_runtime(void* runtime, const struct Ports& ports,
  * This function returns the value(s) of a known port object and stores them as
  * rtosc_arg_val_t.
  * @param runtime The runtime object
- * @param port the port where the value shall be retrieved
+ * @param port the port where loc is relative to
  * @param loc A buffer where dispatch can write down the currently dispatched
  *   path
  * @param loc_size Size of loc
@@ -74,6 +74,9 @@ size_t get_value_from_runtime(void* runtime, const struct Port& port,
 
 // TODO: loc should probably not be passed,
 //       since it can be allocated in constant time?
+// TODO: clean up those funcs:
+// * use dispatch instead of cb
+// * don't pass loc etc
 
 }
 }

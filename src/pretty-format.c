@@ -507,7 +507,7 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
             for(const char* s = val->s; *s; ++s)
             {
                 // "3": 2 quote signs and escaping backslash
-                if(*cols_used > opt->linelength - 3)
+                if(!plain && *cols_used > opt->linelength - 3)
                     break_string(&b, bs, wrt, cols_used);
                 assert(bs);
                 int as_esc = as_escaped_char(*s, false);
@@ -516,7 +516,7 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                     *b++ = '\\';
                     *b++ = as_esc;
                     *cols_used += 2;
-                    if(as_esc == 'n')
+                    if(!plain && as_esc == 'n')
                         break_string(&b, bs, wrt, cols_used);
                 }
                 else {
@@ -646,7 +646,7 @@ size_t rtosc_print_arg_vals(const rtosc_arg_val_t *args, size_t n,
         bs -= tmp;
 
         // these compute the newlines themselves
-        if(! strchr("-asSb", args->type))
+        if(! strchr("-asb", args->type))
         linebreak_check_after_write(&cols_used, &wrt, last_sep, &buffer, &bs,
                                     tmp, &args_written_this_line,
                                     opt->linelength);

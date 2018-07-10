@@ -904,6 +904,7 @@ MergePorts::MergePorts(std::initializer_list<const rtosc::Ports*> c)
 bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
                      const Ports& base, void *runtime)
 {
+    // TODO: this code should be improved
     if(port && runtime)
     {
         const char* enable_port = port->meta()["enabled by"];
@@ -935,18 +936,21 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
             /*
                 concatenate the location string
              */
+            int loclen = strlen(loc);
+            char loc_copy[loc_size];
+            strcpy(loc_copy, loc);
             if(subport)
-                strncat(loc, "/../", loc_size - strlen(loc) - 1);
-            strncat(loc, enable_port, loc_size - strlen(loc) - 1);
+                strncat(loc_copy, "/../", loc_size - loclen - 1);
+            strncat(loc_copy, enable_port, loc_size - loclen - 4 - 1);
 
-            char* collapsed_loc = Ports::collapsePath(loc);
-            loc_size -= (collapsed_loc - loc);
+            char* collapsed_loc = Ports::collapsePath(loc_copy);
+            loc_size -= (collapsed_loc - loc_copy);
 
             /*
                 receive the "enabled" property
              */
             char buf[loc_size];
-            // TODO: try to use portname_from_base, since Ports might
+            // TODO: pass a parameter portname_from_base, since Ports might
             //       also be of type a#N/b
             const char* last_slash = strrchr(collapsed_loc, '/');
             fast_strcpy(buf, last_slash ? last_slash + 1 : collapsed_loc,
