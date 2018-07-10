@@ -27,8 +27,8 @@ std::multimap<issue, std::string> get_exp()
     exp.emplace(issue::option_port_not_si, "/roption_without_ics::i:c");
     exp.emplace(issue::duplicate_mapping, "/duplicate_mapping::i:S");
     exp.emplace(issue::enabled_port_not_replied,
-                "/enabled_port_not_existing:i");
-    exp.emplace(issue::enabled_port_bad_reply, "/enabled_port_bad_reply:i");
+                "/enabled_port_not_existing::i");
+    exp.emplace(issue::enabled_port_bad_reply, "/enabled_port_bad_reply::i");
 
     exp.emplace(issue::rdefault_missing, "/no_rdefault::i");
     exp.emplace(issue::rdefault_multiple, "/double_rdefault::i");
@@ -84,6 +84,11 @@ int main(int argc, char** argv)
                       "Expected number of issues is correct", __LINE__);
         assert_true(exp == res,
                     "Issues are as expected", __LINE__);
+
+        std::set<std::string> exp_skipped;
+        exp_skipped.insert("/invisible_param::i");
+        assert_true(exp_skipped == checker.skipped(), "Skipped port are as"
+                                                      "expected", __LINE__);
     }
     catch(const std::exception& e) {
         // std::cout << "**Error caught**: " << e.what() << std::endl;

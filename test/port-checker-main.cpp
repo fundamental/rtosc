@@ -32,6 +32,7 @@ int main(int argc, char** argv)
         if(checker.errors_found())
             rval = EXIT_FAILURE;
         checker.print_not_affected();
+        checker.print_skipped();
         checker.print_statistics();
     }
     catch(const std::exception& e) {

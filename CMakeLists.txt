@@ -221,7 +221,7 @@ if(LIBLO_FOUND)
     target_link_libraries(port-checker-testapp rtosc-cpp rtosc ${LIBLO_LDFLAGS})
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/test-port-checker.rb
                    ${CMAKE_CURRENT_BINARY_DIR}/test-port-checker.rb COPYONLY)
-    add_test(port-checker test-port-checker.rb)
+    add_test(test-port-checker test-port-checker.rb)
 endif()
 
 # Documentation

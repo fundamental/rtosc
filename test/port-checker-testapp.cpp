@@ -193,11 +193,11 @@ static const rtosc::Ports test_ports = {
     {"not_enabled_bad:", rProp(internal), NULL,
         [](const char* , rtosc::RtData& d){d.reply(d.loc, "i", 42); }},
     // bad parameter, but does not occur since it is disabled:
-    {"invisible_param:i", rEnabledByCondition(not_enabled), NULL,
+    {"invisible_param::i", rEnabledByCondition(not_enabled), NULL,
      [](const char* , rtosc::RtData& ){}},
-    {"enabled_port_not_existing:i", rEnabledByCondition(not_existing), NULL,
+    {"enabled_port_not_existing::i", rEnabledByCondition(not_existing), NULL,
      [](const char* , rtosc::RtData& ){}},
-    {"enabled_port_bad_reply:i", rEnabledByCondition(not_enabled_bad), NULL,
+    {"enabled_port_bad_reply::i", rEnabledByCondition(not_enabled_bad), NULL,
      [](const char* , rtosc::RtData& ){}}
 };
 #undef rObject

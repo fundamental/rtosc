@@ -549,6 +549,21 @@ void port_checker::print_not_affected() const
     print_coverage(false);
 }
 
+const std::set<std::string> &port_checker::skipped() const
+{
+    return m_skipped;
+}
+
+void port_checker::print_skipped() const
+{
+    std::cout << "# Skipped ports" << std::endl << std::endl;
+    std::cout << "The following ports have been skipped" << std::endl;
+    std::cout << "This usually means they have been disabled" << std::endl;
+    for(const std::string& s : skipped())
+        std::cout << "* " << s << std::endl;
+    std::cout << std::endl;
+}
+
 void port_checker::print_statistics() const
 {
     double time = finish_time - start_time;
@@ -556,14 +571,14 @@ void port_checker::print_statistics() const
     std::cout << "# Statistics" << std::endl << std::endl;
     std::cout << "Ports:" << std::endl;
     std::cout << "* checked (and not disabled): " << ports_checked << std::endl;
-    std::cout << "* disabled: " << ports_disabled << std::endl
+    std::cout << "* disabled: " << m_skipped.size() << std::endl
               << std::endl;
 
     std::cout << "Time (incl. IO wait):"  << std::endl;
     std::cout << "* total: " << time << "s" << std::endl;
     std::cout << std::setprecision(3)
               << "* per port (checked or disabled): "
-              << (time / (ports_checked + ports_disabled))*1000.0 << "ms"
+              << (time / (ports_checked + m_skipped.size()))*1000.0 << "ms"
               << std::endl
               << std::endl;
 }
@@ -657,7 +672,7 @@ void port_checker::do_checks(char* loc, int loc_size)
         }
     }
     if(self_disabled)
-        ++ports_disabled;
+        m_skipped.insert("/" + std::string(loc));
     else
         ++ports_checked;
 
@@ -704,7 +719,7 @@ void port_checker::do_checks(char* loc, int loc_size)
             }
         }
         else
-            ++ports_disabled;
+            m_skipped.insert("/" + std::string(loc) + portname);
         *old_loc = 0;
     }
 }

@@ -86,7 +86,6 @@ class port_checker
     // statistical data
     time_t start_time, finish_time;
     unsigned ports_checked = 0; //!< ports checked and not disabled
-    unsigned ports_disabled = 0; //!< ports that were disabled
 
     friend int handle_st(const char *path, const char *types, lo_arg **argv,
                          int argc, lo_message msg, void *data);
@@ -95,6 +94,9 @@ class port_checker
     std::map<issue, issue_t> m_issue_types;
     //! issues found: type and port each
     std::multimap<issue, std::string> m_issues;
+    //! ports that have been skipped, usually because the have been disabled
+    std::set<std::string> m_skipped;
+
     //! URL of the app
     std::string sendtourl;
 
@@ -201,6 +203,13 @@ public:
     void print_coverage(bool coverage_report = true) const;
     //! Print a list of error types that were OK for all checked ports
     void print_not_affected() const;
+
+    //! Return ports that have been skipped,
+    //! usually because the have been disabled
+    const std::set<std::string> &skipped() const;
+    //! Print ports that have been skipped,
+    //! usually because the have been disabled
+    void print_skipped() const;
 
     //! Print statistics like number of ports and time consumed
     void print_statistics() const;
