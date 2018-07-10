@@ -167,11 +167,13 @@ class port_checker
      * Execute all checks recursively under a given OSC path
      * @param loc the OSC root path for the recursive checks
      * @param loc_size size of the buffer located at @p loc
+     * @param check_defaults Whether default values should be checked in this
+     *        port and all subports
      */
-    void do_checks(char *loc, int loc_size);
-    //! Check a single port
+    void do_checks(char *loc, int loc_size, bool check_defaults = true);
+    //! Check a port which has no subports
     void check_port(const char *loc, const char *portname,
-                    const char *metadata, int meta_len);
+                    const char *metadata, int meta_len, bool check_defaults);
     bool port_is_enabled(const char *loc, const char *port,
                          const char *metadata);
     void m_sanity_checks(std::vector<int> &issue_type_missing) const;

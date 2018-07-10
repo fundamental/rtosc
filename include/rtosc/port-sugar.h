@@ -278,10 +278,8 @@ template<class T> constexpr T spice(T*t) {return *t;}
 #define rPresets(...) rPresetsAt(0, __VA_ARGS__)
 #define rDefaultDepends(dep_path_) rMap(default depends, dep_path_)
 #define rDefaultMissing "" // macro to denote yet missing default values
-//#define rNoDefaults() ":no defaults\0" //!< this port (and all children) have no defaults
-//! @brief Denote that this port and its children must always be skipped from
-//!        port-walking if a runtime is being given.
-#define rNoWalk rProp(no walk)
+//!< This port and all children have no default values on purpose
+#define rNoDefaults ":no defaults\0"
 
 //Misc properties
 #define rDoc(doc) ":documentation\0=" doc "\0"

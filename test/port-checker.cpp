@@ -274,7 +274,8 @@ void alternate_arg_val(rtosc_arg_val_t& a)
 }
 
 void port_checker::check_port(const char* loc, const char* portname,
-                              const char* metadata, int meta_len)
+                              const char* metadata, int meta_len,
+                              bool check_defaults)
 {
     const char* port_args = strchr(portname, ':');
     if(!port_args)
@@ -312,6 +313,8 @@ void port_checker::check_port(const char* loc, const char* portname,
                     is_parameter = true;
                 if(!strcmp(x.title, "enumerated"))
                     is_enumerated = true;
+                if(!strcmp(x.title, "no defaults"))
+                    check_defaults = false;
                 else if(!strcmp(x.title, "default")) {
                     // x.value;
                     ++n_default_vals;
@@ -400,10 +403,8 @@ void port_checker::check_port(const char* loc, const char* portname,
 
             if(is_parameter)
             {
-
-
                 // check metadata
-                if(!n_default_vals && presets.empty())
+                if(check_defaults && !n_default_vals && presets.empty())
                     raise(issue::rdefault_missing);
                 else {
                     if(n_default_vals > 1)
@@ -636,10 +637,11 @@ bool port_checker::print_sanity_checks() const
     return issue_type_missing.empty();
 }
 
-void port_checker::do_checks(char* loc, int loc_size)
+void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
 {
     char* old_loc = loc + strlen(loc);
 //  std::cout << "Checking Ports: \"" << loc << "\"..." << std::endl;
+
 
     rtosc_arg_val_t query_args[2];
     query_args[0].type = query_args[1].type = 's';
@@ -708,14 +710,19 @@ void port_checker::do_checks(char* loc, int loc_size)
                         *++hashsign = '/';
                         *++hashsign = 0;
                     }
-                    do_checks(loc, loc_size - portlen);
+                    Port::MetaContainer meta(metadata);
+
+                    bool next_check_defaults =
+                       (meta.find("no defaults") == meta.end());
+
+                    do_checks(loc, loc_size - portlen, next_check_defaults);
                 }
                 else
                     throw std::runtime_error("portname too long");
             }
             else {
                 ++ports_checked;
-                check_port(loc, portname, metadata, meta_len);
+                check_port(loc, portname, metadata, meta_len, check_defaults);
             }
         }
         else

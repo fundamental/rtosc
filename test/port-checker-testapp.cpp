@@ -117,6 +117,7 @@ public:
     int no_rdefault = 0;
     int bundle_size[16];
     int perfect_param_2[16];
+    int perfect_param_3 = 0;
     int invalid_rdefault;
 
     void add_url(const char* url);
@@ -187,6 +188,7 @@ static const rtosc::Ports test_ports = {
     rOption(perfect_param_1, rOptions(one, two, three),
             rPresetsAt(2, one, three, one), rDefault(two), ""),
     rArrayI(perfect_param_2, 16, rDefault([1 2 3...]), ""),
+    rParamI(perfect_param_3, rNoDefaults, ""), // no rDefault, but that's OK here
     // correct enabled-condition
     rEnabledCondition(not_enabled, false),
     // invalid enabled-condition: returns integer
