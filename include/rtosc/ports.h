@@ -326,21 +326,49 @@ void walk_ports(const Ports *base,
                 void *runtime = NULL);
 
 /**
+ * Returns paths and metadata of all direct children of a port, or of the port
+ * itself if that port has no children.
+ * If you just want to generate a reply message, use the overloaded function.
  * @param root see @p m
+ * @param str location under @p root to look up port, or empty-string to search
+ *            directly at @p root
+ * @param needle Only port names starting with this sting are returned (use
+ *            empty-string or nullptr to match everything)
+ * @param types A buffer where the OSC type string is being written
+ * @param max_types should be @p max_args +1 for best performance,
+ *   see @p max_args
+ * @param args An array where the argument values are being written
+ * @param max_args maximum number of arguments in array at @p args. Should be
+ *   greater or equal than 2 * (maximum no. of child ports of your app's ports).
+ */
+void path_search(const rtosc::Ports& root, const char *str, const char *needle,
+                 char *types, std::size_t max_types,
+                 rtosc_arg_t* args, std::size_t max_args);
+
+/**
+ * Returns a messages of all paths and metadata of all direct children of a
+ * port, or of the port itself if that port has no children.
+ *
+ * Your app should always have a port "path-search", calling this function
+ * directly, and replying the resulting buffer @p msgbuf directly. That way, it
+ * will be ready for oscprompt, port-checker etc.
+ *
+ * @param root See @p m
  * @param m a valid OSC message requesting the path search. The corresponding
  *   port args must be of types
  *   * "s" (location under @p root to look up port, or empty-string to search
  *          directly at @p root)
- *   * "s" (needle for port names, or empty-string to match everything)
- * @param url URL of requestor. Must be liblo-conform.
- * @param reply_cb Callback (URL, types, args) that should reply the args to
- *   the requestor given in the URL. The args should be replied in a message
- *   "/paths ...".
+ *   * "s" (only port names starting with this sting are returned, use
+ *          empty-string or nullptr to match everything)
+ * @param max_ports Maximum number (or higher) of child ports in any of your
+ *     app's ports.
+ * @param msgbuf Buffer for the reply message
+ * @param bufsize Size of the message buffer @p msgbuf
+ * @return The length of the reply message (0 means error)
  */
-void path_search(const rtosc::Ports& root, const char *m, const char *url,
-                 void (*reply_cb)(const char* ,
-                                  const char* , const rtosc_arg_t*)
-                 );
+std::size_t path_search(const rtosc::Ports& root, const char *m,
+                        std::size_t max_ports,
+                        char *msgbuf, std::size_t bufsize);
 
 /**
  * Return the index with value @p value from the metadata's enumeration.

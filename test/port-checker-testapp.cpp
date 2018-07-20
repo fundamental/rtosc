@@ -244,26 +244,23 @@ void port_checker_tester::on_recv(const char *path, const char *,
 
 void port_checker_tester::on_recv(const char *msg) {
     if(!strcmp(msg, "/path-search") &&
-            !strcmp("ss", rtosc_argument_string(msg))) {
-        auto reply_cb = [](const char* url,
-                           const char* types, const rtosc_arg_t* args)
-        {
-            char buffer[1024*20];
-            size_t length = rtosc_amessage(buffer, sizeof(buffer),
-                                           "/paths", types, args);
-            if(length) {
-                lo_message msg  = lo_message_deserialise((void*)buffer,
-                                                         length, NULL);
-                lo_address addr = lo_address_new_from_url(url);
-                if(addr)
-                    lo_send_message(addr, buffer, msg);
-                lo_address_free(addr);
-                lo_message_free(msg);
-            }
-        };
-        rtosc::path_search(test_ports, msg, last_url.c_str(),
-                           reply_cb);
-    } else if(msg[0]=='/' && strrchr(msg, '/')[1]) {
+            !strcmp("ss", rtosc_argument_string(msg)))
+    {
+
+        char buffer[1024*20];
+        std::size_t length =
+            rtosc::path_search(test_ports, msg, 128, buffer, sizeof(buffer));
+        if(length) {
+            lo_message msg  = lo_message_deserialise((void*)buffer,
+                                                     length, NULL);
+            lo_address addr = lo_address_new_from_url(last_url.c_str());
+            if(addr)
+                lo_send_message(addr, buffer, msg);
+            lo_address_free(addr);
+            lo_message_free(msg);
+        }
+    }
+    else if(msg[0]=='/' && strrchr(msg, '/')[1]) {
         pc_data_obj d(this);
         test_ports.dispatch(msg, d, true);
         //std::cout << "matches: " << d.matches << std::endl;

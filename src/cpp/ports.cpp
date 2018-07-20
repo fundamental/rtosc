@@ -1164,38 +1164,44 @@ void walk_ports2(const rtosc::Ports *base,
 }
 
 void rtosc::path_search(const rtosc::Ports& root,
-                        const char *m, const char *url,
-                        void (*reply_cb)(const char*,const char*,
-                                         const rtosc_arg_t*))
+                        const char *str, const char* needle,
+                        char *types, std::size_t max_types,
+                        rtosc_arg_t* args, std::size_t max_args)
 {
     using rtosc::Ports;
     using rtosc::Port;
 
-    //assumed upper bound of 32 ports (may need to be resized)
-    char         types[256+1];
-    rtosc_arg_t  args[256];
-    size_t       pos    = 0;
-    const Ports *ports  = NULL;
-    const char  *str    = rtosc_argument(m,0).s;
-    const char  *needle = rtosc_argument(m,1).s;
+    if(!needle)
+        needle = "";
+
+    // the last char of "types" is being used for a terminating 0
+    std::size_t  max         = std::min(max_types - 1, max_args);
+    size_t       pos         = 0;
+    const Ports *ports       = nullptr;
+    const Port  *single_port = nullptr;
 
     //zero out data
-    memset(types, 0, sizeof(types));
-    memset(args,  0, sizeof(args));
+    memset(types, 0, max + 1);
+    memset(args,  0, max);
 
     if(!*str) {
         ports = &root;
     } else {
-        const Port *port = root.apropos(rtosc_argument(m,0).s); /* TODO: use str instead of rtosc_argument */
-        if(port)
-            ports = port->ports;
+        const Port *port = root.apropos(str);
+        if(port) {
+            if(port->ports) {
+                ports = port->ports;
+            } else {
+                single_port = port;
+            }
+        }
     }
 
-    if(ports) {
-        //RTness not confirmed here
-        for(const Port &p:*ports) {
-            if(strstr(p.name, needle) != p.name || !p.name)
-                continue;
+    const auto fn = [&pos,&needle,&types,&args,&max](const Port& p)
+    {
+        assert(pos < max);
+        if(p.name && strstr(p.name, needle) == p.name)
+        {
             types[pos]    = 's';
             args[pos++].s = p.name;
             types[pos]    = 'b';
@@ -1208,10 +1214,29 @@ void rtosc::path_search(const rtosc::Ports& root,
                 args[pos++].b.len  = 0;
             }
         }
-    }
+    };
 
-    //Reply to requester [wow, these messages are getting huge...]
-    reply_cb(url, types, args);
+    if(ports)
+        for(const Port &p:*ports) fn(p);
+    else if(single_port)
+        fn(*single_port);
+}
+
+std::size_t rtosc::path_search(const Ports &root, const char *m,
+                               std::size_t max_ports,
+                               char *msgbuf, std::size_t bufsize)
+{
+    const char *str    = rtosc_argument(m,0).s;
+    const char *needle = rtosc_argument(m,1).s;
+    size_t max_args    = max_ports << 1;
+    size_t max_types   = max_args + 1;
+    char types[max_types];
+    rtosc_arg_t args[max_args];
+
+    path_search(root, str, needle, types, max_types, args, max_args);
+    size_t length = rtosc_amessage(msgbuf, bufsize,
+                                   "/paths", types, args);
+    return length;
 }
 
 static void units(std::ostream &o, const char *u)
