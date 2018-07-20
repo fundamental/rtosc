@@ -19,6 +19,8 @@ std::multimap<issue, std::string> get_exp()
 
     std::multimap<issue, std::string> exp;
 
+    exp.emplace(issue::duplicate_parameter, "/duplicate_param");
+
     exp.emplace(issue::parameter_not_queryable, "/no_query::i");
     exp.emplace(issue::parameter_not_replied, "/no_reply_A::i");
     exp.emplace(issue::parameter_not_replied, "/no_reply_B::i");

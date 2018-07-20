@@ -43,6 +43,8 @@ namespace rtosc {
 
 enum class issue
 {
+    // general:
+    duplicate_parameter,
     // callbacks:
     parameter_not_queryable,
     parameter_not_replied,
@@ -181,7 +183,8 @@ class port_checker
 
 public:
     //! Let the port checker connect to url and find issues for all ports
-    //! @param url URL in format osc.udp://xxx.xxx.xxx.xxx:xxxxx/
+    //! @param url URL in format osc.udp://xxx.xxx.xxx.xxx:ppppp/, or just
+    //!     ppppp (which means osc.udp://127.0.0.1:ppppp/)
     bool operator()(const char* url);
 
     //! Return issue types

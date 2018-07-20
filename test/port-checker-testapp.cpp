@@ -119,6 +119,7 @@ public:
     int perfect_param_2[16];
     int perfect_param_3 = 0;
     int invalid_rdefault;
+    int duplicate_param;
 
     void add_url(const char* url);
     void run();
@@ -184,6 +185,9 @@ static const rtosc::Ports test_ports = {
     rArrayI(bundle_size, 16, rDefault([15x2]), ""),
     rOption(rpreset_not_in_roptions, rOptions(one, two, three),
             rPresetsAt(2, one, does_not_exist, one), rDefault(two), ""),
+
+    rParamI(duplicate_param, rNoDefaults, ""),
+    rParamI(duplicate_param, rNoDefaults, ""),
 
     rOption(perfect_param_1, rOptions(one, two, three),
             rPresetsAt(2, one, three, one), rDefault(two), ""),

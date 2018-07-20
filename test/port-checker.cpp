@@ -21,6 +21,11 @@ namespace rtosc {
 static constexpr const issue_t _m_issue_types_arr[(int)issue::number] =
 {
 {
+    issue::duplicate_parameter,
+    "multiple parameters with same name",
+    "parameters are duplicates",
+    severity::hint
+},{
     issue::parameter_not_queryable,
     "parameter not queryable",
     "parameters can not be queried",
@@ -678,6 +683,8 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
     else
         ++ports_checked;
 
+    std::map<std::string, unsigned> port_count;
+
     if(!self_disabled)
     for(size_t port_no = 0; port_no < port_max; ++port_no)
     {
@@ -696,6 +703,15 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
 
         if(port_is_enabled(loc, portname, metadata))
         {
+            Port::MetaContainer meta(metadata);
+
+            if(meta.find("parameter") != meta.end())
+            {
+                std::string portname_noargs = portname;
+                portname_noargs.resize(portname_noargs.find(':'));
+                ++port_count[portname_noargs];
+            }
+
             if(has_subports)
             {
                 // statistics: port may still be disabled, see above
@@ -710,7 +726,6 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
                         *++hashsign = '/';
                         *++hashsign = 0;
                     }
-                    Port::MetaContainer meta(metadata);
 
                     bool next_check_defaults =
                        (meta.find("no defaults") == meta.end());
@@ -729,6 +744,13 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
             m_skipped.insert("/" + std::string(loc) + portname);
         *old_loc = 0;
     }
+
+    for(const auto& pr : port_count)
+    {
+        if(pr.second > 1)
+            m_issues.emplace(issue::duplicate_parameter,
+                             "/" + std::string(loc) + pr.first);
+    }
 }
 
 bool port_checker::operator()(const char* url)
@@ -738,10 +760,22 @@ bool port_checker::operator()(const char* url)
 
     start_time = time(NULL);
 
-    sendtourl = url;
+    unsigned i = 0;
+    for(; i < strlen(url); ++i)
+        if(!isdigit(url[i]))
+            break;
 
-    sender.init(url);
-    other.init(url);
+    if(i == strlen(url))
+    {
+        sendtourl = "osc.udp://127.0.0.1:";
+        sendtourl += url;
+        sendtourl += "/";
+    }
+    else
+        sendtourl = url;
+
+    sender.init(sendtourl.c_str());
+    other.init(sendtourl.c_str());
 
     char loc_buffer[4096] = { 0 };
     do_checks(loc_buffer, sizeof(loc_buffer));

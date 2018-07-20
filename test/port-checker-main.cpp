@@ -10,6 +10,10 @@ void usage(const char* progname)
     std::cout << "Tests ports of the app running on <URL>, if the app"
               << std::endl
               << "has a \"path-search\" port conforming to rtosc::path_search()"
+              << std::endl
+              << "The URL must be in format osc.udp://xxx.xxx.xxx.xxx:ppppp/,"
+              << std::endl
+              << "or just ppppp (which means osc.udp://127.0.0.1:ppppp/)"
               << std::endl;
 }
 

@@ -440,7 +440,8 @@ MIDI [0xff 0xff 0xff 0xff]
 #8badf00d
 ----------
 * Timestamps are written as the UTC date in the ISO 8601
-  standard (the conversions are equal to using localtime(3p) and mktime(3p) )
+  standard (the conversions are equal to using `localtime(3p)` and
+  `mktime(3p)`)
   with an optional, appended time, which contains an optional 'seconds' part
   and an optional appended fractional part separated by a period. There are
   two special timestamps called 'now' and 'immediately' with the same
@@ -596,10 +597,12 @@ rToggle(subport_is_enabled, "port that returns if this subtree is enabled")
 
 Another situation where you may want to skip a subtree is if its data should
 never be saved. This can happen if the subtree ...
+
 * contains parameters of your app that shall not be written into savefiles
    (e.g. configuration parameters from $HOME/.app)
 * contains parameters that can not be accessed at all or not in reasonable time
 * shall only be synchronized when certain macros are defined
+
 In such a case, simply add the macro "rNoDefaults" to the metadata of the port
 containing these subports (or to the metadata of a single port).
 
@@ -608,25 +611,28 @@ Checking your ports
 
 Once your rtosc app is coded, you can check your ports for common issues.
 Requirements:
+
 * your app has a UDP port for OSC
 * your app provides the "/path-search" port, see the doxygen comment for the
   "path_search" function in ports.h
 * rtosc was compiled with liblo support
 
 To do so, you need to
+
 * start your app
 * extract the UDP port from it (e.g. via stdout)
-* start the port checker with "test/port-checker osc.udp://127.0.0.1/<port>"
+* source the port-checker bash completion: `. completions/port-checker`
+* start the port checker with `test/port-checker <port>`
 
 This can be automated by a ruby script, see test/check-ports.rb, which starts
 a test app which is used to test the port-checker itself.
 
-Note: In order to check all of your ports, make sure that each type of port is
-      being enabled in some path.
-Note: As the port-checker will only always take the first element of a bundle
-      port (e.g. only "multiple0/" of "multiple#16/"), the parent ports of any
-      port you want to test must be a non-bundle port or the first port of a
-      bundle port.
+NOTE:: In order to check all of your ports, make sure that each type of port is
+       being enabled in some path.
+NOTE:: As the port-checker will only always take the first element of a bundle
+       port (e.g. only "multiple0/" of "multiple#16/"), the parent ports of any
+       port you want to test must be a non-bundle port or the first port of a
+       bundle port.
 
 Undo Support
 ~~~~~~~~~~~~

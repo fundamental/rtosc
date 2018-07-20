@@ -1,0 +1,32 @@
+__port_checker_get_ports()
+{
+    local mtool=ss
+    which $mtool >/dev/null 2>/dev/null || mtool=netstat
+    which $mtool >/dev/null 2>/dev/null || mtool=
+    
+    if [ "$mtool" ]
+    then
+        # ports must be of local, and should not use
+        # reserved port names (like 'ntp')
+        $mtool -lu |
+            grep -o '\(127.0.0.1\|0.0.0.0\):[0-9]\+' |
+            sed 's/.*://' | tr '\n' ' '
+    fi
+}
+
+_port_checker()
+{
+    local cword=$COMP_CWORD
+    local cur=${COMP_WORDS[COMP_CWORD]}
+    local params=
+    
+    if [ "$cword" == 1 ]
+    then
+        params="--help $(__port_checker_get_ports)"
+    fi
+    
+    COMPREPLY=( $(compgen -W "${params}" -- ${cur}) )
+}
+
+
+complete -F _port_checker port-checker
