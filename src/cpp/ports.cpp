@@ -1007,16 +1007,16 @@ void rtosc::walk_ports(const Ports  *base,
                 fast_strcpy(buf + strlen(buf) + 1, ",", 2);
 
                 p.cb(buf, r);
-                runtime = r.obj; // callback has stored the child pointer here
-                // if there is runtime information, but the pointer is NULL,
-                // the port is not enabled
-                enabled = (bool) runtime;
+                // if there is runtime information (see above), but this pointer
+                // is NULL, the port is not enabled
+                enabled = (bool) r.obj; // r.obj = the next runtime object
                 if(enabled)
                 {
                     // check if the port is disabled by a switch
                     enabled = port_is_enabled(&p, name_buffer, buffer_size,
                                               base, runtime);
                 }
+                runtime = r.obj; // callback has stored the child pointer here
             }
         }
         if(enabled)
