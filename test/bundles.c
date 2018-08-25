@@ -68,5 +68,5 @@ int main()
     assert_int_eq(1, rtosc_bundle_timetag(buffer_c),
             "Verify rtosc_bundle_timetag() Works", __LINE__);
 
-    return global_err ? EXIT_FAILURE : EXIT_SUCCESS;
+    return test_summary();
 }

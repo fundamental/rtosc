@@ -33,7 +33,7 @@ const unsigned char message_two[4*10] = {
 /*
  * The OSC 1.0 spec provides two example messages at
  * http://opensoundcontrol.org/spec-1_0-examples
- * 
+ *
  * This test verifies that these messages are identically serialized
  */
 int main()
@@ -50,5 +50,5 @@ int main()
             "Creating Multi Argument Message From OSC Spec", __LINE__);
     assert_hex_eq((char*)message_two, buffer, sizeof(message_two), sz,
             "Validating Binary Representation of Message 2", __LINE__);
-    return 0;
+    return test_summary();
 }

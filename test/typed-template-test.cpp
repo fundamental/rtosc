@@ -76,5 +76,5 @@ int main() {
     assert_true(m5, "Check Type Match", __LINE__);
     assert_false(m6, "Check Type Conflict", __LINE__);
 
-    return global_err ? EXIT_FAILURE : EXIT_SUCCESS;
+    return test_summary();
 };

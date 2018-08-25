@@ -99,7 +99,7 @@ int main()
     assert_int_eq(7, o.b,
             "Verify Redo Has Returned To Altered State", __LINE__);
 
-    return 0;
+    return test_summary();
 }
 
 
