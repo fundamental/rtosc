@@ -46,7 +46,8 @@ struct Rt:public RtData
     }
     void reply(const char *path, const char *args, ...)
     {
-        if(strcmp(path, "undo_change") || !enable)
+        //printf("# reply <%s, %s>\n", path, args);
+        if(strcmp(path, "/undo_change") || !enable)
             return;
 
         va_list va;
