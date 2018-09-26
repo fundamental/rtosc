@@ -212,7 +212,8 @@ maketestcpp(path-collapse)
 
 maketestcpp(test-automation)
 
-if(LIBLO_FOUND)
+find_package(Ruby 1.8)
+if(LIBLO_FOUND AND RUBY_FOUND)
     add_executable(port-checker test/port-checker.cpp test/port-checker-main.cpp)
     target_link_libraries(port-checker rtosc-cpp rtosc ${LIBLO_LDFLAGS})
     add_executable(port-checker-tester test/port-checker.cpp test/port-checker-tester.cpp)
