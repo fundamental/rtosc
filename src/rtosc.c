@@ -8,6 +8,7 @@
 
 #include <rtosc/rtosc.h>
 #include <rtosc/arg-val-math.h>
+#include "util.h"
 
 const char *rtosc_argument_string(const char *msg)
 {
@@ -377,7 +378,7 @@ size_t rtosc_vmessage(char   *buffer,
     if(!nargs)
         return rtosc_amessage(buffer,len,address,arguments,NULL);
 
-    rtosc_arg_t args[nargs];
+    STACKALLOC(rtosc_arg_t, args, nargs);
     rtosc_va_list_t ap2;
     va_copy(ap2.a, ap);
     rtosc_v2args(args, nargs, arguments, &ap2);
@@ -403,8 +404,8 @@ size_t rtosc_avmessage(char                  *buffer,
             rtosc_arg_val_itr_next(&itr2);
     }
 
-    rtosc_arg_t vals[val_max];
-    char argstr[val_max+1];
+    STACKALLOC(rtosc_arg_t, vals, val_max);
+    STACKALLOC(char, argstr,val_max+1);
 
     int i;
     for(i = 0; i < val_max; ++i)
