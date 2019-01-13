@@ -1,6 +1,7 @@
 #include <limits>
 #include <cassert>
 #include <cstring>
+#include <algorithm>
 
 #include "../util.h"
 #include <rtosc/arg-val-cmp.h>

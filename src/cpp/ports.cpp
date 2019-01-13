@@ -8,6 +8,7 @@
 #include <limits>
 #include <cstring>
 #include <string>
+#include <algorithm>
 
 /* Compatibility with non-clang compilers */
 #ifndef __has_feature
