@@ -316,7 +316,7 @@ int count_dups(std::vector<T> &t)
 {
     int dups = 0;
     int N = t.size();
-    bool mark[t.size()];
+    STACKALLOC(bool, mark, t.size());
     memset(mark, 0, N);
     for(int i=0; i<N; ++i) {
         if(mark[i])
