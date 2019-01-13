@@ -95,7 +95,6 @@ struct MidiBijection
     float operator()(int x) const;
 };
 
-#include <cassert>
 class MidiMappernRT
 {
     public:
