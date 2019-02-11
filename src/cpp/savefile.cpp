@@ -14,25 +14,22 @@
 
 namespace rtosc {
 
+namespace {
+    constexpr std::size_t buffersize = 8192;
+    constexpr size_t max_arg_vals = 2048;
+}
+
 std::string get_changed_values(const Ports& ports, void* runtime)
 {
     std::string res;
-    //TODO: ugly hack but there are some disagreements about constexpr lambda captures
-    //see: https://stackoverflow.com/questions/44386415/gcc-and-clang-disagree-about-c17-constexpr-lambda-captures
-#define BUFFERSIZE_GET_CHANGED_VALUES 8192
-    constexpr std::size_t buffersize = BUFFERSIZE_GET_CHANGED_VALUES;
     char port_buffer[buffersize];
     memset(port_buffer, 0, buffersize); // requirement for walk_ports
-#define MAX_ARG_VALS 2048
-    const size_t max_arg_vals = MAX_ARG_VALS;
 
     auto on_reach_port =
             [](const Port* p, const char* port_buffer,
                const char* port_from_base, const Ports& base,
                void* data, void* runtime)
     {
-        const size_t max_arg_vals = MAX_ARG_VALS;
-        constexpr std::size_t buffersize = BUFFERSIZE_GET_CHANGED_VALUES;
 
         assert(runtime);
         const Port::MetaContainer meta = p->meta();
@@ -180,8 +177,6 @@ std::string get_changed_values(const Ports& ports, void* runtime)
                                   rtosc_arg_val_t* arg_vals_runtime,
                                   int nargs_default, size_t nargs_runtime)
             {
-                constexpr std::size_t buffersize = BUFFERSIZE_GET_CHANGED_VALUES;
-
                 if(!rtosc_arg_vals_eq(arg_vals_default, arg_vals_runtime,
                                       nargs_default, nargs_runtime, nullptr))
                 {
