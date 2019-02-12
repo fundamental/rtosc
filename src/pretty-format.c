@@ -1,4 +1,4 @@
-﻿#include "util.h"
+#include "util.h"
 #include <assert.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -563,7 +563,7 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
         {
             char* last_sep = buffer - 1;
             int args_written_this_line = (cols_used) ? 1 : 0;
-            rtosc_arg_val_t args_converted[val->a.len]; // range conversion
+            STACKALLOC(rtosc_arg_val_t, args_converted, val->a.len); // range conversion
 
             COUNT_UP_WRITE('[');
             if(val->a.len)
@@ -633,7 +633,7 @@ size_t rtosc_print_arg_vals(const rtosc_arg_val_t *args, size_t n,
         opt = default_print_options;
     size_t sep_len = strlen(opt->sep);
     char* last_sep = buffer - 1;
-    rtosc_arg_val_t args_converted[n]; // only used for range conversion
+    STACKALLOC(rtosc_arg_val_t, args_converted, n); // only used for range conversion
 
     for(size_t i = 0; i < n;)
     {

@@ -41,7 +41,7 @@ class CapturePretty : public RtData
     void reply_va(const char *args, va_list va)
     {
         size_t nargs = strlen(args);
-        rtosc_arg_val_t arg_vals[nargs];
+        STACKALLOC(rtosc_arg_val_t, arg_vals, nargs);
 
         rtosc_v2argvals(arg_vals, nargs, args, va);
 

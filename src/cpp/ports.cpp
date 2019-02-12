@@ -1,4 +1,4 @@
-﻿#include "../util.h"
+#include "../util.h"
 #include "../../include/rtosc/ports.h"
 #include "../../include/rtosc/ports-runtime.h"
 #include "../../include/rtosc/bundle-foreach.h"
@@ -8,6 +8,7 @@
 #include <limits>
 #include <cstring>
 #include <string>
+#include <algorithm>
 
 /* Compatibility with non-clang compilers */
 #ifndef __has_feature
@@ -315,7 +316,7 @@ int count_dups(std::vector<T> &t)
 {
     int dups = 0;
     int N = t.size();
-    bool mark[t.size()];
+    STACKALLOC(bool, mark, t.size());
     memset(mark, 0, N);
     for(int i=0; i<N; ++i) {
         if(mark[i])
@@ -937,7 +938,7 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
                 concatenate the location string
              */
             int loclen = strlen(loc);
-            char loc_copy[loc_size];
+            STACKALLOC(char, loc_copy, loc_size);
             strcpy(loc_copy, loc);
             if(subport)
                 strncat(loc_copy, "/../", loc_size - loclen - 1);
@@ -949,7 +950,7 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
             /*
                 receive the "enabled" property
              */
-            char buf[loc_size];
+            STACKALLOC(char, buf, loc_size);
             // TODO: pass a parameter portname_from_base, since Ports might
             //       also be of type a#N/b
             const char* last_slash = strrchr(collapsed_loc, '/');
@@ -1230,8 +1231,8 @@ std::size_t rtosc::path_search(const Ports &root, const char *m,
     const char *needle = rtosc_argument(m,1).s;
     size_t max_args    = max_ports << 1;
     size_t max_types   = max_args + 1;
-    char types[max_types];
-    rtosc_arg_t args[max_args];
+    STACKALLOC(char, types, max_types);
+    STACKALLOC(rtosc_arg_t, args, max_args);
 
     path_search(root, str, needle, types, max_types, args, max_args);
     size_t length = rtosc_amessage(msgbuf, bufsize,

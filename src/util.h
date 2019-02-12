@@ -51,6 +51,12 @@ extern "C" {
  */
 char *fast_strcpy(char *dest, const char *src, size_t buffersize);
 
+/*TODO: Add documentation?*/
+#ifdef _MSC_VER
+#define STACKALLOC(type, name, size) type *name = (type*)(_alloca((size)*sizeof(type)))
+#else
+#define STACKALLOC(type, name, size) type name[size]
+#endif
 #ifdef __cplusplus
 }
 #endif

@@ -1,6 +1,7 @@
 #include <limits>
 #include <cassert>
 #include <cstring>
+#include <algorithm>
 
 #include "../util.h"
 #include <rtosc/arg-val-cmp.h>
@@ -13,20 +14,23 @@
 
 namespace rtosc {
 
+namespace {
+    constexpr std::size_t buffersize = 8192;
+    constexpr size_t max_arg_vals = 2048;
+}
+
 std::string get_changed_values(const Ports& ports, void* runtime)
 {
     std::string res;
-    constexpr std::size_t buffersize = 8192;
     char port_buffer[buffersize];
     memset(port_buffer, 0, buffersize); // requirement for walk_ports
-
-    const size_t max_arg_vals = 2048;
 
     auto on_reach_port =
             [](const Port* p, const char* port_buffer,
                const char* port_from_base, const Ports& base,
                void* data, void* runtime)
     {
+
         assert(runtime);
         const Port::MetaContainer meta = p->meta();
 #if 0
@@ -326,7 +330,7 @@ int dispatch_printed_messages(const char* messages,
                 // nargs << 1 is usually too much, but it allows the user to use
                 // these values (using on_dispatch())
                 size_t maxargs = std::max(nargs << 1, 16);
-                rtosc_arg_val_t arg_vals[maxargs];
+                STACKALLOC(rtosc_arg_val_t, arg_vals, maxargs);
                 rd = rtosc_scan_message(msg_ptr, portname, buffersize,
                                         arg_vals, nargs, strbuf, buffersize);
                 rd_total += rd;
@@ -405,8 +409,8 @@ int dispatch_printed_messages(const char* messages,
                                     rtosc_arg_val_itr_next(&itr2);
                                 }
                             }
-                            rtosc_arg_t vals[val_max];
-                            char argstr[val_max+1];
+                            STACKALLOC(rtosc_arg_t, vals, val_max);
+                            STACKALLOC(char, argstr, val_max+1);
 
                             for(i = 0;
                                 itr.i - last_pos < (size_t)nargs &&

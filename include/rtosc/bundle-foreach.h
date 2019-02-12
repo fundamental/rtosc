@@ -34,6 +34,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <cstdio>
+#include "ports.h"
 
 namespace rtosc {
 
