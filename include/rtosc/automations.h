@@ -95,7 +95,7 @@ class AutomationMgr
         void clearSlot(int slot_id);
         void clearSlotSub(int slot_id, int sub);
 
-
+		void setSlotSubPath(int slot_id, int sub, const char *msg);
         void setSlotSubGain(int slot_id, int sub, float f);
         float getSlotSubGain(int slot_id, int sub);
         void setSlotSubOffset(int slot_id, int sub, float f);

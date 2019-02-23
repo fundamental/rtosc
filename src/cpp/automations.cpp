@@ -230,6 +230,61 @@ void AutomationMgr::clearSlotSub(int slot_id, int sub)
     damaged = true;
 }
 
+void AutomationMgr::setSlotSubPath(int slot, int ind, const char *path)
+{
+    if(slot >= nslots || slot < 0)
+        return;
+
+	assert(p);
+    const Port *port = p->apropos(path);
+    if(!port) {
+        fprintf(stderr, "[Zyn:Error] port '%s' does not exist\n", path);
+        return;
+    }
+    auto meta = port->meta();
+    if(!(meta.find("min") && meta.find("max"))) {
+        if(!strstr(port->name, ":T")) {
+            fprintf(stderr, "No bounds for '%s' known\n", path);
+            return;
+        }
+    }
+    if(meta.find("internal") || meta.find("no learn")) {
+        fprintf(stderr, "[Warning] port '%s' is unlearnable\n", path);
+        return;
+    }
+
+    slots[slot].used = true;
+
+    auto &au = slots[slot].automations[ind];
+
+    au.used   = true;
+    au.active = true;
+    au.param_type = 'i';
+    if(strstr(port->name, ":f"))
+        au.param_type = 'f';
+    else if(strstr(port->name, ":T"))
+        au.param_type = 'T';
+    if(au.param_type == 'T') {
+        au.param_min = 0.0;
+        au.param_max = 1.0;
+    } else {
+        au.param_min = atof(meta["min"]);
+        au.param_max = atof(meta["max"]);
+    }
+    fast_strcpy(au.param_path, path, sizeof(au.param_path));
+
+    if(meta["scale"] && strstr(meta["scale"], "log")) {
+        au.map.control_scale = 1;
+        au.param_min = logf(au.param_min);
+        au.param_max = logf(au.param_max);
+    } else
+        au.map.control_scale = 0;
+
+    updateMapping(slot, ind);
+	damaged = true;
+
+}
+
 void  AutomationMgr::setSlotSubGain(int slot_id, int sub, float f)
 {
     if(slot_id >= nslots || slot_id < 0 || sub >= per_slot || sub < 0)
