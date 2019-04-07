@@ -2,6 +2,12 @@
 #include <rtosc/rtosc.h>
 #include <cassert>
 namespace rtosc {
+    
+#define C_dataentryhi 0x06
+#define C_dataentrylo 0x26
+#define C_nrpnhi 99
+#define C_nrpnlo 98
+    
 struct AutomationMapping
 {
     //0 - linear
@@ -56,6 +62,9 @@ struct AutomationSlot
 
     //-1 or a valid MIDI CC + MIDI Channel
     int   midi_cc;
+    
+    //-1 or a valid NRPN ID Channel
+    int   midi_nrpn;
 
     //Current state supplied by MIDI value or host
     float current_state;
@@ -65,6 +74,7 @@ struct AutomationSlot
 
     //Collection of automations
     Automation *automations;
+    
 };
 
 class AutomationMgr
@@ -107,6 +117,9 @@ class AutomationMgr
         const char * getName(int slot_id);
 
         bool handleMidi(int channel, int cc, int val);
+        
+        void setparameternumber(unsigned int type, int value); //used for RPN and NRPN's
+        int getnrpn(int *parhi, int *parlo, int *valhi, int *vallo);
 
         void set_ports(const struct Ports &p);
 
@@ -128,5 +141,12 @@ class AutomationMgr
         std::function<void(const char *)> backend;
 
         int damaged;
+    private:
+    
+        /** RPN and NPRPN */
+        struct { //nrpn
+            int parhi, parlo;
+            int valhi, vallo;
+        } NRPN;
 };
 };

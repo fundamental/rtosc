@@ -14,6 +14,7 @@ AutomationMgr::AutomationMgr(int slots, int per_slot, int control_points)
         auto &s = this->slots[i];
         sprintf(s.name, "Slot %d", i);
         s.midi_cc  = -1;
+        s.midi_nrpn  = -1;
         s.learning = -1;
 
         s.automations = new Automation[per_slot];
@@ -202,6 +203,7 @@ void AutomationMgr::clearSlot(int slot_id)
             slots[i].learning--;
     s.learning = -1;
     s.midi_cc  = -1;
+    s.midi_nrpn  = -1;
     s.current_state = 0;
     memset(s.name, 0, sizeof(s.name));
     sprintf(s.name, "Slot %d", slot_id);
@@ -327,26 +329,59 @@ const char *AutomationMgr::getName(int slot_id)
         return "";
     return slots[slot_id].name;
 }
-bool AutomationMgr::handleMidi(int channel, int cc, int val)
+bool AutomationMgr::handleMidi(int channel, int type, int val)
 {
-    int ccid = channel*128 + cc;
+    bool is_nrpn = false;
+    int par_id;
+    int value;
+    if((type == C_dataentryhi) || (type == C_dataentrylo)
+       || (type == C_nrpnhi) || (type == C_nrpnlo)) { //Process RPN and NRPN by the Master (ignore the chan)
+        
+        setparameternumber(type, val);
 
-    bool bound_cc = false;
-    for(int i=0; i<nslots; ++i) {
-        if(slots[i].midi_cc == ccid) {
-            bound_cc = true;
-            setSlot(i, val/127.0);
+        int parhi = -1, parlo = -1, valhi = -1, vallo = -1;
+        if(getnrpn(&parhi, &parlo, &valhi, &vallo) == 0){ //this is NRPN
+            is_nrpn = true;
+            par_id = (parhi<<7) + parlo;
+            value = (valhi<<7) + vallo;
+            bool bound_nrpn = false;
+            for(int i=0; i<nslots; ++i) {
+                if(slots[i].midi_nrpn == par_id) {
+                    bound_nrpn = true;
+                    setSlot(i, value/16383.0);
+                }
+            }
+
+        if(bound_nrpn)
+            return 1;
         }
+        
     }
+    else {
+        
+        par_id = channel*128 + type;
 
-    if(bound_cc)
-        return 1;
+        bool bound_cc = false;
+        for(int i=0; i<nslots; ++i) {
+            if(slots[i].midi_cc == par_id) {
+                bound_cc = true;
+                setSlot(i, val/127.0);
+            }
+        }
+
+        if(bound_cc)
+            return 1;
+        
+    }
 
     //No bound CC, now to see if there's something to learn
     for(int i=0; i<nslots; ++i) {
         if(slots[i].learning == 1) {
             slots[i].learning = -1;
-            slots[i].midi_cc = ccid;
+            if (is_nrpn)
+                slots[i].midi_nrpn = par_id;
+            else
+                slots[i].midi_cc = par_id;
             for(int j=0; j<nslots; ++j)
                 if(slots[j].learning > 1)
                     slots[j].learning -= 1;
@@ -357,6 +392,44 @@ bool AutomationMgr::handleMidi(int channel, int cc, int val)
         }
     }
     return 0;
+}
+
+//Returns 0 if there is NRPN or 1 if there is not
+int AutomationMgr::getnrpn(int *parhi, int *parlo, int *valhi, int *vallo)
+{
+    if((NRPN.parhi < 0) || (NRPN.parlo < 0) || (NRPN.valhi < 0)
+       || (NRPN.vallo < 0))
+        return 1;
+
+    *parhi = NRPN.parhi;
+    *parlo = NRPN.parlo;
+    *valhi = NRPN.valhi;
+    *vallo = NRPN.vallo;
+    return 0;
+}
+
+void AutomationMgr::setparameternumber(unsigned int type, int value)
+{
+    switch(type) {
+        case C_nrpnhi:
+            NRPN.parhi = value;
+            NRPN.valhi = -1;
+            NRPN.vallo = -1; //clear the values
+            break;
+        case C_nrpnlo:
+            NRPN.parlo = value;
+            NRPN.valhi = -1;
+            NRPN.vallo = -1; //clear the values
+            break;
+        case C_dataentryhi:
+            if((NRPN.parhi >= 0) && (NRPN.parlo >= 0))
+                NRPN.valhi = value;
+            break;
+        case C_dataentrylo:
+            if((NRPN.parhi >= 0) && (NRPN.parlo >= 0))
+                NRPN.vallo = value;
+            break;
+    }
 }
 
 void AutomationMgr::set_ports(const struct Ports &p_) {
