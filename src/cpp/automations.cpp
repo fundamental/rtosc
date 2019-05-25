@@ -12,7 +12,7 @@ AutomationMgr::AutomationMgr(int slots, int per_slot, int control_points)
     memset(this->slots, 0, sizeof(AutomationSlot)*slots);
     for(int i=0; i<slots; ++i) {
         auto &s = this->slots[i];
-        sprintf(s.name, "Slot %d", i);
+        sprintf(s.name, "Slot %d", i + 1);
         s.midi_cc  = -1;
         s.midi_nrpn  = -1;
         s.learning = -1;
@@ -206,7 +206,7 @@ void AutomationMgr::clearSlot(int slot_id)
     s.midi_nrpn  = -1;
     s.current_state = 0;
     memset(s.name, 0, sizeof(s.name));
-    sprintf(s.name, "Slot %d", slot_id);
+    sprintf(s.name, "Slot %d", slot_id + 1);
     for(int i=0; i<per_slot; ++i)
         clearSlotSub(slot_id, i);
     damaged = true;
