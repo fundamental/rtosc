@@ -296,9 +296,15 @@ void port_checker::check_port(const char* loc, const char* portname,
         if(hash_pos != std::string::npos)
         {
             bundle_size = atoi(full_path.data() + hash_pos + 1);
+
             // .../port#16... -> .../port0
             full_path[hash_pos] = '0';
-            full_path.resize(hash_pos+1);
+            std::string::size_type slash = full_path.find('/', hash_pos + 1);
+            full_path.erase(hash_pos + 1,
+                (slash == std::string::npos)
+                ? std::string::npos // cut string after '#0'
+                : slash - (hash_pos + 1) // cut anything between '#0' and '/'
+            );
         }
 
         rtosc::Port::MetaContainer meta(metadata);
