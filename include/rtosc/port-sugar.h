@@ -49,8 +49,9 @@ struct rtosc_hack_decltype_t
 #define STRINGIFY(a) STRINGIFY2(a)
 
 //Helper for documenting varargs
-#define IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,N, ...) N
-#define LAST_IMP(...) IMPL(__VA_ARGS__,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,0,0,0)
+#define IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,N, ...) N
+#define LAST_IMP(...) IMPL(__VA_ARGS__,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,0,0,0)
+#define DOC_IMP13(a,b,c,d,e,f,g,h,i,j,k,l,m) a b c d e f g h i j k l rDoc(m)
 #define DOC_IMP12(a,b,c,d,e,f,g,h,i,j,k,l) a b c d e f g h i j k rDoc(l)
 #define DOC_IMP11(a,b,c,d,e,f,g,h,i,j,k)   a b c d e f g h i j rDoc(k)
 #define DOC_IMP10(a,b,c,d,e,f,g,h,i,j)     a b c d e f g h i rDoc(j)
@@ -115,7 +116,11 @@ struct rtosc_hack_decltype_t
     MAC_EACH_I(off, mac, data, LAST_IMP(__VA_ARGS__), __VA_ARGS__)
 #define MAC_EACH(mac, data, ...) MAC_EACH_OFF(0, mac, data, __VA_ARGS__)
 
-//                    1 2 3 4 5 6 7 8 910111213141516
+//                    1 2 3 4 5 6 7 8 91011121314151617
+#define OPTIONS_IMP17(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q) \
+    rOpt(0,a) rOpt(1,b) rOpt(2,c) rOpt(3,d) rOpt(4,e) rOpt(5,f) rOpt(6,g) \
+    rOpt(7,h) rOpt(8,i) rOpt(9,j) rOpt(10,k)rOpt(11,l)rOpt(12,m)rOpt(13,n)\
+    rOpt(14,o)rOpt(15,p)rOpt(16,q)
 #define OPTIONS_IMP16(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p) \
     rOpt(0,a) rOpt(1,b) rOpt(2,c) rOpt(3,d) rOpt(4,e) rOpt(5,f) rOpt(6,g) \
     rOpt(7,h) rOpt(8,i) rOpt(9,j) rOpt(10,k)rOpt(11,l)rOpt(12,m)rOpt(13,n)\
@@ -308,7 +313,6 @@ template<class T> constexpr T spice(T*t) {return *t;}
 
 #define rTYPE(n) decltype(obj->n)
 
-//#define rAPPLY(n,t) if(obj->n != var) data.reply("/undo_change", "s" #t #t, data.loc, obj->n, var); obj->n = var;
 #define rCAPPLY(getcode, t, setcode) if(getcode != var) data.reply("/undo_change", "s" #t #t, data.loc, getcode, var); setcode;
 #define rAPPLY(n,t) rCAPPLY(obj->n, t, obj->n = var)
 
