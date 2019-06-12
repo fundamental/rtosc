@@ -56,6 +56,13 @@ int main()
     assert_str_eq("/foobar-message", rtosc_bundle_fetch(buffer_c, 1),
             "Verifying Message 2 Path", __LINE__);
 
+    //Verify that rtosc_bundle_size works
+    assert_int_eq(0x1c, rtosc_bundle_size(buffer_c, 0),
+            "Verify rtosc_bundle_size() Works", __LINE__);
+
+    assert_int_eq(0x18, rtosc_bundle_size(buffer_c, 1),
+            "Verify rtosc_bundle_size() Works", __LINE__);
+
     //Check minimum bundle size #bundle + time tag
     assert_int_eq(8+8, rtosc_bundle(buffer_c, 256, 1, 0),
             "Verify Minimum Legal Bundle Size", __LINE__);
