@@ -124,7 +124,7 @@ void port_checker::server::on_recv(const char *path, const char *types,
 //  for(const char** exp_path = exp_paths; *exp_path;
 //      ++exp_path, ++_replied_path)
 //      std::cout << " - exp: " << *exp_path << std::endl;
-    if(waiting && exp_paths && exp_paths[0])
+    if(waiting && exp_paths[0])
     {
         _replied_path = 0;
         for(const char** exp_path = exp_paths; *exp_path;
