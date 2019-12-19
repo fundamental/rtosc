@@ -1,3 +1,4 @@
+#include <atomic>
 #include "../../include/rtosc/thread-link.h"
 
 namespace rtosc {
@@ -8,11 +9,10 @@ namespace rtosc {
 
 
 //Ringbuffer internal structure
-//XXX possible undefined behavior depending on future semantics of volatile
 struct internal_ringbuffer_t {
     char *buffer;
-    volatile off_t write;
-    volatile off_t read;
+    std::atomic<off_t> write;
+    std::atomic<off_t> read;
     size_t size;
 };
 
