@@ -4,7 +4,6 @@ on: [push]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -17,3 +16,27 @@ jobs:
       run: cd build && make
     - name: make test
       run: cd build && make test
+  build:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: install_deps
+      run: sudo apt-get install liblo-dev
+    - name: configure
+      run: mkdir build && cd build && cmake ..
+    - name: make
+      run: cd build && make
+    - name: make test
+      run: cd build && make test
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: install_deps
+      run: sudo apt-get install liblo-dev
+    - name: configure
+      run: cmake .
+    - name: make
+      run: make
+    - name: make test
+      run:  make test
