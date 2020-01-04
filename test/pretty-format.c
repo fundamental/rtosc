@@ -4,6 +4,7 @@
 #include "common.h"
 
 rtosc_arg_val_t scanned[32];
+#define BUF_LEN 256
 
 /**
  * @brief check_alt like check, but specify an alternative expectation
@@ -18,10 +19,10 @@ void check_alt(const char* arg_val_str, const rtosc_print_options* opt,
                const char* tc_base, int line,
                const char* _exp_print)
 {
-    const int tc_len = 256;
-    char tc_full[tc_len]; // descr. for full testcase name
-    int strbuflen = 256;
-    char strbuf[strbuflen];
+    const int tc_len = BUF_LEN;
+    char tc_full[BUF_LEN]; // descr. for full testcase name
+    int strbuflen = BUF_LEN;
+    char strbuf[BUF_LEN];
     memset(strbuf, 0x7f, strbuflen); /* init with rubbish */
 
     int num = rtosc_count_printed_arg_vals(arg_val_str);
@@ -439,8 +440,8 @@ void scan_ranges()
 
 void fail_at_arg(const char* arg_val_str, int exp_fail, int line)
 {
-    const int tc_len = 256;
-    char tc_full[tc_len]; // descr. for full testcase name
+    const int tc_len = BUF_LEN;
+    char tc_full[BUF_LEN]; // descr. for full testcase name
 
     int num = rtosc_count_printed_arg_vals(arg_val_str);
 
@@ -468,7 +469,7 @@ void messages()
 
     num = rtosc_count_printed_arg_vals_of_msg(input);
     assert_int_eq(3, num, "read a /noteOn message", __LINE__);
-    rtosc_arg_val_t scanned[num];
+    rtosc_arg_val_t scanned[3];
     size_t rd = rtosc_scan_message(input, msgbuf, msgbuflen,
                                    scanned, num,
                                    strbuf, strbuflen);
