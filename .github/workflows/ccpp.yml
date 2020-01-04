@@ -42,6 +42,6 @@ jobs:
     - name: configure
       run: ${{matrix.config.config}}
     - name: make
-      run: ${{matrix.config.make}}
+      run: ${{matrix.config.build}}
     - name: make test
       run: ${{matrix.config.test}}
