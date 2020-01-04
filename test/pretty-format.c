@@ -18,7 +18,7 @@ void check_alt(const char* arg_val_str, const rtosc_print_options* opt,
                const char* tc_base, int line,
                const char* _exp_print)
 {
-    int tc_len = 256;
+    const int tc_len = 256;
     char tc_full[tc_len]; // descr. for full testcase name
     int strbuflen = 256;
     char strbuf[strbuflen];
@@ -439,7 +439,7 @@ void scan_ranges()
 
 void fail_at_arg(const char* arg_val_str, int exp_fail, int line)
 {
-    int tc_len = 256;
+    const int tc_len = 256;
     char tc_full[tc_len]; // descr. for full testcase name
 
     int num = rtosc_count_printed_arg_vals(arg_val_str);
