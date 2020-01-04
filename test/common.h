@@ -185,7 +185,7 @@ int assert_hex_eq(const char *a, const char *b, size_t size_a, size_t size_b,
         //create difference mask
         const int longer  = size_a > size_b ? size_a : size_b;
         const int shorter = size_a < size_b ? size_a : size_b;
-        char mask[longer];
+        char *mask = (char*)malloc(longer);
         memset(mask, 0, longer);
         for(int i=0; i<shorter; ++i)
             if(a[i] != b[i])
@@ -197,6 +197,7 @@ int assert_hex_eq(const char *a, const char *b, size_t size_a, size_t size_b,
         printf("#\n");
         printf("# Observed:\n");
         hexdump(b, mask, size_b);
+        free(mask);
 
         global_err++;
     } else
