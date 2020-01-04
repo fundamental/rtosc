@@ -14,16 +14,25 @@ jobs:
                 name: "Windows MinGW",
                 os:   windows-latest,
                 deps: ""
+                config: cmake .
+                build:  make
+                test:   make test
             }
             - {
                 name: "Ubuntu gcc",
                 os:   ubuntu-latest,
                 deps: sudo apt-get install liblo-dev
+                config: mkdir build && cd build && cmake ..
+                build:  cd build && make
+                test:   cd build && make test
             }
             - {
                 name: "macOS clang",
                 os:   macos-latest,
                 deps: ""
+                config: mkdir build && cd build && cmake ..
+                build:  cd build && make
+                test:   cd build && make test
             }
 
     steps:
@@ -31,8 +40,8 @@ jobs:
     - name: install_deps
       run: ${{matrix.config.deps}}
     - name: configure
-      run: mkdir build && cd build && cmake ..
+      run: ${{matrix.config.config}}
     - name: make
-      run: cd build && make
+      run: ${{matrix.config.make}}
     - name: make test
-      run: cd build && make test
+      run: ${{matrix.config.test}}
