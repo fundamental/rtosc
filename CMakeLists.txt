@@ -210,11 +210,10 @@ if(NOT MSVC)
     if(CXX11_FLAG STREQUAL "-std=c++11")
         maketestcpp(typed-template-test)
     endif()
+    maketestcpp(test-automation)
 endif()
 
 maketestcpp(path-collapse)
-
-maketestcpp(test-automation)
 
 find_package(Ruby 1.8)
 if(LIBLO_FOUND AND RUBY_FOUND)
