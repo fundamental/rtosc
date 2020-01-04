@@ -13,7 +13,7 @@ jobs:
             - {
                 name: "Windows MinGW",
                 os:   windows-latest,
-                deps: ""
+                deps: "",
                 config: "cmake .",
                 build:  "make",
                 test:   "make test"
@@ -29,7 +29,7 @@ jobs:
             - {
                 name: "macOS clang",
                 os:   macos-latest,
-                deps: "" ,
+                deps: "",
                 config: "mkdir build && cd build && cmake ..",
                 build:  "cd build && make",
                 test:   "cd build && make test"
