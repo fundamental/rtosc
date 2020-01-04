@@ -11,15 +11,15 @@ jobs:
         matrix:
             config:
             - {
-                name: "Windows MinGW"
+                name: "Windows MinGW",
                 os:   windows-latest
             }
             - {
-                name: "Ubuntu gcc"
+                name: "Ubuntu gcc",
                 os:   ubuntu-latest
             }
             - {
-                name: "macOS clang"
+                name: "macOS clang",
                 os:   macos-latest
             }
 
