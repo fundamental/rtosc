@@ -14,25 +14,25 @@ jobs:
                 name: "Windows MinGW",
                 os:   windows-latest,
                 deps: ""
-                config: cmake .
-                build:  make
-                test:   make test
+                config: "cmake .",
+                build:  "make",
+                test:   "make test"
             }
             - {
                 name: "Ubuntu gcc",
                 os:   ubuntu-latest,
-                deps: sudo apt-get install liblo-dev
-                config: mkdir build && cd build && cmake ..
-                build:  cd build && make
-                test:   cd build && make test
+                deps:   "sudo apt-get install liblo-dev",
+                config: "mkdir build && cd build && cmake ..",
+                build:  "cd build && make",
+                test:   "cd build && make test"
             }
             - {
                 name: "macOS clang",
                 os:   macos-latest,
-                deps: ""
-                config: mkdir build && cd build && cmake ..
-                build:  cd build && make
-                test:   cd build && make test
+                deps: "" ,
+                config: "mkdir build && cd build && cmake ..",
+                build:  "cd build && make",
+                test:   "cd build && make test"
             }
 
     steps:
