@@ -12,21 +12,24 @@ jobs:
             config:
             - {
                 name: "Windows MinGW",
-                os:   windows-latest
+                os:   windows-latest,
+                deps: ""
             }
             - {
                 name: "Ubuntu gcc",
-                os:   ubuntu-latest
+                os:   ubuntu-latest,
+                deps: sudo apt-get install liblo-dev
             }
             - {
                 name: "macOS clang",
-                os:   macos-latest
+                os:   macos-latest,
+                deps: ""
             }
 
     steps:
     - uses: actions/checkout@v1
     - name: install_deps
-      run: sudo apt-get install liblo-dev
+      run: ${{matrix.config.deps}}
     - name: configure
       run: mkdir build && cd build && cmake ..
     - name: make
