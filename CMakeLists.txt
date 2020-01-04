@@ -167,7 +167,6 @@ maketest(util)
 maketest(osc-spec)
 maketest(arg-val-cmp)
 maketest(arg-val-math)
-maketest(pretty-format)
 maketest(simple-messages)
 maketest(null-messages)
 maketest(bundles)
@@ -190,7 +189,6 @@ endif()
 
 maketestcpp(test-midi-mapper)
 maketestcpp(metadata)
-maketestcpp(default-value)
 maketestcpp(headerlib)
 maketestcpp(test-walker)
 
@@ -203,9 +201,15 @@ if(PERF_TEST)
 endif(PERF_TEST)
 
 maketestcpp(undo-test)
-maketestcpp(sugar)
-if(CXX11_FLAG STREQUAL "-std=c++11")
-    maketestcpp(typed-template-test)
+
+
+if(NOT MSVC)
+    maketest(pretty-format)
+    maketestcpp(default-value)
+    maketestcpp(sugar)
+    if(CXX11_FLAG STREQUAL "-std=c++11")
+        maketestcpp(typed-template-test)
+    endif()
 endif()
 
 maketestcpp(path-collapse)
@@ -231,7 +235,7 @@ if(DOXYGEN_FOUND)
     # configuration variables
     set(CMAKE_DOXYGEN_INPUT_LIST ${CMAKE_CURRENT_SOURCE_DIR}/include/rtosc/)
     set(DOXYGEN_OUTPUT_DIR html)
-    
+
     configure_file(Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
     add_custom_command(OUTPUT ${DOXYGEN_OUTPUT_DIR}
         COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
