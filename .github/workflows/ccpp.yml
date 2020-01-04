@@ -10,18 +10,18 @@ jobs:
         fail-fast: false
         matrix:
             config:
-                - {
-                    name: "Windows MinGW?"
-                    os:   windows-latest
-                }
-                - {
-                    name: "Ubuntu gcc"
-                    os:   ubuntu-latest
-                }
-                - {
-                    name: "macOS clang"
-                    os:   macos-latest
-                }
+            - {
+                name: "Windows MinGW"
+                os:   windows-latest
+            }
+            - {
+                name: "Ubuntu gcc"
+                os:   ubuntu-latest
+            }
+            - {
+                name: "macOS clang"
+                os:   macos-latest
+            }
 
     steps:
     - uses: actions/checkout@v1
