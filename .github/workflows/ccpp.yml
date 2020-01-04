@@ -11,11 +11,11 @@ jobs:
         matrix:
             config:
             - {
-                name: "Windows MinGW",
+                name: "Windows MSVC",
                 os:   windows-latest,
                 deps: "",
                 config: "cmake .",
-                build:  "make",
+                build:  "cmake --build .",
                 test:   "make test"
             }
             - {
