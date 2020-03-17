@@ -51,6 +51,7 @@ struct Ports;
 struct RtData
 {
     RtData(void);
+    virtual ~RtData() = default;
 
     /**
      * Location of where the dispatch routine is currently being called.
@@ -313,7 +314,7 @@ typedef void(*port_walker_t)(const Port*,const char*,const char*,
  * @param walker Callback function
  * @param expand_bundles Whether walking over bundles without subports
  *   invokes walking over each of the bundle's port
- * @param runtime Runtime object corresponding to @param base. If given, checks
+ * @param runtime Runtime object corresponding to @p base . If given, checks
  *   the runtime object will be used stop recursion if the Ports are disabled
  *   (using the "enabled by" property) and it will be passed to the walker
  */

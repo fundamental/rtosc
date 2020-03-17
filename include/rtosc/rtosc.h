@@ -287,7 +287,7 @@ size_t rtosc_message_ring_length(ring_t *ring);
 bool rtosc_valid_message_p(const char *msg, size_t len);
 
 /**
- * @param OSC message
+ * @param msg OSC message
  * @returns the argument string of a given message
  */
 const char *rtosc_argument_string(const char *msg);
