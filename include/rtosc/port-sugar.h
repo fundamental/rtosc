@@ -320,7 +320,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
 
 #define rTYPE(n) decltype(obj->n)
 
-#define rCAPPLY(getcode, t, setcode) if(getcode != var) data.reply("/undo_change", "s" #t #t, data.loc, getcode, var); setcode;
+#define rCAPPLY(getcode, t, setcode) if(static_cast<int>(getcode) != var) data.reply("/undo_change", "s" #t #t, data.loc, static_cast<int>(getcode), var); setcode;
 #define rAPPLY(n,t) rCAPPLY(obj->n, t, obj->n = var)
 
 #define rParamCb(name) rBOIL_BEGIN \
@@ -358,9 +358,9 @@ template<class T> constexpr T spice(T*t) {return *t;}
 
 #define rCOptionCb_(getcode, setcode) { \
             if(!strcmp("", args)) {\
-                data.reply(loc, "i", getcode); \
+                data.reply(loc, "i", static_cast<int>(getcode)); \
             } else if(!strcmp("s", args) || !strcmp("S", args)) { \
-                auto var = \
+                int var = \
                     enum_key(prop, rtosc_argument(msg, 0).s); \
                 /* make sure we have no out-of-bound options */ \
                 assert(!prop["min"] || \
@@ -371,7 +371,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
                 data.broadcast(loc, "i", getcode); \
                 rChangeCb \
             } else {\
-                auto var = \
+                int var = \
                     rtosc_argument(msg, 0).i; \
                 rLIMIT(var, atoi) \
                 rCAPPLY(getcode, i, setcode) \
@@ -380,7 +380,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
             } \
         }
 
-#define rOptionCb_(name) rCOptionCb_(obj->name, obj->name = var)
+#define rOptionCb_(name) rCOptionCb_(obj->name, obj->name = static_cast<std::remove_reference<decltype(obj->name)>::type>(var))
 
 #define rOptionCb(name) rBOIL_BEGIN \
     rOptionCb_(name) \
