@@ -320,3 +320,6 @@ if(FLTK_FOUND)
 else()
     message(STATUS "FLTK disabled      -- ${Yellow}package NOT found${ColorReset}")
 endif()
+
+message(STATUS "C   flags: ${CMAKE_C_FLAGS}")
+message(STATUS "C++ flags: ${CMAKE_CXX_FLAGS}")
