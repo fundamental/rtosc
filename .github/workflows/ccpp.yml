@@ -16,7 +16,7 @@ jobs:
                 deps: "",
                 config: "cmake .",
                 build:  "cmake --build .",
-                test:   "make test"
+                test:   "ctest --output-on-failure"
             }
             - {
                 name: "Ubuntu gcc",
