@@ -86,5 +86,9 @@ int main()
             "Check First Blob Length", __LINE__);
     assert_int_eq(1,rtosc_argument(buffer, 1).b.len,
             "Check Second Blob Length", __LINE__);
+
+    printf("#Check mixed argument types (storage requirement vs no-requirement)\n");
+    int sz0 = rtosc_message(buffer, 256, "/page/poge", "TFs", "foobar");
+    assert_int_eq(28, sz0, "Check a 'TFs' type message can be constructed", __LINE__);
     return test_summary();
 }

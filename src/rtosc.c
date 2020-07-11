@@ -379,9 +379,47 @@ size_t rtosc_vmessage(char   *buffer,
         return rtosc_amessage(buffer,len,address,arguments,NULL);
 
     STACKALLOC(rtosc_arg_t, args, nargs);
-    rtosc_va_list_t ap2;
-    va_copy(ap2.a, ap);
-    rtosc_v2args(args, nargs, arguments, &ap2);
+    unsigned arg_pos = 0;
+    const char *arg_str = arguments;
+    uint8_t *midi_tmp;
+    while(arg_pos < nargs)
+    {
+        switch(*arg_str++) {
+            case 'h':
+            case 't':
+                args[arg_pos++].h = va_arg(ap, int64_t);
+                break;
+            case 'd':
+                args[arg_pos++].d = va_arg(ap, double);
+                break;
+            case 'c':
+            case 'i':
+            case 'r':
+                args[arg_pos++].i = va_arg(ap, int);
+                break;
+            case 'm':
+                midi_tmp = va_arg(ap, uint8_t *);
+                args[arg_pos].m[0] = midi_tmp[0];
+                args[arg_pos].m[1] = midi_tmp[1];
+                args[arg_pos].m[2] = midi_tmp[2];
+                args[arg_pos++].m[3] = midi_tmp[3];
+                break;
+            case 'S':
+            case 's':
+                args[arg_pos++].s = va_arg(ap, const char *);
+                break;
+            case 'b':
+                args[arg_pos].b.len = va_arg(ap, int);
+                args[arg_pos].b.data = va_arg(ap, unsigned char *);
+                arg_pos++;
+                break;
+            case 'f':
+                args[arg_pos++].f = va_arg(ap, double);
+                break;
+            default:
+                ;
+        }
+    }
 
     return rtosc_amessage(buffer,len,address,arguments,args);
 }
