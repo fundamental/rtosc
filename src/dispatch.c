@@ -287,10 +287,12 @@ bool rtosc_match_partial(const char *a, const char *b)
             return true;
         else
             return false;
-    } else if(type == 4) {
+    } else if(type == 4) { //Case not implemented
+        assert(false);
+        return false;
         //extract substring
-        const char *sub=NULL;
-        return strstr(a,sub);
+        //const char *sub=NULL;
+        //return strstr(a,sub);
     } else if(type == RTOSC_MATCH_OPTIONS || type == 6) {
         return false;
     } else if(type == RTOSC_MATCH_ENUMERATED) {

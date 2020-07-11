@@ -74,13 +74,13 @@ bool match_path(std::true_type, const char *)
 template<int i, class This, class... Rest>
 bool validate(const char *arg)
 {
-    auto size = advance_size<This>::size;
+    decltype(advance_size<This>::size) size;
     if(size && !valid_char<This>(rtosc_type(arg,i)))
         return false;
     else if(!size && !match_path<This>(size, arg))
         return false;
     else
-        return validate<i+advance_size<This>::size,Rest...>(arg);
+        return validate<i+size,Rest...>(arg);
 }
 
 //Tuple Like Template Class Definition

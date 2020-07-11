@@ -171,7 +171,7 @@ MidiMapperStorage *MidiMappernRT::generateNewBijection(const Port &port, std::st
         cb(buf);
     };
     if(bi.min == 0 && bi.max == 127 && type =='i')
-        tmp = [bi,addr,type](int16_t x, MidiMapperStorage::write_cb cb) {
+        tmp = [addr](int16_t x, MidiMapperStorage::write_cb cb) {
         //printf("special case in = %x out = %d\n", x, 0x7f&(x>>7));
         char buf[1024];
         rtosc_message(buf, 1024, addr.c_str(), "i", 0x7f&(x>>7));

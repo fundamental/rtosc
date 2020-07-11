@@ -88,7 +88,6 @@ class port_checker_tester
             bool forwarded;
         private:
             char *buffer;
-            pc_data_obj *mwi;
     };
 
     lo_server srv;

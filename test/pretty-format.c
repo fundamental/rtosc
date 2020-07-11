@@ -441,13 +441,13 @@ void scan_ranges()
 void fail_at_arg(const char* arg_val_str, int exp_fail, int line)
 {
     const int tc_len = BUF_LEN;
-    char tc_full[BUF_LEN]; // descr. for full testcase name
+    char tc_full[BUF_LEN] = {0}; // descr. for full testcase name
 
     int num = rtosc_count_printed_arg_vals(arg_val_str);
 
     strcpy(tc_full, "find 1st invalid arg in \"");
     strncat(tc_full, arg_val_str, tc_len-25);
-    strncat(tc_full, "\"", tc_len);
+    strncat(tc_full, "\"", tc_len-1);
     assert_int_eq(exp_fail, -num, tc_full, line);
 }
 
