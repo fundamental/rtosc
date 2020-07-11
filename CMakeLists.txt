@@ -37,8 +37,13 @@ if(NOT WIN32 OR CMAKE_COMPILER_IS_GNUCC)
 endif()
 
 if(MSVC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4244")
-    set(CPP_FLAGS     "${CPP_FLAGS} /wd4244")
+    #Ignore the type narrowing conversion warnings
+    set(CNV_WARN "/wd4244 /wd4267 /wd4305")
+    #Ignore the whole non-portable string*_s function recommendations 
+    set(SAFE_WARN "/wd4996")
+
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CNV_WARN} ${SAFE_WARN}")
+    set(CPP_FLAGS     "${CPP_FLAGS} ${CNF_WARN} ${SAFE_WARN}")
 endif(MSVC)
 
 if(CMAKE_COMPILER_IS_GNUCC)
