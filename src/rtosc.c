@@ -94,7 +94,7 @@ static size_t arg_start(const char *msg_)
     return arg_pos-msg;
 }
 
-static ssize_t arg_size(const uint8_t *arg_mem, char type)
+static unsigned arg_size(const uint8_t *arg_mem, char type)
 {
     if(!has_reserved(type))
         return 0;
