@@ -17,8 +17,8 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     include(GNUInstallDirs)
 endif()
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version.c.in
-    ${CMAKE_CURRENT_BINARY_DIR}/version.c)
+#configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version.c.in
+#    ${CMAKE_CURRENT_BINARY_DIR}/version.c)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 if(NOT MSVC)
@@ -75,11 +75,18 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CPP_FLAGS} ${CXX11_FLAG}")
 
-add_library(rtosc STATIC src/rtosc.c src/dispatch.c src/pretty-format.c
-            src/arg-val-math.c src/arg-val-cmp.c src/rtosc-time.c src/util.c
-            ${CMAKE_CURRENT_BINARY_DIR}/version.c)
+add_library(rtosc STATIC
+    src/rtosc.c
+    src/dispatch.c
+    src/pretty-format.c
+    src/util.c)
+            #src/arg-val-math.c
+            #src/arg-val-cmp.c
+            #src/rtosc-time.c
+            #${CMAKE_CURRENT_BINARY_DIR}/version.c)
 add_library(rtosc-cpp STATIC src/cpp/ports.cpp src/cpp/ports-runtime.cpp
-    src/cpp/default-value.cpp src/cpp/savefile.cpp
+    src/cpp/default-value.cpp
+    src/cpp/savefile.cpp
     src/cpp/miditable.cpp
     src/cpp/automations.cpp
     src/cpp/midimapper.cpp
@@ -103,6 +110,7 @@ endif()
 
 
 # Example Code
+set(OpenGL_GL_PREFERENCE "GLVND")
 find_package(FLTK)
 if(NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Windows"))
     find_package(PkgConfig)
@@ -174,11 +182,11 @@ macro(maketestcpp fname)
     target_link_libraries(${fname} rtosc-cpp rtosc)
 endmacro(maketestcpp)
 
-maketest(version)
+#maketest(version)
 maketest(util)
 maketest(osc-spec)
-maketest(arg-val-cmp)
-maketest(arg-val-math)
+#maketest(arg-val-cmp)
+#maketest(arg-val-math)
 maketest(simple-messages)
 maketest(null-messages)
 maketest(bundles)
@@ -216,7 +224,7 @@ maketestcpp(undo-test)
 
 
 if(NOT MSVC)
-    maketest(pretty-format)
+    #maketest(pretty-format)
     maketestcpp(default-value)
     maketestcpp(sugar)
     if(CXX11_FLAG STREQUAL "-std=c++11")
@@ -273,7 +281,6 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT DEFINED RTOSC_NO_INSTALL)
         include/rtosc/undo-history.h
         include/rtosc/subtree-serialize.h
         include/rtosc/typed-message.h
-        include/rtosc/rtosc-version.h
         DESTINATION include/rtosc)
     install(TARGETS rtosc rtosc-cpp
         DESTINATION ${CMAKE_INSTALL_LIBDIR})

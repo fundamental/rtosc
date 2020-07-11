@@ -52,16 +52,24 @@ const char* get_default_value(const char* port_name, const Ports& ports,
         if(*dependent_port == '/')
             ++dependent_port;
 
-        const char* dependent_value =
-            runtime
-            ? helpers::get_value_from_runtime(runtime, ports,
-                                              buffersize, loc,
-                                              dependent_port,
-                                              buffersize-1, 0)
-            : get_default_value(dependent_port, ports,
+        const char* dependent_value = nullptr;
+        char dep_str[120] = {0};
+        if(runtime) { //we get a message rather than a string
+            const Port *p = ports.apropos(dependent_port);
+            if(p) {
+                auto vl = helpers::simple_runtime_value(runtime, *p,
+                        dependent_port);
+                assert(vl.type == 'i');
+                snprintf(dep_str, 120, "%d", vl.val.i);
+            }
+        } else {
+            dependent_value = get_default_value(dependent_port, ports,
                                 runtime, NULL, recursive-1);
-
-        assert(strlen(dependent_value) < 16); // must be an int
+            //We just lookup the value in the metadata string
+            dep_str[119] = '\0';
+            strncpy(dep_str, dependent_value, 119);
+        }
+        assert(strlen(dep_str) < 16); // must be an int
 
         char* default_variant = buffer;
         *default_variant = 0;
@@ -69,7 +77,7 @@ const char* get_default_value(const char* port_name, const Ports& ports,
         strncat(default_variant, default_annotation,
                 buffersize - strlen(default_variant));
         strncat(default_variant, " ", buffersize - strlen(default_variant));
-        strncat(default_variant, dependent_value,
+        strncat(default_variant, dep_str,
                 buffersize - strlen(default_variant));
 
         return_value = metadata[default_variant];
@@ -104,6 +112,7 @@ int get_default_value(const char* port_name, const char* port_args,
     int nargs;
     if(pretty)
     {
+        printf("PRETTY DEFAULT????\n");
         nargs = rtosc_count_printed_arg_vals(pretty);
         assert(nargs > 0); // parse error => error in the metadata?
         assert((size_t)nargs < n);

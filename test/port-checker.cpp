@@ -10,7 +10,7 @@
 
 #include <rtosc/ports.h>
 #include <rtosc/pretty-format.h>
-#include <rtosc/arg-val-math.h>
+//#include <rtosc/arg-val-math.h>
 #include <lo/lo.h>
 #include <lo/lo_lowlevel.h>
 
@@ -184,7 +184,16 @@ bool port_checker::server::send_msg(const char* address,
                                     size_t nargs, const rtosc_arg_val_t* args)
 {
     char buffer[2048];
-    int len = rtosc_avmessage(buffer, sizeof(buffer), address, nargs, args);
+    char types[20] = {0};
+    rtosc_arg_t arg[20] = {0};
+    if(nargs > 19)
+        throw std::runtime_error("Could not send message (too many args)");
+
+    for(size_t i=0; i<nargs; ++i) {
+        types[i] = args[i].type;
+        arg[i] = args[i].val;
+    }
+    int len = rtosc_amessage(buffer, sizeof(buffer), address, types, arg);
     int res = 0;
     lo_message msg  = lo_message_deserialise(buffer, len, &res);
     if(msg == nullptr) {
@@ -401,11 +410,11 @@ void port_checker::check_port(const char* loc, const char* portname,
                                             break;
                                     }
                                 }
-                                if(!infinite) {
-                                    raise(issue::rdefault_not_infinite);
-                                    if(arrsize != bundle_size)
-                                        raise(issue::bundle_size_not_matching_rdefault);
-                                }
+                                //if(!infinite) {
+                                //    raise(issue::rdefault_not_infinite);
+                                //    if(arrsize != bundle_size)
+                                //        raise(issue::bundle_size_not_matching_rdefault);
+                                //}
                             }
                         }
                     }

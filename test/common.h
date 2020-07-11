@@ -15,6 +15,7 @@ int assert_int_eq(int a, int b, const char *testcase, int line)
         printf("not ok %d - %s...\n", test_counter, testcase);
         printf("# Expected %d, but observed %d instead (line %d)\n", a, b, line);
         global_err++;
+        exit(1);
     } else
         printf("ok %d - %s...\n", test_counter, testcase);
     return err;
@@ -60,6 +61,7 @@ int assert_str_eq(const char *a, const char *b, const char *testcase, int line)
         printf("not ok %d - %s...\n", test_counter, testcase);
         printf("# Expected '%s', but observed '%s' instead (line %d)\n", a, b, line);
         global_err++;
+        exit(1);
     } else
         printf("ok %d - %s...\n", test_counter, testcase);
     return err;
@@ -187,7 +189,7 @@ int assert_hex_eq(const char *a, const char *b, size_t size_a, size_t size_b,
         const size_t shorter = size_a < size_b ? size_a : size_b;
         char *mask = (char*)malloc(longer);
         memset(mask, 0, longer);
-        for(int i=0; i<shorter; ++i)
+        for(size_t i=0; i<shorter; ++i)
             if(a[i] != b[i])
                 mask[i] = 1;
 

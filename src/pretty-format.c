@@ -9,9 +9,6 @@
 
 #include <rtosc/rtosc.h>
 #include <rtosc/pretty-format.h>
-#include <rtosc/rtosc-time.h>
-#include <rtosc/arg-val-math.h>
-#include <rtosc/arg-val-cmp.h>
 
 /**
     @file pretty-format.c
@@ -154,17 +151,17 @@ static int rtosc_print_range(const rtosc_arg_val_t* arg,
 
             if(val->r.has_delta)
             {
-                rtosc_arg_val_t one, m_one;
-                rtosc_arg_val_from_int(  &one, first_arg->type,  1);
-                rtosc_arg_val_from_int(&m_one, first_arg->type, -1);
-                if(   !rtosc_arg_vals_eq_single(arg+1,   &one, NULL)
-                   && !rtosc_arg_vals_eq_single(arg+1, &m_one, NULL))
+                //rtosc_arg_val_t one, m_one;
+                //rtosc_arg_val_from_int(  &one, first_arg->type,  1);
+                //rtosc_arg_val_from_int(&m_one, first_arg->type, -1);
+                if(false)//   !rtosc_arg_vals_eq_single(arg+1,   &one, NULL)
+                   //&& !rtosc_arg_vals_eq_single(arg+1, &m_one, NULL))
                 {
                     asnprintf(buffer, bs, " ");
                     COUNT_UP_COL(1);
 
                     rtosc_arg_val_t second;
-                    rtosc_arg_val_range_arg(arg, 1, &second);
+                    //rtosc_arg_val_range_arg(arg, 1, &second);
                     tmp = rtosc_print_arg_val(&second, buffer, bs,
                                               opt, cols_used);
                     COUNT_UP(tmp);
@@ -207,7 +204,7 @@ static int rtosc_print_range(const rtosc_arg_val_t* arg,
         const rtosc_arg_val_t *cur;
         if(val->r.has_delta)
         {
-            rtosc_arg_val_range_arg(arg, i, &tmparg);
+            //rtosc_arg_val_range_arg(arg, i, &tmparg);
             cur = &tmparg;
         }
         else
@@ -285,73 +282,6 @@ static const char* numeric_range_convertible_types()
     return "cihTF";
 }
 
-//! tries to convert all args starting at @a arg into
-//! an arg val range - if possible
-//! @param arg_out array, output which must have the size of arg or more;
-//!        may be the same as arg
-//! @return The number of really skipped argument values
-static int32_t rtosc_convert_to_range(const rtosc_arg_val_t* const arg,
-                                      size_t size,
-                                      rtosc_arg_val_t* arg_out,
-                                      const rtosc_print_options* opt)
-{
-    if(size < range_min || arg[0].type == '-' || !opt->compress_ranges)
-        return 0;
-    char type = arg->type;
-    size_t num_common = 0;
-    for(size_t i = 0; i < size; i += incsize(arg+i), ++num_common)
-    {
-        if(type != arg[i].type)
-            break;
-    }
-    if(num_common < range_min)
-        return 0;
-
-    int32_t skipped;
-    num_common = 1;
-    int has_delta;
-    rtosc_arg_val_t delta, added;
-
-    if(rtosc_arg_vals_eq_single(arg, arg + incsize(arg), NULL))
-        has_delta = 0;
-    else if(strchr(numeric_range_convertible_types(), arg->type)) {
-        has_delta = 1;
-        rtosc_arg_val_sub(arg+1, arg, &delta);
-    }
-    else return 0;
-
-    {
-        int go_on = 1;
-        size_t next;
-        for(skipped = incsize(arg); go_on; skipped = next, ++num_common)
-        {
-            next = skipped + incsize(arg+skipped);
-
-            if(has_delta)
-                rtosc_arg_val_add(arg+skipped, &delta, &added);
-
-            if(next >= size || !rtosc_arg_vals_eq_single(has_delta ? &added
-                                                                   : arg,
-                                                         arg+next, NULL))
-                go_on = false;
-        }
-    }
-
-    if(num_common >= range_min)
-    {
-        insert_arg_range(arg_out, num_common, arg, has_delta, &delta,
-                         false, false);
-        const rtosc_arg_val_t* old_arg_out = arg_out;
-        arg_out += 1 + has_delta;
-        arg_out += incsize(arg);
-        arg_out->type = ' ';
-        arg_out->val.a.len = skipped - (arg_out - old_arg_out) - 1;
-        return skipped;
-    }
-    else
-        return 0;
-}
-
 size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                            char *buffer, size_t bs,
                            const rtosc_print_options* opt, int *cols_used)
@@ -387,52 +317,8 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
         case 'h':
             wrt = asnprintf(buffer, bs, "%"PRId64"h", val->h);
             break;
-        case 't': // write to ISO 8601 date
-        {
-            if(rtosc_arg_val_is_immediatelly(arg))
-                wrt = asnprintf(buffer, bs, "immediately");
-            else
-            {
-                struct tm* m_tm = rtosct_params_from_arg_val(arg);
-                int32_t secfracs = rtosct_secfracs_from_arg_val(arg);
-
-                const char* strtimefmt = (secfracs || m_tm->tm_sec)
-                                  ? "%Y-%m-%d %H:%M:%S"
-                                  : (m_tm->tm_hour || m_tm->tm_min)
-                                    ? "%Y-%m-%d %H:%M"
-                                    : "%Y-%m-%d";
-
-                wrt = strftime(buffer, bs, strtimefmt, m_tm);
-                assert(wrt);
-
-                if(secfracs)
-                {
-                    int prec = opt->floating_point_precision;
-                    assert(prec>=0);
-                    assert(prec<100);
-
-                    // convert fractions -> float
-                    float flt = rtosc_secfracs2float(secfracs);
-
-                    // append float
-                    char fmtstr[8];
-                    asnprintf(fmtstr, 5, "%%.%df", prec);
-                    int lastwrt = wrt;
-                    wrt += asnprintf(buffer + wrt, bs - wrt,
-                                     fmtstr, flt);
-                    // snip part before separator
-                    const char* sep = strchr(buffer + lastwrt, '.');
-                    assert(sep);
-                    memmove(buffer + lastwrt, sep, strlen(sep)+1);
-                    wrt -= (sep - (buffer + lastwrt));
-
-                    if(opt->lossless)
-                        wrt += asnprintf(buffer + wrt, bs - wrt,
-                                         " (...+%as)", flt);
-                } // if secfracs
-            } // else
-            break;
-        }
+        case 't': // out-of-scope
+            assert(false);
         case 'r':
             wrt = asnprintf(buffer, bs, "#%02x%02x%02x%02x",
                       (val->i >> 24) & 0xff,
@@ -560,41 +446,9 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
             buffer[-1] = ']';
             break;
         case 'a':
-        {
-            char* last_sep = buffer - 1;
-            int args_written_this_line = (cols_used) ? 1 : 0;
-            STACKALLOC(rtosc_arg_val_t, args_converted, val->a.len); // range conversion
-
-            COUNT_UP_WRITE('[');
-            if(val->a.len)
-            for(int32_t i = 1; i <= val->a.len; )
-            {
-                int32_t conv = rtosc_convert_to_range(arg+i, val->a.len+1-i, args_converted, opt);
-                const rtosc_arg_val_t* input = conv ? args_converted : arg+i;
-
-                size_t tmp = rtosc_print_arg_val(input, buffer, bs,
-                                                 opt, cols_used);
-                i += conv ? conv : next_arg_offset(arg+i);
-                COUNT_UP(tmp);
-
-                linebreak_check_after_write(cols_used, &wrt,
-                                            last_sep, &buffer, &bs,
-                                            tmp, &args_written_this_line,
-                                            opt->linelength);
-
-                last_sep = buffer;
-                COUNT_UP_WRITE(' ');
-            }
-            else
-                COUNT_UP_WRITE(' ');
-
-            assert(bs);
-            buffer[-1] = ']';
-            *buffer = 0;
-            ++*cols_used;
-            --bs;
+            assert(false);
             break;
-        }
+        
         case '-':
         {
             wrt += rtosc_print_range(arg, buffer, bs, opt, cols_used);
@@ -637,7 +491,7 @@ size_t rtosc_print_arg_vals(const rtosc_arg_val_t *args, size_t n,
 
     for(size_t i = 0; i < n;)
     {
-        int32_t conv = rtosc_convert_to_range(args, n-i, args_converted, opt);
+        int32_t conv = 0;
         const rtosc_arg_val_t* input = conv ? args_converted : args;
 
         size_t tmp = rtosc_print_arg_val(input, buffer, bs, opt, &cols_used);
@@ -899,6 +753,13 @@ int32_t delta_from_arg_vals(const rtosc_arg_val_t* llhsarg,
                             rtosc_arg_val_t* delta,
                             int must_be_unity)
 {
+    (void) llhsarg;
+    (void) lhsarg;
+    (void) rhsarg;
+    (void) delta;
+    (void) must_be_unity;
+    return false;
+#if 0
     /*
         compute delta
     */
@@ -944,6 +805,7 @@ int32_t delta_from_arg_vals(const rtosc_arg_val_t* llhsarg,
     else
         res = -1; // return 0 to say "infinite range"
     return res + 1;
+#endif
 }
 
 static int is_range_multiplier(const char* s)
@@ -1465,6 +1327,7 @@ size_t rtosc_scan_arg_val(const char* src,
                           char* buffer_for_strings, size_t* bufsize,
                           size_t args_before, int follow_ellipsis)
 {
+    (void) args_before;
     int rd = 0;
     const char* start = src;
     assert(nargs);
@@ -1480,7 +1343,7 @@ size_t rtosc_scan_arg_val(const char* src,
             // timestamps "immediately" or "now"?
             if(skip_word("immediately", &src) || skip_word("now", &src))
             {
-                rtosc_arg_val_immediatelly(arg);
+                //rtosc_arg_val_immediatelly(arg);
             }
             else if(skip_word("true", &src)  ||
                     skip_word("false", &src) )
@@ -1727,7 +1590,8 @@ size_t rtosc_scan_arg_val(const char* src,
                     sscanf(src, "%f%n", &secfracsf, &rd);
                     src += rd;
 
-                    secfracs = rtosc_float2secfracs(secfracsf);
+                    secfracs = 0;
+                    //secfracs = rtosc_float2secfracs(secfracsf);
                 }
                 else
                 {
@@ -1735,7 +1599,7 @@ size_t rtosc_scan_arg_val(const char* src,
                     secfracs = 0;
                 }
 
-                rtosc_arg_val_from_params(arg, &m_tm, secfracs);
+                //rtosc_arg_val_from_params(arg, &m_tm, secfracs);
             }
             else
             {
@@ -1795,20 +1659,20 @@ size_t rtosc_scan_arg_val(const char* src,
     if(follow_ellipsis && !strncmp(src2, "...", 3))
     {
         src = src2;
-        rtosc_arg_val_t delta, rhs;
-        size_t zero;
+        //rtosc_arg_val_t delta, rhs;
+        //size_t zero;
 
         // lhsarg has already been read
-        rtosc_arg_val_t lhsarg = *arg;
+        //rtosc_arg_val_t lhsarg = *arg;
 
         // skip ellipsis and read rhs
         src += 2;
         while(isspace(*++src)) ;
 
-        int infinite_range = (*src == ']');
+        //int infinite_range = (*src == ']');
 
-        if(!infinite_range)
-            src += rtosc_scan_arg_val(src, &rhs, 1, NULL, &zero, 0, 0);
+        //if(!infinite_range)
+        //    src += rtosc_scan_arg_val(src, &rhs, 1, NULL, &zero, 0, 0);
 
         /*
             these shall be conforming to delta_from_arg_vals,
@@ -1816,7 +1680,8 @@ size_t rtosc_scan_arg_val(const char* src,
                  if no ranges, the elements themselves
          */
         // find llhs position
-        rtosc_arg_val_t tmp;
+        //rtosc_arg_val_t tmp;
+#if 0
         // argument "-2" could be a delta arg
         rtosc_arg_val_t* llhsarg = (args_before > 2 &&
                                     arg[-3].type == '-' &&
@@ -1855,6 +1720,7 @@ size_t rtosc_scan_arg_val(const char* src,
         }
 
         insert_arg_range(arg, num, &lhsarg, has_delta, &delta, true, true);
+#endif
     }
 
     return (size_t)(src-start);
@@ -1913,4 +1779,3 @@ size_t rtosc_scan_message(const char* src,
 
     return rd;
 }
-

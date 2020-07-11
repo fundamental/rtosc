@@ -155,14 +155,6 @@ static const Ports envelope_ports = {
             obj->read_or_store(m, d, obj->attack_rate); }},
     rOption(scale_type, rProp(parameter) rOpt(0, logarithmic), rOpt(1, linear),
             rDefault(linear), "scale type"),
-    // array: env_type 0: 0 0 0 0
-    //        env_type 1: 0 1 2 3
-    rArrayI(array, 4, rDefaultDepends(env_type),
-            /*rPreset(0, 0),*/
-            rPreset(0, [4x0]),
-            rPreset(1, [0 1 2 3]), // bash the whole array to 0 for preset 1
-            rDefault(3), // all not yet specified values are set to 3
-            "some bundle"),
     // port without rDefault macros
     // must not be noted for the savefile
     {"paste:b", rProp(parameter), NULL,
@@ -195,11 +187,9 @@ void envelope_types()
 
     e1.sustain         =  40; // != envelope 0's default
     e2.sustain         =   0; // != envelope 1's default
-    e2.attack_rate     = 127; // = envelope 1's default
+    e2.attack_rate     = 127; //  = envelope 1's default
     e2.env_type        =   1; // != default
     e2.scale_type      =   0; // != default
-    for(size_t i = 0; i < 4; ++i)
-        e2.array[i] = 3-i;
 
     assert_str_eq("30", get_default_value("sustain::i", envelope_ports, &e1),
                   "get default value with runtime (1)", __LINE__);
@@ -217,7 +207,7 @@ void envelope_types()
                   get_changed_values(envelope_ports, &e1).c_str(),
                   "get changed values where none are changed", __LINE__);
     const char* changed_e2 = "/sustain 0\n/scale_type logarithmic\n"
-                             "/array [3 2 1 0]\n/env_type 1";
+                             "/env_type 1";
     assert_str_eq(changed_e2,
                   get_changed_values(envelope_ports, &e2).c_str(),
                   "get changed values where three are changed", __LINE__);
@@ -231,7 +221,7 @@ void envelope_types()
     //       dispatch_printed_messages() executes these messages in the
     //       correct order.
     int num = dispatch_printed_messages("%this is a savefile\n"
-                                        "/sustain 60 /env_type 1\n"
+                                        "/sustain 60\n /env_type 1\n"
                                         "/attack_rate 10 % a useless comment\n"
                                         "/scale_type 0",
                                         envelope_ports, &e3);
@@ -249,19 +239,12 @@ void envelope_types()
     assert_int_eq(-13, num,
                   "restore values from a corrupt savefile (3)", __LINE__);
 
-    std::string appname = "default-values-test",
-                appver_str = "0.0.1";
-    rtosc_version appver = rtosc_version { 0, 0, 1 };
+    std::string appname = "default-values-test";
     std::string savefile = save_to_file(envelope_ports, &e2,
-                                        appname.c_str(),
-                                        appver);
+                                        appname.c_str());
     char cur_rtosc_buf[12];
-    rtosc_version cur_rtosc = rtosc_current_version();
-    rtosc_version_print_to_12byte_str(&cur_rtosc, cur_rtosc_buf);
-    std::string exp_savefile = "% RT OSC v";
+    std::string exp_savefile = "";
                 exp_savefile += cur_rtosc_buf;
-                exp_savefile += " savefile\n"
-                               "% " + appname + " v" + appver_str + "\n";
     exp_savefile += changed_e2;
 
     assert_str_eq(exp_savefile.c_str(), savefile.c_str(),
@@ -271,9 +254,9 @@ void envelope_types()
 
     int rval = load_from_file(exp_savefile.c_str(),
                               envelope_ports, &e2_restored,
-                              appname.c_str(), appver);
+                              appname.c_str());
 
-    assert_int_eq(4, rval,
+    assert_int_eq(3, rval,
                   "load savefile from file, 4 messages read", __LINE__);
 
     auto check_restored = [](int i1, int i2, const char* member) {
@@ -284,10 +267,6 @@ void envelope_types()
     check_restored(e2.sustain, e2_restored.sustain, "sustain value");
     check_restored(e2.attack_rate, e2_restored.attack_rate, "attack rate");
     check_restored(e2.scale_type, e2_restored.scale_type, "scale type");
-    check_restored(e2.array[0], e2_restored.array[0], "array[0]");
-    check_restored(e2.array[1], e2_restored.array[1], "array[1]");
-    check_restored(e2.array[2], e2_restored.array[2], "array[2]");
-    check_restored(e2.array[3], e2_restored.array[3], "array[3]");
     check_restored(e2.env_type, e2_restored.env_type, "envelope type");
 }
 
@@ -325,149 +304,6 @@ static const Ports savefile_test_ports = {
 
 const rtosc::Ports& SavefileTest::ports = savefile_test_ports;
 
-void savefiles()
-{
-    int rval = load_from_file("% NOT AN RT OSC v0.0.1 savefile\n"
-                              // => error: it should be "RT OSC"
-                              "% my_application v0.0.1",
-                              savefile_test_ports, NULL,
-                              "my_application", rtosc_version {1, 2, 3});
-    assert_int_eq(-1, rval,
-                  "reject file that has an invalid first line", __LINE__);
-
-    rval = load_from_file("% RT OSC v0.0.1 savefile\n"
-                          "% not_my_application v0.0.1",
-                          // => error: application name mismatch
-                          savefile_test_ports, NULL,
-                          "my_application", rtosc_version {1, 2, 3});
-    assert_int_eq(-25, rval,
-                  "reject file from another application", __LINE__);
-
-    struct my_dispatcher_t : public rtosc::savefile_dispatcher_t
-    {
-
-        int modify(char* portname,
-                   size_t maxargs, size_t nargs, rtosc_arg_val_t* args,
-                   bool round2)
-        {
-            int newsize = nargs;
-
-            if(round2)
-            {
-                if(rtosc_version_cmp(rtosc_filever,
-                                     rtosc_version{0, 0, 4}) < 0)
-                   /* version < 0.0.4 ? */
-                {
-                    if(rtosc_version_cmp(rtosc_filever,
-                                         rtosc_version{0, 0, 3}) < 0)
-                    {
-                        if(rtosc_version_cmp(rtosc_filever,
-                                             rtosc_version{0, 0, 2}) < 0)
-                        {
-                            {
-                                // dispatch an additional message
-                                char buffer[32];
-                                rtosc_message(buffer, 32,
-                                              "/very_old_version", "T");
-                                operator()(buffer);
-                            }
-
-                            if(nargs == 0 && maxargs >= 1)
-                            {
-                                memcpy(portname+1, "new", 3);
-                                args[0].val.i = 42;
-                                args[0].type = 'i';
-                                newsize = 1;
-                            }
-                            else // wrong argument count or not enough space
-                                newsize = abort;
-                        }
-                        else // i.e. version = 0.0.2
-                            newsize = discard;
-                    }
-                    else // i.e. version = 0.0.3
-                        newsize = abort;
-                }
-                /* for versions >= 0.0.4, we just let "/old_param" pass */
-                /* in order to get a dispatch error */
-            }
-            else {
-                // discard "/old_param" in round 1, since nothing depends on it
-                newsize = discard;
-            }
-
-            return newsize;
-        }
-
-        int on_dispatch(size_t, char* portname,
-                        size_t maxargs, size_t nargs, rtosc_arg_val_t* args,
-                        bool round2, dependency_t dependency)
-        {
-            return (portname[1] == 'o' && !strcmp(portname, "/old_param"))
-                ? modify(portname, maxargs, nargs, args, round2)
-                : default_response(nargs, round2, dependency);
-        }
-    };
-
-    my_dispatcher_t my_dispatcher;
-    SavefileTest sft;
-
-    auto reset_savefile = [](SavefileTest& sft) {
-        sft.new_param = 0; sft.very_old_version = false;
-        sft.further_param = 0;
-    };
-#define MAKE_TESTFILE(ver) "% RT OSC " ver " savefile\n" \
-                           "% savefiletest v1.2.3\n" \
-                           "/old_param\n" \
-                           "/further_param 123"
-
-    reset_savefile(sft);
-    rval = load_from_file(MAKE_TESTFILE("v0.0.1"),
-                          savefile_test_ports, &sft,
-                          "savefiletest", rtosc_version {1, 2, 3},
-                          &my_dispatcher);
-    assert_int_eq(2, rval, "savefile: 2 messages read for v0.0.1", __LINE__);
-    assert_int_eq(42, sft.new_param, "port renaming works", __LINE__);
-    assert_true(sft.very_old_version,
-                "additional messages work", __LINE__);
-    assert_int_eq(123, sft.further_param,
-                  "further parameter is being dispatched for v0.0.1", __LINE__);
-
-    reset_savefile(sft);
-    rval = load_from_file(MAKE_TESTFILE("v0.0.2"),
-                          savefile_test_ports, &sft,
-                          "savefiletest", rtosc_version {1, 2, 3},
-                          &my_dispatcher);
-    assert_int_eq(2, rval, "savefile: 2 messages read for v0.0.2", __LINE__);
-    assert_int_eq(0, sft.new_param, "message discarding works", __LINE__);
-    assert_int_eq(123, sft.further_param,
-                  "further parameter is being dispatched for v0.0.2", __LINE__);
-
-    reset_savefile(sft);
-    // test with v0.0.3
-    // abort explicitly (see savefile dispatcher implementation)
-    rval = load_from_file(MAKE_TESTFILE("v0.0.3"),
-                          savefile_test_ports, &sft,
-                          "savefiletest", rtosc_version {1, 2, 3},
-                          &my_dispatcher);
-    assert_int_eq(-59, rval, "savefile: 1 error for v0.0.3", __LINE__);
-    assert_int_eq(123, sft.further_param,
-                  "no further parameter is being dispatched for v0.0.3",
-                  __LINE__);
-    // test with v0.0.4
-    // abort implicitly (the port is unknown)
-    rval = load_from_file(MAKE_TESTFILE("v0.0.4"),
-                          savefile_test_ports, &sft,
-                          "savefiletest", rtosc_version {1, 2, 3},
-                          &my_dispatcher);
-    assert_int_eq(-59, rval, "savefile: 1 error for v0.0.4", __LINE__);
-    assert_int_eq(123, sft.further_param,
-                  "no further parameter is being dispatched for v0.0.4",
-                  __LINE__);
-
-#undef MAKE_TESTFILE
-}
-
 int main()
 {
     port_sugar();
@@ -476,7 +312,6 @@ int main()
     simple_default_values();
     envelope_types();
     presets();
-    savefiles();
 
     return test_summary();
 }

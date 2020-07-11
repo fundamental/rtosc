@@ -4,7 +4,7 @@
 #include <algorithm>
 
 #include "../util.h"
-#include <rtosc/arg-val-cmp.h>
+//#include <rtosc/arg-val-cmp.h>
 #include <rtosc/pretty-format.h>
 #include <rtosc/bundle-foreach.h>
 #include <rtosc/ports.h>
@@ -19,7 +19,18 @@ namespace {
     constexpr size_t max_arg_vals = 2048;
 }
 
-std::string get_changed_values(const Ports& ports, void* runtime)
+bool arg_eq(rtosc_arg_val_t a, rtosc_arg_val_t b)
+{
+    if(a.type != b.type)
+        return false;
+    if(a.type != 'i')
+        return false;
+    if(a.val.i == b.val.i)
+        return true;
+    return false;
+}
+
+std::string get_changed_values(const Ports& ports, void *runtime)
 {
     std::string res;
     char port_buffer[buffersize];
@@ -30,17 +41,9 @@ std::string get_changed_values(const Ports& ports, void* runtime)
                const char* port_from_base, const Ports& base,
                void* data, void* runtime)
     {
-
+        printf("Reached port <%s><%s>\n", port_buffer, port_from_base);
         assert(runtime);
         const Port::MetaContainer meta = p->meta();
-#if 0
-// practical for debugging if a parameter was changed, but not saved
-        const char* cmp = "/part15/kit0/adpars/GlobalPar/Reson/Prespoints";
-        if(!strncmp(port_buffer, cmp, strlen(cmp)))
-        {
-            puts("break here");
-        }
-#endif
 
         if((p->name[strlen(p->name)-1] != ':' && !strstr(p->name, "::"))
             || meta.find("parameter") == meta.end())
@@ -48,9 +51,7 @@ std::string get_changed_values(const Ports& ports, void* runtime)
             // runtime information can not be retrieved,
             // thus, it can not be compared with the default value
             return;
-        }
-        else
-        { // TODO: duplicate to above? (colon[1])
+        } else { // TODO: duplicate to above? (colon[1])
             const char* colon = strchr(p->name, ':');
             if(!colon || !colon[1])
             {
@@ -62,7 +63,7 @@ std::string get_changed_values(const Ports& ports, void* runtime)
 
         char loc[buffersize] = ""; // buffer to hold the dispatched path
         rtosc_arg_val_t arg_vals_default[max_arg_vals];
-        rtosc_arg_val_t arg_vals_runtime[max_arg_vals];
+        std::vector<rtosc_arg_val_t> arg_vals_runtime;
         // buffer to hold the message (i.e. /port ..., without port's bases)
         char buffer_with_port[buffersize];
         char strbuf[buffersize]; // temporary string buffer for pretty-printing
@@ -81,13 +82,6 @@ std::string get_changed_values(const Ports& ports, void* runtime)
         if(!portargs)
             portargs = p->name + strlen(p->name);
 
-#if 0 // debugging stuff
-        if(!strncmp(port_buffer, "/part1/Penabled", 5) &&
-           !strncmp(port_buffer+6, "/Penabled", 9))
-        {
-            printf("runtime: %ld\n", (long int)runtime);
-        }
-#endif
 // TODO: p->name: duplicate to p
         int nargs_default = get_default_value(p->name,
                                               portargs,
@@ -99,6 +93,7 @@ std::string get_changed_values(const Ports& ports, void* runtime)
                                               arg_vals_default,
                                               strbuf,
                                               buffersize);
+        printf("nargs_default = %d\n", nargs_default);
 
         if(nargs_default > 0)
         {
@@ -115,15 +110,10 @@ std::string get_changed_values(const Ports& ports, void* runtime)
                 // over to loc_end
                 fast_strcpy(loc_end, old_end, loc_remain_size);
 
-                size_t nargs_runtime_cur =
-                    helpers::get_value_from_runtime(runtime, *p,
-                                                    buffersize, loc, old_end,
-                                                    buffer_with_port,
-                                                    buffersize,
-                                                    max_arg_vals,
-                                                    arg_vals_runtime +
-                                                        nargs_runtime);
-                nargs_runtime += nargs_runtime_cur;
+                auto values = helpers::runtime_values(runtime,
+                        *p, loc);
+                for(auto v: values)
+                    arg_vals_runtime.push_back(v);
             };
 
             auto refix_old_end = [&base](const Port* _p, char* _old_end)
@@ -161,94 +151,56 @@ std::string get_changed_values(const Ports& ports, void* runtime)
             else
                 ftor(p, port_buffer, port_from_base, base, NULL, runtime);
 
-#if 0
-// practical for debugging if a parameter was changed, but not saved
-            const char* cmp = "/part15/kit0/adpars/GlobalPar/Reson/Prespoints";
-            if(!strncmp(port_buffer, cmp, strlen(cmp)))
-            {
-                puts("break here");
-            }
-#endif
             canonicalize_arg_vals(arg_vals_default, nargs_default,
                                   strchr(p->name, ':'), meta);
 
             auto write_msg = [&res, &meta, &port_buffer]
                                  (const rtosc_arg_val_t* arg_vals_default,
-                                  rtosc_arg_val_t* arg_vals_runtime,
-                                  int nargs_default, size_t nargs_runtime)
+                                  std::vector<rtosc_arg_val_t> arg_vals_runtime,
+                                  int nargs_default)
             {
-                if(!rtosc_arg_vals_eq(arg_vals_default, arg_vals_runtime,
-                                      nargs_default, nargs_runtime, nullptr))
+                printf("Write message?\n");
+                printf("t1 = %c\n", arg_vals_default[0].type);
+                printf("t2 = %c\n", arg_vals_runtime[0].type);
+                printf("v1 = %d\n", arg_vals_default[0].val.i);
+                printf("v2 = %d\n", arg_vals_runtime[0].val.i);
+                bool args_equal = true;
+                if(arg_vals_runtime.size() != nargs_default) {
+                    printf("HERE\n");
+                    args_equal = false;
+                }
+                if(args_equal)
+                    for(int i=0; i<nargs_default; ++i)
+                        if(!arg_eq(arg_vals_runtime[i], arg_vals_default[i]))
+                            args_equal = false;
+                if(!args_equal)
                 {
+                    printf("ARGS DIFFERENT!!(%s)\n", port_buffer);
                     char cur_value_pretty[buffersize] = " ";
 
-                    map_arg_vals(arg_vals_runtime, nargs_runtime, meta);
+                    map_arg_vals(arg_vals_runtime.data(),
+                                 arg_vals_runtime.size(), meta);
 
-                    rtosc_print_arg_vals(arg_vals_runtime, nargs_runtime,
+                    rtosc_print_arg_vals(arg_vals_runtime.data(),
+                            arg_vals_runtime.size(),
                                          cur_value_pretty + 1, buffersize - 1,
                                          NULL, strlen(port_buffer) + 1);
                     *res += port_buffer;
                     *res += cur_value_pretty;
                     *res += "\n";
+                    printf("<%s>\n", res->c_str());
                 }
             }; // functor write_msg
 
-            if(arg_vals_runtime[0].type == 'a' && strchr(port_from_base, '/'))
+            printf("Here type = %c\n", arg_vals_runtime[0].type);
+            if(false) {
+            } else
             {
-                // These are grouped as an array, but the port structure
-                // implicits that they shall be handled as single values
-                // inside their subtrees
-                //  => We don't print this as an array
-                //  => All arrays in savefiles have their numbers after
-                //     the last port separator ('/')
-
-                // used if the value of lhs or rhs is range-computed:
-                rtosc_arg_val_t rlhs, rrhs;
-
-                rtosc_arg_val_itr litr, ritr;
-                rtosc_arg_val_itr_init(&litr, arg_vals_default+1);
-                rtosc_arg_val_itr_init(&ritr, arg_vals_runtime+1);
-
-                auto write_msg_adaptor = [&litr, &ritr,&rlhs,&rrhs,&write_msg](
-                    const Port* p,
-                    const char* port_buffer, const char* old_end,
-                    const Ports&, void*, void*)
-                {
-                    const rtosc_arg_val_t
-                        * lcur = rtosc_arg_val_itr_get(&litr, &rlhs),
-                        * rcur = rtosc_arg_val_itr_get(&ritr, &rrhs);
-
-                    if(!rtosc_arg_vals_eq_single(
-                            rtosc_arg_val_itr_get(&litr, &rlhs),
-                            rtosc_arg_val_itr_get(&ritr, &rrhs), nullptr))
-                    {
-                        auto get_sz = [](const rtosc_arg_val_t* a) {
-                            return a->type == 'a' ? (a->val.a.len + 1) : 1; };
-                        // the const-ness does not matter
-                        write_msg(lcur,
-                            const_cast<rtosc_arg_val_t*>(rcur),
-                            get_sz(lcur), get_sz(rcur));
-                    }
-
-                    rtosc_arg_val_itr_next(&litr);
-                    rtosc_arg_val_itr_next(&ritr);
-                };
-
-                char* old_end_noconst = const_cast<char*>(port_from_base);
-
-                // iterate over the whole array
-                bundle_foreach(*p, p->name, old_end_noconst, port_buffer,
-                               base, NULL, NULL,
-                               write_msg_adaptor, true);
-
-                // glue the old end behind old_end_noconst again
-                refix_old_end(p, old_end_noconst);
-
-            }
-            else
-            {
-                write_msg(arg_vals_default, arg_vals_runtime,
-                          nargs_default, nargs_runtime);
+                printf("\n");
+                printf("Default path to write_msg\n");
+                write_msg(arg_vals_default, 
+                        arg_vals_runtime,
+                        nargs_default);
             }
         }
     };
@@ -268,6 +220,9 @@ bool savefile_dispatcher_t::do_dispatch(const char* msg)
     d.obj = runtime;
     d.loc = loc; // we're always dispatching at the base
     d.loc_size = 1024;
+    if(msg[0] == '/')
+        msg++;
+    printf("dispatch on <%s>\n", msg);
     ports->dispatch(msg, d, true);
     return !!d.matches;
 }
@@ -334,6 +289,7 @@ int dispatch_printed_messages(const char* messages,
                 rd = rtosc_scan_message(msg_ptr, portname, buffersize,
                                         arg_vals, nargs, strbuf, buffersize);
                 rd_total += rd;
+                printf("scanned <%s>:%d\n", portname, nargs);
 
                 const Port* port = ports.apropos(portname);
                 savefile_dispatcher_t::dependency_t dependency =
@@ -348,6 +304,7 @@ int dispatch_printed_messages(const char* messages,
                 nargs = dispatcher->on_dispatch(buffersize, portname,
                                                 maxargs, nargs, arg_vals,
                                                 round, dependency);
+                printf("nargs after ondispatch = %d\n", nargs);
 
                 if(nargs == savefile_dispatcher_t::abort)
                     ok = false;
@@ -356,83 +313,24 @@ int dispatch_printed_messages(const char* messages,
                     if(nargs != savefile_dispatcher_t::discard)
                     {
                         const rtosc_arg_val_t* arg_val_ptr;
-                        bool is_array;
-                        if(nargs && arg_vals[0].type == 'a')
-                        {
-                            is_array = true;
-                            // arrays of arrays are not yet supported -
-                            // neither by rtosc_*message, nor by the inner for
-                            // loop below.
-                            // arrays will probably have an 'a' (or #)
-                            assert(arg_vals[0].val.a.type != 'a' &&
-                                   arg_vals[0].val.a.type != '#');
-                            // we won't read the array arg val anymore
-                            --nargs;
-                            arg_val_ptr = arg_vals + 1;
-                        }
-                        else {
-                            is_array = false;
-                            arg_val_ptr = arg_vals;
-                        }
+                        bool is_array = false;
 
                         char* portname_end = portname + strlen(portname);
-
-                        rtosc_arg_val_itr itr;
-                        rtosc_arg_val_t buffer;
-                        const rtosc_arg_val_t* cur;
-
-                        rtosc_arg_val_itr_init(&itr, arg_val_ptr);
-
-                        // for bundles, send each element separately
-                        // for non-bundles, send all elements at once
-                        for(size_t arr_idx = 0;
-                            itr.i < (size_t)std::max(nargs,1) && ok; ++arr_idx)
-                        {
-                            // this will fail for arrays of arrays,
-                            // since it only copies one arg val
-                            // (arrays are not yet specified)
-                            size_t i;
-                            const size_t last_pos = itr.i;
-                            const size_t elem_limit = is_array
-                                  ? 1 : std::numeric_limits<int>::max();
-
-                            // equivalent to the for loop below, in order to
-                            // find out the array size
-                            size_t val_max = 0;
-                            {
-                                rtosc_arg_val_itr itr2 = itr;
-                                for(val_max = 0;
-                                    itr2.i - last_pos < (size_t)nargs &&
-                                        val_max < elem_limit;
-                                    ++val_max)
-                                {
-                                    rtosc_arg_val_itr_next(&itr2);
-                                }
-                            }
-                            STACKALLOC(rtosc_arg_t, vals, val_max);
-                            STACKALLOC(char, argstr, val_max+1);
-
-                            for(i = 0;
-                                itr.i - last_pos < (size_t)nargs &&
-                                    i < elem_limit;
-                                ++i)
-                            {
-                                cur = rtosc_arg_val_itr_get(&itr, &buffer);
-                                vals[i] = cur->val;
-                                argstr[i] = cur->type;
-                                rtosc_arg_val_itr_next(&itr);
-                            }
-
-                            argstr[i] = 0;
-
-                            if(is_array)
-                                snprintf(portname_end, 8, "%d", (int)arr_idx);
-
-                            rtosc_amessage(message, buffersize, portname,
-                                           argstr, vals);
-
-                            ok = (*dispatcher)(message);
+                        char args[32]  = {0};
+                        char msg[1024] = {0};
+                        rtosc_arg_t arg[32];
+                        for(int i=0; i<nargs; ++i) {
+                            args[i] = arg_vals[i].type;
+                            arg[i]  = arg_vals[i].val;
                         }
+
+                        size_t sz = rtosc_amessage(msg, sizeof(msg),
+                                portname, args,
+                                arg);
+                        printf("msg = <%s>\n", msg);
+                        if(sz)
+                            ok = (*dispatcher)(msg);
+                        printf("ok -> %d\n", ok);
                     }
                 }
 
@@ -450,75 +348,23 @@ int dispatch_printed_messages(const char* messages,
             }
         }
     }
+    printf("msg_read = <%d>\n", msgs_read);
+    printf("ok = %d\n", ok);
     return ok ? msgs_read : -rd_total-1;
 }
 
 std::string save_to_file(const Ports &ports, void *runtime,
-                         const char *appname, rtosc_version appver)
+                         const char *appname)
 {
-    std::string res;
-    char rtosc_vbuf[12], app_vbuf[12];
-
-    {
-        rtosc_version rtoscver = rtosc_current_version();
-        rtosc_version_print_to_12byte_str(&rtoscver, rtosc_vbuf);
-        rtosc_version_print_to_12byte_str(&appver, app_vbuf);
-    }
-
-    res += "% RT OSC v"; res += rtosc_vbuf; res += " savefile\n"
-           "% "; res += appname; res += " v"; res += app_vbuf; res += "\n";
-    res += get_changed_values(ports, runtime);
-
-    return res;
+    return get_changed_values(ports, runtime);
 }
 
 int load_from_file(const char* file_content,
                    const Ports& ports, void* runtime,
                    const char* appname,
-                   rtosc_version appver,
                    savefile_dispatcher_t* dispatcher)
 {
-    char appbuf[128];
     int bytes_read = 0;
-
-    if(dispatcher)
-    {
-        dispatcher->app_curver = appver;
-        dispatcher->rtosc_curver = rtosc_current_version();
-    }
-
-    unsigned vma, vmi, vre;
-    int n = 0;
-
-    sscanf(file_content,
-           "%% RT OSC v%u.%u.%u savefile%n ", &vma, &vmi, &vre, &n);
-    if(n <= 0 || vma > 255 || vmi > 255 || vre > 255)
-        return -bytes_read-1;
-    if(dispatcher)
-    {
-        dispatcher->rtosc_filever.major = vma;
-        dispatcher->rtosc_filever.minor = vmi;
-        dispatcher->rtosc_filever.revision = vre;
-    }
-    file_content += n;
-    bytes_read += n;
-    n = 0;
-
-    sscanf(file_content,
-           "%% %128s v%u.%u.%u%n ", appbuf, &vma, &vmi, &vre, &n);
-    if(n <= 0 || strcmp(appbuf, appname) || vma > 255 || vmi > 255 || vre > 255)
-        return -bytes_read-1;
-
-    if(dispatcher)
-    {
-        dispatcher->app_filever.major = vma;
-        dispatcher->app_filever.minor = vmi;
-        dispatcher->app_filever.revision = vre;
-    }
-    file_content += n;
-    bytes_read += n;
-    n = 0;
-
     int rval = dispatch_printed_messages(file_content,
                                          ports, runtime, dispatcher);
     return (rval < 0) ? (rval-bytes_read) : rval;

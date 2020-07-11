@@ -34,7 +34,6 @@
 
 #include <string>
 #include <rtosc/rtosc.h>
-#include <rtosc/rtosc-version.h>
 
 namespace rtosc {
 
@@ -74,10 +73,6 @@ protected:
         not_specified     //! it's not know which of the other enum values fit
     };
 
-    rtosc_version rtosc_filever, //!< rtosc versinon savefile was written with
-                  rtosc_curver, //!< rtosc version of this library
-                  app_filever, //!< app version savefile was written with
-                  app_curver; //!< current app version
 
     //! call this to dispatch a message
     bool operator()(const char* msg) { return do_dispatch(msg); }
@@ -103,7 +98,6 @@ private:
     friend int load_from_file(const char* file_content,
                               const struct Ports& ports, void* runtime,
                               const char* appname,
-                              rtosc_version appver,
                               savefile_dispatcher_t* dispatcher);
 };
 
@@ -132,7 +126,7 @@ int dispatch_printed_messages(const char* messages,
  * @return The resulting savefile as an std::sting
  */
 std::string save_to_file(const struct Ports& ports, void* runtime,
-                         const char* appname, rtosc_version appver);
+                         const char* appname);
 
 /**
  * Read save file and dispatch contained parameters.
@@ -149,7 +143,6 @@ std::string save_to_file(const struct Ports& ports, void* runtime,
 int load_from_file(const char* file_content,
                    const struct Ports& ports, void* runtime,
                    const char* appname,
-                   rtosc_version appver,
                    savefile_dispatcher_t* dispatcher = NULL);
 
 }

@@ -30,6 +30,7 @@
 #define PORTS_RUNTIME
 
 #include <cstddef>
+#include <vector>
 #include <rtosc/rtosc.h>
 
 namespace rtosc {
@@ -77,6 +78,16 @@ size_t get_value_from_runtime(void* runtime, const struct Port& port,
 // TODO: clean up those funcs:
 // * use dispatch instead of cb
 // * don't pass loc etc
+
+std::vector<rtosc_arg_val_t>
+runtime_values(void *runtime,
+                    const struct Port &port, 
+                    const char *path);
+
+rtosc_arg_val_t
+simple_runtime_value(void *runtime,
+                    const Port &port,
+                    const char *name);
 
 }
 }
