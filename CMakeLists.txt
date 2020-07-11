@@ -21,7 +21,9 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version.c.in
     ${CMAKE_CURRENT_BINARY_DIR}/version.c)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(CXX11_FLAG "-std=c++11")
+if(NOT MSVC)
+    set(CXX11_FLAG "-std=c++11")
+endif()
 set(FPIC_FLAG "-fPIC")
 set(OPT_FLAG "-O2")
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
@@ -43,7 +45,7 @@ if(MSVC)
     set(SAFE_WARN "/wd4996")
 
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CNV_WARN} ${SAFE_WARN}")
-    set(CPP_FLAGS     "${CPP_FLAGS} ${CNF_WARN} ${SAFE_WARN}")
+    set(CPP_FLAGS     "${CPP_FLAGS} ${CNV_WARN} ${SAFE_WARN}")
 endif(MSVC)
 
 if(CMAKE_COMPILER_IS_GNUCC)
