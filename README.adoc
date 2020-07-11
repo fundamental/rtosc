@@ -1,6 +1,7 @@
 RtOsc - Realtime safe OSC Messaging
 ===================================
 
+
 image::https://travis-ci.org/fundamental/rtosc.svg?branch=master[alt="Build status", link="https://travis-ci.org/fundamental/rtosc"]
 
 A realtime safe library for handling OSC messages.
