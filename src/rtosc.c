@@ -80,7 +80,7 @@ char rtosc_type(const char *msg, unsigned nargument)
     }
 }
 
-static unsigned arg_start(const char *msg_)
+static size_t arg_start(const char *msg_)
 {
     const uint8_t *msg = (const uint8_t*)msg_;
     //Iterate to the right position
@@ -94,7 +94,7 @@ static unsigned arg_start(const char *msg_)
     return arg_pos-msg;
 }
 
-static unsigned arg_size(const uint8_t *arg_mem, char type)
+static ssize_t arg_size(const uint8_t *arg_mem, char type)
 {
     if(!has_reserved(type))
         return 0;
@@ -662,9 +662,9 @@ rtosc_arg_val_t rtosc_itr_next(rtosc_arg_itr_t *itr)
         result.val = extract_arg(itr->value_pos, result.type);
 
     //advance
-    itr->type_pos = advance_past_dummy_args(itr->type_pos+1);
-    char type = result.type;
-    int size  = arg_size(itr->value_pos, type);
+    itr->type_pos   = advance_past_dummy_args(itr->type_pos+1);
+    char   type     = result.type;
+    size_t size     = arg_size(itr->value_pos, type);
     itr->value_pos += size;
 
 

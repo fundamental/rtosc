@@ -36,6 +36,11 @@ if(NOT WIN32 OR CMAKE_COMPILER_IS_GNUCC)
     set(CPP_FLAGS       "${OPT_FLAG} ${FPIC_FLAG} -Wall -Wextra -Wno-unused-parameter")
 endif()
 
+if(MSVC)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4244")
+    set(CPP_FLAGS     "${CPP_FLAGS} /wd4244")
+endif(MSVC)
+
 if(CMAKE_COMPILER_IS_GNUCC)
     execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
         OUTPUT_VARIABLE GCC_VERSION)

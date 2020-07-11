@@ -183,8 +183,8 @@ int assert_hex_eq(const char *a, const char *b, size_t size_a, size_t size_b,
         //printf("# Expected '%s', but observed '%s' instead (line %d)\n", a, b, line);
 
         //create difference mask
-        const int longer  = size_a > size_b ? size_a : size_b;
-        const int shorter = size_a < size_b ? size_a : size_b;
+        const size_t longer  = size_a > size_b ? size_a : size_b;
+        const size_t shorter = size_a < size_b ? size_a : size_b;
         char *mask = (char*)malloc(longer);
         memset(mask, 0, longer);
         for(int i=0; i<shorter; ++i)
