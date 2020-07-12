@@ -62,20 +62,12 @@ set(MSVC_CNV_WARN "/wd4244 /wd4267 /wd4305")
 set(MSVC_SAFE_WARN "/wd4996")
 
 if(MSVC)
-    set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   ${CNV_WARN} ${SAFE_WARN}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CNV_WARN} ${SAFE_WARN}")
+    set(CMAKE_C_FLAGS     "${CMAKE_C_FLAGS} ${MSVC_CNV_WARN} ${MSVC_SAFE_WARN}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MSVC_CNV_WARN} ${MSVC_SAFE_WARN}")
 else()
     set(CMAKE_C_FLAGS     "${CMAKE_C_FLAGS} -Wall -Wextra")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
 endif(MSVC)
-
-if(RTOSC_INCLUDE_WHAT_YOU_USE)
-    if(NOT RTOSC_IWYU_PATH)
-        set(IWYU_ERR "package NOT found")
-    endif()
-else()
-    set(IWYU_ERR "disabled (RTOSC_INCLUDE_WHAT_YOU_USE=OFF)")
-endif()
 
 add_library(rtosc STATIC SHARED
     src/rtosc.c
@@ -100,9 +92,7 @@ target_include_directories(rtosc  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_options(rtosc      PRIVATE
         "$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-std=c99>")
 
-if(IWYU_ERR)
-    message (STATUS "Include what you use: ${IWYU_ERR}")
-else()
+if(RTOSC_IWYU_PATH AND RTOSC_INCLUDE_WHAT_YOU_USE)
     set(RTOSC_IWYU_PATH_AND_OPTIONS
         ${RTOSC_IWYU_PATH}
         -Xiwyu
@@ -262,11 +252,13 @@ message(STATUS "${ColorBold}Rtosc Build Configuration")
 message(STATUS             "=========================${ColorReset}")
 message(STATUS)
 
-package_status(PKG_CONFIG_FOUND     "PkgConfig  " "found"   ${Yellow})
-package_status(LIBLO_FOUND          "Liblo      " "enabled" ${Yellow})
-package_status(JACK_FOUND           "jack       " "enabled" ${Yellow})
-package_status(GUI_FOUND            "FLTK       " "enabled" ${Yellow})
-package_status(BUILD_RTOSC_EXAMPLES "Examples   " "enabled" ${Yellow})
+package_status(PKG_CONFIG_FOUND           "PkgConfig  " "found"   ${Yellow})
+package_status(LIBLO_FOUND                "Liblo      " "enabled" ${Yellow})
+package_status(JACK_FOUND                 "jack       " "enabled" ${Yellow})
+package_status(GUI_FOUND                  "FLTK       " "enabled" ${Yellow})
+package_status(BUILD_RTOSC_EXAMPLES       "Examples   " "enabled" ${Yellow})
+package_status(RTOSC_IWYU_PATH            "IWYU       " "found"   ${Yellow})
+package_status(RTOSC_INCLUDE_WHAT_YOU_USE "IWYU       " "enabled" ${Yellow})
 
 message(STATUS "Build C   flags: ${CMAKE_C_FLAGS}")
 message(STATUS "Build C++ flags: ${CMAKE_CXX_FLAGS}")
