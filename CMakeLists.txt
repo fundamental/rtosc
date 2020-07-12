@@ -144,6 +144,8 @@ macro(maketest fname)
     add_executable(${fname} test/${fname}.c)
     add_test(${fname} ${fname})
     target_link_libraries(${fname} PRIVATE rtosc)
+    target_compile_options(${fname} PRIVATE
+        "$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-std=c99>")
     #add_test(memcheck_${fname} valgrind --leak-check=full --show-reachable=yes --error-exitcode=1 ./${fname})
 endmacro(maketest)
 
