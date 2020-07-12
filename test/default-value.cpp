@@ -242,10 +242,7 @@ void envelope_types()
     std::string appname = "default-values-test";
     std::string savefile = save_to_file(envelope_ports, &e2,
                                         appname.c_str());
-    char cur_rtosc_buf[12];
-    std::string exp_savefile = "";
-                exp_savefile += cur_rtosc_buf;
-    exp_savefile += changed_e2;
+    std::string exp_savefile = changed_e2;
 
     assert_str_eq(exp_savefile.c_str(), savefile.c_str(),
                   "save testfile", __LINE__);
