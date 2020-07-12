@@ -24,7 +24,7 @@ jobs:
                 deps:   "sudo apt-get install liblo-dev",
                 config: "mkdir build && cd build && cmake ..",
                 build:  "cd build && make",
-                test:   "cd build && make test"
+                test:   "cd build && ctest --output-on-failure"
             }
             - {
                 name: "macOS clang",
@@ -32,7 +32,7 @@ jobs:
                 deps: "",
                 config: "mkdir build && cd build && cmake ..",
                 build:  "cd build && make",
-                test:   "cd build && make test"
+                test:   "cd build && ctest --output-on-failure"
             }
 
     steps:

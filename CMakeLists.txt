@@ -69,13 +69,13 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
 endif(MSVC)
 
-add_library(rtosc STATIC SHARED
+add_library(rtosc SHARED STATIC
     src/rtosc.c
     src/dispatch.c
     src/pretty-format.c
     src/util.c)
 
-add_library(rtosc-cpp STATIC SHARED
+add_library(rtosc-cpp SHARED STATIC
     src/cpp/ports.cpp
     src/cpp/ports-runtime.cpp
     src/cpp/default-value.cpp
