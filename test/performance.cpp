@@ -162,9 +162,9 @@ int main()
     /*
      * run RTOSC
      */
-    int repeats = 200000;
+    const int repeats = 200000;
     clock_t t_on = clock(); // timer before calling func
-    for(int j=0; j<200000; ++j) {
+    for(int j=0; j<repeats; ++j) {
         for(int i=0; i<20; ++i){
             port_table.dispatch(events[i], d);
         }
@@ -282,7 +282,7 @@ int main()
     add_methods(liblo_port_info, server, liblo_do_nothing);
 
     t_on = clock(); // timer before calling func
-    for(int j=0; j<200000; ++j) {
+    for(int j=0; j<repeats; ++j) {
         for(int i=0; i<20; ++i){
             lo_server_dispatch_data(server, lo_messages[i].memory,
                                             lo_messages[i].exact_size);
