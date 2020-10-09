@@ -496,7 +496,7 @@ void port_checker::print_evaluation() const
     std::cout << "# Port evaluation" << std::endl;
 
     issue last_issue = issue::number;
-    for(const std::pair<issue, std::string>& p : m_issues)
+    for(const std::pair<const issue, std::string>& p : m_issues)
     {
         if(last_issue != p.first)
         {
@@ -604,7 +604,7 @@ const std::multimap<issue, std::string> &port_checker::issues() const {
 int port_checker::errors_found() const
 {
     int errors = 0;
-    for(const std::pair<issue, std::string>& p : m_issues)
+    for(const std::pair<const issue, std::string>& p : m_issues)
         errors += (m_issue_types.at(p.first).sev == severity::error);
     return errors;
 }
