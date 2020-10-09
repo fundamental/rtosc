@@ -701,6 +701,8 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
         const int32_t meta_len = blob.len;
         const bool has_meta = meta_len && metadata && *metadata;
         const bool has_subports = portname[portlen-1] == '/';
+        if(!has_meta)
+           metadata = "";
 /*      std::cout << "port /" << loc << portname
                   << " (" << port_no << "/" << port_max
                   << "), has subports: " << std::boolalpha << has_subports
