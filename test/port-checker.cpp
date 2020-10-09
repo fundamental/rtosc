@@ -208,12 +208,13 @@ bool port_checker::server::_wait_for_reply(std::vector<char>* buffer,
     last_args = args;
     last_buffer = buffer;
 
-    // allow up to 1000 ports = 1s. never wait more than 0.05 seconds
-    const int timeout_initial = 50;
+    // allow up to 1000 recv calls = 1s
+    // if there's no reply at all after 0.5 seconds, abort
+    const int timeout_initial = timeout_msecs;
     int tries_left = 1000, timeout = timeout_initial;
     while(tries_left-->1 && timeout-->1 && waiting)
     {
-        int n = lo_server_recv_noblock(srv, 1 /* 0,001 seconds */);
+        int n = lo_server_recv_noblock(srv, 1 /* 0,001 second = 1 milli second */);
         if(n)
             timeout = timeout_initial;
         // message will be dispatched to the server's callback

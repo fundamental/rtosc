@@ -82,6 +82,11 @@ struct issue_t
     severity sev;
 };
 
+struct port_checker_options
+{
+    int timeout_msecs = 50;
+};
+
 //! Class to check all ports of a remote (UDP) controlled app
 class port_checker
 {
@@ -111,6 +116,7 @@ class port_checker
                              int argc, lo_message msg, void *data);
 
         volatile bool waiting = true;
+        int timeout_msecs;
 
         lo_server srv;
         lo_address target;
@@ -139,6 +145,8 @@ class port_checker
                      lo_arg **argv, int argc, lo_message msg);
 
     public:
+        server(int t) : timeout_msecs(t) {}
+
         //! Return which of the expected paths from wait_for_reply() has
         //! has been received
         int replied_path() const { return _replied_path; }
@@ -182,6 +190,10 @@ class port_checker
     std::set<issue> issues_not_covered() const;
 
 public:
+    port_checker(port_checker_options opts_arg = port_checker_options()) :
+        sender(opts_arg.timeout_msecs),
+        other(opts_arg.timeout_msecs) {}
+
     //! Let the port checker connect to url and find issues for all ports
     //! @param url URL in format osc.udp://xxx.xxx.xxx.xxx:ppppp/, or just
     //!     ppppp (which means osc.udp://127.0.0.1:ppppp/)
