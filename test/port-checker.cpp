@@ -308,7 +308,7 @@ void port_checker::check_port(const char* loc, const char* portname,
         }
 
         rtosc::Port::MetaContainer meta(metadata);
-        if(*metadata && meta_len)
+        if(meta_len && metadata && *metadata)
         {
             bool is_parameter = false, is_enumerated = false;
             int n_default_vals = 0;
@@ -695,26 +695,26 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
     for(size_t port_no = 0; port_no < port_max; ++port_no)
     {
         const char* portname = args[port_no << 1].val.s;
-        int portlen = strlen(portname);
-        rtosc_blob_t& blob = args[(port_no << 1) + 1].val.b;
+        const int portlen = strlen(portname);
+        const rtosc_blob_t& blob = args[(port_no << 1) + 1].val.b;
         const char* metadata = (const char*)blob.data;
-        int32_t meta_len = blob.len;
-        if(!metadata)
-            metadata = "";
-        bool has_subports = portname[portlen-1] == '/';
+        const int32_t meta_len = blob.len;
+        const bool has_meta = meta_len && metadata && *metadata;
+        const bool has_subports = portname[portlen-1] == '/';
 /*      std::cout << "port /" << loc << portname
                   << " (" << port_no << "/" << port_max
                   << "), has subports: " << std::boolalpha << has_subports
                   << std::endl;*/
 
-        if(port_is_enabled(loc, portname, metadata))
+        if(!has_meta || port_is_enabled(loc, portname, metadata))
         {
             Port::MetaContainer meta(metadata);
 
-            if(meta.find("parameter") != meta.end())
+            if(has_meta && meta.find("parameter") != meta.end())
             {
                 std::string portname_noargs = portname;
                 portname_noargs.resize(portname_noargs.find(':'));
+                // count portname to detect duplicate parameter ports
                 ++port_count[portname_noargs];
             }
 
@@ -734,7 +734,7 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
                     }
 
                     bool next_check_defaults =
-                       (meta.find("no defaults") == meta.end());
+                       !has_meta || (meta.find("no defaults") == meta.end());
 
                     do_checks(loc, loc_size - portlen, next_check_defaults);
                 }
