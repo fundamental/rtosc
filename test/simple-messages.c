@@ -86,5 +86,21 @@ int main()
             "Check First Blob Length", __LINE__);
     assert_int_eq(1,rtosc_argument(buffer, 1).b.len,
             "Check Second Blob Length", __LINE__);
+
+    //Check that an integer after a boolean is still appended
+    printf("#Check \"Ti\"\n");
+    char ref3[] = "/tes""ting""\0\0\0\0"",Ti\0""\0\0\0\x2a";
+    sz = rtosc_message(buffer, sizeof(buffer), "/testing", "Ti", 42);
+    if(sizeof(ref3)-1 == sz)
+    {
+        assert_hex_eq(ref3, buffer, sizeof(ref3)-1, sz,
+                "'i' after 'T' is still being appended", __LINE__);
+        assert_int_eq(rtosc_argument(buffer, 0).T, 1, "1st arg is boolean true", __LINE__);
+        assert_int_eq(rtosc_argument(buffer, 1).i, 42, "2nd arg is integer 42", __LINE__);
+    }
+    else {
+        assert_int_eq(sizeof(ref3), sz, "correct buffer size", __LINE__);
+    }
+
     return test_summary();
 }
