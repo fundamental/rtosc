@@ -329,12 +329,6 @@ void rtosc_v2args(rtosc_arg_t* args, size_t nargs, const char* arg_str,
             case 'f':
                 args[arg_pos++].f = va_arg(ap->a, double);
                 break;
-            case 'T':
-                args[arg_pos++].T = 1;
-                break;
-            case 'F':
-                args[arg_pos++].T = 0;
-                break;
             default:
                 ;
         }
