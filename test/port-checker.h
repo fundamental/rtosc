@@ -29,6 +29,7 @@
  * @test port-checker.c
  */
 
+#include <stdexcept>
 #include <string>
 #include <vector>
 #include <set>
@@ -85,6 +86,13 @@ struct issue_t
 struct port_checker_options
 {
     int timeout_msecs = 50;
+};
+
+class port_error : public std::runtime_error
+{
+public:
+    char m_port[256];
+    port_error(const char* errmsg, const char* port);
 };
 
 //! Class to check all ports of a remote (UDP) controlled app

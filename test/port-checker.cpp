@@ -665,9 +665,9 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
 
     int res = sender.wait_for_reply(&strbuf, &args, "/paths");
     if(!res)
-        throw std::runtime_error("no reply from path-search");
+        throw port_error("no reply from path-search", loc);
     if(args.size() % 2)
-        throw std::runtime_error("bad reply from path-search");
+        throw port_error("bad reply from path-search", loc);
 
     bool self_disabled = false; // disabled by an rSelf() ?
     size_t port_max = args.size() >> 1;
@@ -676,7 +676,7 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
     {
         if(args[port_no << 1].type != 's' ||
                 args[(port_no << 1) + 1].type != 'b')
-            throw std::runtime_error("Invalid \"paths\" reply: bad types");
+            throw port_error("Invalid \"paths\" reply: bad types", loc);
 
         if(!strncmp(args[port_no << 1].val.s, "self:", 5)) {
             rtosc_blob_t& blob = args[(port_no << 1) + 1].val.b;
@@ -742,7 +742,7 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
                     do_checks(loc, loc_size - portlen, next_check_defaults);
                 }
                 else
-                    throw std::runtime_error("portname too long");
+                    throw port_error("portname too long", loc);
             }
             else {
                 ++ports_checked;
@@ -791,6 +791,13 @@ bool port_checker::operator()(const char* url)
 
     finish_time = time(NULL);
     return true;
+}
+
+port_error::port_error(const char *errmsg, const char *port)
+    : runtime_error(errmsg)
+{
+    strncpy(m_port, port, sizeof(m_port) - 1);
+    m_port[sizeof(m_port) - 1] = 0;
 }
 
 }
