@@ -33,6 +33,19 @@ int assert_char_eq(char a, char b, const char *testcase, int line)
     return err;
 }
 
+int assert_ptr_eq(const void* a, const void* b, const char *testcase, int line)
+{
+    test_counter++;
+    int err = a!=b;
+    if(err) {
+        printf("not ok %d - %s...\n", test_counter, testcase);
+        printf("# Expected %p, but observed %p instead (line %d)\n", a, b, line);
+        global_err++;
+    } else
+        printf("ok %d - %s...\n", test_counter, testcase);
+    return err;
+}
+
 int assert_true(int a, const char *testcase, int line)
 {
     test_counter++;
