@@ -745,21 +745,16 @@ const Port *Ports::operator[](const char *name) const
     return NULL;
 }
 
-static msg_t snip(msg_t m)
-{
-    while(*m && *m != '/') ++m;
-    return m+1;
-}
-
 const Port *Ports::apropos(const char *path) const
 {
     if(path && path[0] == '/')
         ++path;
 
+    const char* path_end;
     for(const Port &port: ports)
-        if(strchr(port.name,'/') && rtosc_match_path(port.name,path, NULL))
+        if(strchr(port.name,'/') && rtosc_match_path(port.name,path, &path_end))
             return (strchr(path,'/')[1]==0) ? &port :
-                port.ports->apropos(snip(path));
+                port.ports->apropos(path_end);
 
     //This is the lowest level, now find the best port
     for(const Port &port: ports)

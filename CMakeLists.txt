@@ -190,6 +190,7 @@ endif()
 
 maketestcpp(test-midi-mapper)
 maketestcpp(metadata)
+maketestcpp(apropos)
 maketestcpp(default-value)
 maketestcpp(headerlib)
 maketestcpp(test-walker)
