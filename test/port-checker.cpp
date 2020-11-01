@@ -732,14 +732,23 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
             }
             else
             {
-                // TODO: it could still be a port without subports tht
-                //       did not pass rtosc_match_path
-                // it can not come from the root now,
-                // so it's relative to the current port
-                strcpy(old_loc, portname);
-                // TODO: the portname could be relative (i.e. rtosc_match_path
-                //       failed), but relative to a parent port
-                //       => only copy last part ("basename") of portname?
+                if(has_subports)
+                {
+                    // statistics: port may still be disabled, see above
+                    if(loc_size > portlen)
+                    {
+                        // TODO: it could still be a port without subports tht
+                        //       did not pass rtosc_match_path
+                        // it can not come from the root now,
+                        // so it's relative to the current port
+                        strcpy(old_loc, portname);
+                        // TODO: the portname could be relative (i.e. rtosc_match_path
+                        //       failed), but relative to a parent port
+                        //       => only copy last part ("basename") of portname?
+                    }
+                    else
+                        throw port_error("portname too long", loc);
+                }
             }
 
             if(has_subports)
@@ -761,8 +770,6 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
 
                     do_checks(loc, loc_size - portlen, next_check_defaults);
                 }
-                else
-                    throw port_error("portname too long", loc);
             }
             else {
                 ++ports_checked;
