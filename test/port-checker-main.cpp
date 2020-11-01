@@ -37,7 +37,7 @@ int run_port_checker(const char* url,
         checker.print_statistics();
     }
     catch(const rtosc::port_error& e) {
-        std::cout << "**Error caught**: port " << e.m_port << ": "
+        std::cout << "**Error caught**: port \"" << e.m_port << "\": "
                   << e.what() << std::endl;
         rval = EXIT_FAILURE;
     }

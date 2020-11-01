@@ -701,13 +701,13 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
         const char* metadata = (const char*)blob.data;
         const int32_t meta_len = blob.len;
         const bool has_meta = meta_len && metadata && *metadata;
-        const bool has_subports = portname[portlen-1] == '/';
+        bool has_subports = portname[portlen-1] == '/';
         if(!has_meta)
            metadata = "";
-/*      std::cout << "port /" << loc << portname
-                  << " (" << port_no << "/" << port_max
-                  << "), has subports: " << std::boolalpha << has_subports
-                  << std::endl;*/
+        //std::cout << "port /" << loc << ", replied: " << portname
+        //          << " (" << port_no << "/" << port_max
+        //          << "), has subports: " << std::boolalpha << has_subports
+        //          << std::endl;
 
         if(!has_meta || port_is_enabled(loc, portname, metadata))
         {
@@ -721,12 +721,32 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
                 ++port_count[portname_noargs];
             }
 
+            if(rtosc_match_path(portname, loc, nullptr))
+            {
+                // the returned path has equal length
+                // -> it's a single port without subports
+                if(has_subports)
+                {
+                    has_subports = false;
+                }
+            }
+            else
+            {
+                // TODO: it could still be a port without subports tht
+                //       did not pass rtosc_match_path
+                // it can not come from the root now,
+                // so it's relative to the current port
+                strcpy(old_loc, portname);
+                // TODO: the portname could be relative (i.e. rtosc_match_path
+                //       failed), but relative to a parent port
+                //       => only copy last part ("basename") of portname?
+            }
+
             if(has_subports)
             {
                 // statistics: port may still be disabled, see above
                 if(loc_size > portlen)
                 {
-                    strcpy(old_loc, portname);
                     char* hashsign = strchr(old_loc, '#');
                     if(hashsign)
                     {

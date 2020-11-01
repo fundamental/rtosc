@@ -1197,6 +1197,7 @@ void rtosc::path_search(const rtosc::Ports& root,
     const auto fn = [&pos,&needle,&types,&args,&max](const Port& p)
     {
         assert(pos < max);
+        //printf("path search iterating port: %s (needle %s) (pos %d)\n", p.name, needle, (int)pos);
         if(p.name && strstr(p.name, needle) == p.name)
         {
             types[pos]    = 's';
