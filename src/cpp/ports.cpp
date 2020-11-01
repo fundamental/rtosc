@@ -753,8 +753,9 @@ const Port *Ports::apropos(const char *path) const
     const char* path_end;
     for(const Port &port: ports)
         if(strchr(port.name,'/') && rtosc_match_path(port.name,path, &path_end))
-            return (strchr(path,'/')[1]==0) ? &port :
-                port.ports->apropos(path_end);
+            return (port.ports && strchr(path,'/')[1])
+                ? port.ports->apropos(path_end)
+                : &port;
 
     //This is the lowest level, now find the best port
     for(const Port &port: ports)
