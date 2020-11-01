@@ -14,11 +14,14 @@ using issue = rtosc::issue;
 std::multimap<issue, std::string> get_exp()
 {
     // test expectations
+    // note: must be conforming to port-checker-testapp.cpp
     // note: if you add new ports, please try to only let each new port
     //       occur in at most one category
 
     std::multimap<issue, std::string> exp;
 
+    exp.emplace(issue::trailing_slash_without_subports,
+                "/trailing_slash_without_subports/");
     exp.emplace(issue::duplicate_parameter, "/duplicate_param");
 
     exp.emplace(issue::parameter_not_queryable, "/no_query::i");
@@ -84,6 +87,8 @@ int main(int argc, char** argv)
 
         assert_int_eq(exp.size(), res.size(),
                       "Expected number of issues is correct", __LINE__);
+        //for(auto pr : exp) { std::cerr << "exp: " << (int)pr.first << "   " <<  pr.second << std::endl; }
+        //for(auto pr : res) { std::cerr << "res: " << (int)pr.first << "   " << pr.second << std::endl; }
         assert_true(exp == res,
                     "Issues are as expected", __LINE__);
 
