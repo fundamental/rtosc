@@ -129,10 +129,13 @@ int dispatch_printed_messages(const char* messages,
  * @param runtime The runtime object
  * @param appname Name of the application calling this function
  * @param appver Version of the application calling this function
+ * @param fileStr If given, the new savefile will be appended to
+ *   this passed savefile
  * @return The resulting savefile as an std::sting
  */
 std::string save_to_file(const struct Ports& ports, void* runtime,
-                         const char* appname, rtosc_version appver);
+                         const char* appname, rtosc_version appver,
+                         std::string file_str = "");
 
 /**
  * Read save file and dispatch contained parameters.

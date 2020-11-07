@@ -19,6 +19,11 @@ namespace {
     constexpr size_t max_arg_vals = 2048;
 }
 
+// this basically does:
+// walk over all ports and for each port:
+// * get default value
+// * get current value
+// * compare: if values are different -> write to savefile
 std::string get_changed_values(const Ports& ports, void* runtime)
 {
     std::string res;
@@ -454,22 +459,29 @@ int dispatch_printed_messages(const char* messages,
 }
 
 std::string save_to_file(const Ports &ports, void *runtime,
-                         const char *appname, rtosc_version appver)
+                         const char *appname, rtosc_version appver,
+                         std::string file_str)
 {
-    std::string res;
     char rtosc_vbuf[12], app_vbuf[12];
 
+    if(file_str.empty())
     {
-        rtosc_version rtoscver = rtosc_current_version();
-        rtosc_version_print_to_12byte_str(&rtoscver, rtosc_vbuf);
-        rtosc_version_print_to_12byte_str(&appver, app_vbuf);
+        {
+            rtosc_version rtoscver = rtosc_current_version();
+            rtosc_version_print_to_12byte_str(&rtoscver, rtosc_vbuf);
+            rtosc_version_print_to_12byte_str(&appver, app_vbuf);
+        }
+
+        file_str += "% RT OSC v"; file_str += rtosc_vbuf; file_str += " savefile\n"
+               "% "; file_str += appname; file_str += " v"; file_str += app_vbuf; file_str += "\n";
     }
+    else
+    {
+        // append mode - no header
+    }
+    file_str += get_changed_values(ports, runtime);
 
-    res += "% RT OSC v"; res += rtosc_vbuf; res += " savefile\n"
-           "% "; res += appname; res += " v"; res += app_vbuf; res += "\n";
-    res += get_changed_values(ports, runtime);
-
-    return res;
+    return file_str;
 }
 
 int load_from_file(const char* file_content,
