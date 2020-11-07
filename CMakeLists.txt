@@ -194,6 +194,7 @@ maketestcpp(apropos)
 maketestcpp(default-value)
 maketestcpp(headerlib)
 maketestcpp(test-walker)
+maketestcpp(walk-ports)
 
 if(PERF_TEST)
     maketestcpp(performance)
