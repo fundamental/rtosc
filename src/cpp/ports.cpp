@@ -966,6 +966,120 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
         return true;
 }
 
+void walk_ports_recurse(const Port& p, char* name_buffer,
+                             size_t buffer_size, const Ports& base,
+                             void* data, port_walker_t walker,
+                             void* runtime, const char* old_end,
+                             bool expand_bundles)
+{
+    // TODO: all/most of these checks must also be done for the
+    // first, non-recursive call
+    bool enabled = true;
+    if(runtime)
+    {
+        // get child runtime and check if it's NULL
+
+        assert(old_end >= name_buffer);
+        assert(old_end - name_buffer <= 255);
+
+        const char* buf_ptr;
+        char buf[1024] = "";
+        fast_strcpy(buf, name_buffer, sizeof(buf));
+        // there is no "pointer" callback. thus, there will be nothing
+        // dispatched, but the rRecur*Cb already have set r.obj
+        // that way, we get our pointer
+        strncat(buf, "pointer", sizeof(buf) - strlen(buf) - 1);
+        assert(1024 - strlen(buf) >= 8);
+        fast_strcpy(buf + strlen(buf) + 1, ",", 2);
+
+        buf_ptr = buf + (old_end - name_buffer);
+
+        char locbuf[1024];
+        RtData r;
+        r.obj = runtime;
+        r.port = &p;
+        r.message = buf;
+        r.loc = locbuf;
+        r.loc_size = sizeof(locbuf);
+
+        p.cb(buf_ptr, r); // call "pointer" callback (see above)
+        // if there is runtime information (see above), but this pointer
+        // is NULL, the port is not enabled
+        enabled = (bool) r.obj; // r.obj = the next runtime object
+        if(enabled)
+        {
+            // check if the port is disabled by a switch
+            enabled = port_is_enabled(&p, name_buffer, buffer_size,
+                                      base, runtime);
+            runtime = r.obj; // callback has stored the child pointer here
+        }
+    }
+    if(enabled)
+        rtosc::walk_ports(p.ports, name_buffer, buffer_size,
+                          data, walker, expand_bundles, runtime);
+};
+
+/*
+
+example:
+
+          (Ports& base)         p.name       e.g. read_head
+                v               v            v
+               "/path/from/root/new#2/path#2/to#2/"
+
+               "/path/from/root/new1/path1/"
+                ^               ^          ^
+   name_buffer[buffer_size]     old_end    e.g. write_head
+
+ */
+void walk_ports_recurse0(const Port& p, char* name_buffer,
+                             size_t buffer_size, const Ports* base,
+                             void* data, port_walker_t walker,
+                             void* runtime, char* const old_end, char* write_head,
+                             bool expand_bundles, const char* read_head)
+{
+    const char* hash_ptr = strchr(read_head + 1,'#');
+    std::size_t to_copy = hash_ptr ? hash_ptr - read_head : strlen(read_head);
+
+    //Append the path, until possible '#'
+    //TODO: buffer size checking
+    //yes, there are subports with ':', e.g. ".../::i"
+    while(to_copy-->0 && *read_head != ':')
+    {
+        *write_head++ = *read_head++;
+    }
+
+    if(hash_ptr)
+    {
+        //Overwrite the "#.../" by "0/", "1/" ...
+        assert(*read_head == '#');
+        const unsigned max = atoi(++read_head);
+        assert(isdigit(*read_head));
+        for(;isdigit(*read_head); ++read_head) {}
+
+        if(*read_head == '/') { ++read_head; }
+        for(unsigned i=0; i<max; ++i)
+        {
+            int written = sprintf(write_head,"%d/",i);
+            //Recurse
+            walk_ports_recurse0(p, name_buffer, buffer_size, base, data, walker,
+                                runtime, old_end, write_head + written,
+                                expand_bundles, read_head);
+        }
+    }
+    else
+    {
+        //Ensure last to trail with "/" before recursion
+        if(write_head[-1] != '/')
+            *write_head++ = '/';
+        *write_head = 0;
+        //Recurse
+        walk_ports_recurse(p, name_buffer, buffer_size,
+                           *base, data, walker, runtime, old_end,
+                           expand_bundles);
+    }
+};
+
 // TODO: copy the changes into walk_ports_2
 void rtosc::walk_ports(const Ports  *base,
                        char         *name_buffer,
@@ -975,52 +1089,6 @@ void rtosc::walk_ports(const Ports  *base,
                        bool          expand_bundles,
                        void*         runtime)
 {
-    auto walk_ports_recurse = [](const Port& p, char* name_buffer,
-                                 size_t buffer_size, const Ports& base,
-                                 void* data, port_walker_t walker,
-                                 void* runtime, const char* old_end,
-                                 bool expand_bundles)
-    {
-        // TODO: all/most of these checks must also be done for the
-        // first, non-recursive call
-        bool enabled = true;
-        if(runtime)
-        {
-            enabled = (p.meta().find("no walk") == p.meta().end());
-            if(enabled)
-            {
-                // get child runtime and check if it's NULL
-                RtData r;
-                r.obj = runtime;
-                r.port = &p;
-
-                char buf[1024] = "";
-                fast_strcpy(buf, old_end, sizeof(buf));
-                // there is no "pointer" callback. thus, there will be nothing
-                // dispatched, but the rRecur*Cb already have set r.obj
-                // that way, we get our pointer
-                strncat(buf, "pointer", sizeof(buf) - strlen(buf) - 1);
-                assert(1024 - strlen(buf) >= 8);
-                fast_strcpy(buf + strlen(buf) + 1, ",", 2);
-
-                p.cb(buf, r);
-                // if there is runtime information (see above), but this pointer
-                // is NULL, the port is not enabled
-                enabled = (bool) r.obj; // r.obj = the next runtime object
-                if(enabled)
-                {
-                    // check if the port is disabled by a switch
-                    enabled = port_is_enabled(&p, name_buffer, buffer_size,
-                                              base, runtime);
-                }
-                runtime = r.obj; // callback has stored the child pointer here
-            }
-        }
-        if(enabled)
-            rtosc::walk_ports(p.ports, name_buffer, buffer_size,
-                              data, walker, expand_bundles, runtime);
-    };
-
     //only walk valid ports
     if(!base)
         return;
@@ -1038,32 +1106,10 @@ void rtosc::walk_ports(const Ports  *base,
         //if(strchr(p.name, '/')) {//it is another tree
         if(p.ports) {//it is another tree
 
-            //Append the path
-            fast_strcpy(old_end, p.name, buffer_size - (old_end - name_buffer));
+            walk_ports_recurse0(p, name_buffer, buffer_size,
+                                base, data, walker, runtime, old_end, old_end,
+                                expand_bundles, p.name);
 
-            char* const hashPtr = strchr(old_end,'#');
-            if(hashPtr)
-            {
-                //Overwrite the "#.../" by "0/", "1/" ...
-                //TODO: still invalid for ports like /a#2/b#2
-                const unsigned max = atoi(hashPtr+1);
-                for(unsigned i=0; i<max; ++i)
-                {
-                    sprintf(hashPtr,"%d/",i);
-
-                    //Recurse
-                    walk_ports_recurse(p, name_buffer, buffer_size,
-                                       *base, data, walker, runtime, old_end,
-                                       expand_bundles);
-                }
-            }
-            else
-            {
-                //Recurse
-                walk_ports_recurse(p, name_buffer, buffer_size,
-                                   *base, data, walker, runtime, old_end,
-                                   expand_bundles);
-            }
         } else {
             if(strchr(p.name,'#')) {
                 bundle_foreach(p, p.name, old_end, name_buffer, *base,

@@ -184,6 +184,7 @@ size_t get_value_from_runtime(void* runtime, const Port& port,
     d.loc_size = loc_size;
     d.loc = loc;
     d.port = &port;
+    d.message = portname_from_base;
     d.matches = 0;
     assert(*loc);
 

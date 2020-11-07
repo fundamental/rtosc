@@ -21,15 +21,21 @@ static const rtosc::Ports a_ports = {
     {"b/c/", 0, &c_ports, null_fn},
 };
 
-#define rObject walk_ports_tester
 static const rtosc::Ports ports = {
     {"a/", 0, &a_ports, null_fn},
     {"a/b/c/", 0, &c_ports, null_fn},
 };
-#undef rObject
 
 static const rtosc::Ports numeric_ports = {
-    {"a#3/b#2/c", 0, 0, null_fn},
+    {"a#3/b#2/c", 0, &d_ports, null_fn},
+};
+
+static const rtosc::Ports numeric_ports_integer = {
+    {"a#3/b#2/c/::i", 0, &d_ports, null_fn},
+};
+
+static const rtosc::Ports numeric_port = {
+    {"a#3/b#2/c::i", 0, 0, null_fn},
 };
 
 void append_str(const rtosc::Port*, const char *name, const char*,
@@ -40,18 +46,36 @@ void append_str(const rtosc::Port*, const char *name, const char*,
     *res += ";";
 }
 
-int main()
+void check_all_subports(const rtosc::Ports& root, const char* exp,
+                        const char* testcase, int line)
 {
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
     std::string res;
-    rtosc::walk_ports(&ports, buffer, 1024, &res, append_str);
-    assert_str_eq("/a/b/c/d/e;/a/b/c/d/e;", res.c_str(), "walk_ports from root", __LINE__);
-    res.clear();
-    rtosc::walk_ports(&numeric_ports, buffer, 1024, &res, append_str);
-    printf("str: %s\n",res.c_str());
-    // yet wrong, but at least half way right:
-    assert_str_eq("/a0/b#2/c;/a1/b#2/c;/a2/b#2/c;", res.c_str(), "walk_ports from root", __LINE__);
+    rtosc::walk_ports(&root, buffer, 1024, &res, append_str);
+    assert_str_eq(exp, res.c_str(), testcase, line);
+}
+
+int main()
+{
+    check_all_subports(ports, "/a/b/c/d/e;/a/b/c/d/e;",
+                       "walk_ports with \"/a/b/c\"", __LINE__);
+
+    const char* numeric_exp = "/a0/b0/c/e;/a0/b1/c/e;"
+                              "/a1/b0/c/e;/a1/b1/c/e;"
+                              "/a2/b0/c/e;/a2/b1/c/e;";
+    check_all_subports(numeric_ports, numeric_exp,
+                       "walk_ports with \"a#3/b#2/c\"", __LINE__);
+
+    check_all_subports(numeric_ports_integer, numeric_exp,
+                       "walk_ports with \"a#3/b#2/c/::i\"", __LINE__);
+
+#if 0
+    check_all_subports(numeric_port, numeric_exp,
+                       "walk_ports with \"a#3/b#2/c::i\"", __LINE__);
+    // still failing: bundle-foreach.h needs a recursion like walk_ports
+    // has it for subports with multiple hashes
+#endif
     return test_summary();
 }
 

@@ -333,7 +333,7 @@ void walk_ports(const Ports *base,
  * @param root see @p m
  * @param str location under @p root to look up port, or empty-string to search
  *            directly at @p root
- * @param needle Only port names starting with this sting are returned (use
+ * @param needle Only port names starting with this string are returned (use
  *            empty-string or nullptr to match everything)
  * @param types A buffer where the OSC type string is being written
  * @param max_types should be @p max_args +1 for best performance,
