@@ -1030,38 +1030,35 @@ void rtosc::walk_ports(const Ports  *base,
     if(name_buffer[0] == 0)
         name_buffer[0] = '/';
 
-    char *old_end         = name_buffer;
-    while(*old_end) ++old_end;
+    char * const old_end = name_buffer + strlen(name_buffer);
 
     if(port_is_enabled((*base)["self:"], name_buffer, buffer_size, *base,
                        runtime))
     for(const Port &p: *base) {
         //if(strchr(p.name, '/')) {//it is another tree
         if(p.ports) {//it is another tree
-            if(strchr(p.name,'#')) {
-                const char *name = p.name;
-                char       *pos  = old_end;
-                while(*name != '#') *pos++ = *name++;
-                const unsigned max = atoi(name+1);
 
+            //Append the path
+            fast_strcpy(old_end, p.name, buffer_size - (old_end - name_buffer));
+
+            char* const hashPtr = strchr(old_end,'#');
+            if(hashPtr)
+            {
+                //Overwrite the "#.../" by "0/", "1/" ...
+                //TODO: still invalid for ports like /a#2/b#2
+                const unsigned max = atoi(hashPtr+1);
                 for(unsigned i=0; i<max; ++i)
                 {
-                    sprintf(pos,"%d",i);
-
-                    //Ensure the result is a path
-                    if(strrchr(name_buffer, '/')[1] != '/')
-                        strcat(name_buffer, "/");
+                    sprintf(hashPtr,"%d/",i);
 
                     //Recurse
                     walk_ports_recurse(p, name_buffer, buffer_size,
                                        *base, data, walker, runtime, old_end,
                                        expand_bundles);
                 }
-            } else {
-                //Append the path
-                const char* old_end = name_buffer + strlen(name_buffer);
-                scat(name_buffer, p.name);
-
+            }
+            else
+            {
                 //Recurse
                 walk_ports_recurse(p, name_buffer, buffer_size,
                                    *base, data, walker, runtime, old_end,
