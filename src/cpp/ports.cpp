@@ -966,11 +966,14 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
         return true;
 }
 
-void walk_ports_recurse(const Port& p, char* name_buffer,
-                             size_t buffer_size, const Ports& base,
-                             void* data, port_walker_t walker,
-                             void* runtime, const char* old_end,
-                             bool expand_bundles)
+// this is doing nothing else than checking if a port is enabled (using the runtime),
+// and if yes, call walk_ports again
+// in case of no runtime, this is only calling walk_ports
+static void walk_ports_recurse(const Port& p, char* name_buffer,
+                               size_t buffer_size, const Ports& base,
+                               void* data, port_walker_t walker,
+                               void* runtime, const char* old_end,
+                               bool expand_bundles)
 {
     // TODO: all/most of these checks must also be done for the
     // first, non-recursive call
@@ -1032,11 +1035,11 @@ example:
    name_buffer[buffer_size]     old_end    e.g. write_head
 
  */
-void walk_ports_recurse0(const Port& p, char* name_buffer,
-                             size_t buffer_size, const Ports* base,
-                             void* data, port_walker_t walker,
-                             void* runtime, char* const old_end, char* write_head,
-                             bool expand_bundles, const char* read_head)
+static void walk_ports_recurse0(const Port& p, char* name_buffer,
+                                size_t buffer_size, const Ports* base,
+                                void* data, port_walker_t walker,
+                                void* runtime, char* const old_end, char* write_head,
+                                bool expand_bundles, const char* read_head)
 {
     const char* hash_ptr = strchr(read_head + 1,'#');
     std::size_t to_copy = hash_ptr ? hash_ptr - read_head : strlen(read_head);
@@ -1203,10 +1206,29 @@ void walk_ports2(const rtosc::Ports *base,
     }
 }
 
+template <typename T, size_t N>
+struct my_array
+{
+    T data[N];
+    inline void swap(my_array &other)
+    {
+        std::swap_ranges(&data[0], &data[0] + N, other.data);
+    }
+    inline T& operator[](const size_t idx)
+    {
+        return data[idx];
+    }
+    inline const T& operator[](const size_t idx) const
+    {
+        return data[idx];
+    }
+};
+
 void rtosc::path_search(const rtosc::Ports& root,
                         const char *str, const char* needle,
                         char *types, std::size_t max_types,
-                        rtosc_arg_t* args, std::size_t max_args)
+                        rtosc_arg_t* args, std::size_t max_args,
+                        path_search_opts opts)
 {
     using rtosc::Ports;
     using rtosc::Port;
@@ -1261,6 +1283,25 @@ void rtosc::path_search(const rtosc::Ports& root,
         for(const Port &p:*ports) fn(p);
     else if(single_port)
         fn(*single_port);
+
+    if (opts == path_search_opts::sorted ||
+        opts == path_search_opts::sorted_and_unique_prefix)
+    {
+        // we could use std::array, but it's internal array does not necessarily
+        // have offset 0
+        using val_on_2 = my_array<rtosc_arg_t, 2>;
+        using ptr_on_2 = val_on_2*;
+        auto is_less = [](const val_on_2 &p1, const val_on_2 &p2) -> bool {
+            return strcmp(p1[0].s, p2[0].s) < 0;
+        };
+        std::sort((ptr_on_2)args, ((ptr_on_2)(args))+(pos>>1), is_less);
+
+        if (opts == path_search_opts::sorted_and_unique_prefix)
+        {
+
+        }
+
+    }
 }
 
 std::size_t rtosc::path_search(const Ports &root, const char *m,

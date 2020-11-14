@@ -38,6 +38,14 @@ static const rtosc::Ports numeric_port = {
     {"a#3/b#2/c::i", 0, 0, null_fn},
 };
 
+static const rtosc::Ports multiple_ports = {
+    {"c/d/e:", 0, 0, null_fn},
+    {"a/x:", 0, 0, null_fn},
+    {"c/d:", 0, 0, null_fn},
+    {"a:", 0, 0, null_fn},
+    {"b:", 0, 0, null_fn},
+};
+
 void append_str(const rtosc::Port*, const char *name, const char*,
                 const rtosc::Ports&, void *resVoid, void*)
 {
@@ -76,6 +84,10 @@ int main()
     // still failing: bundle-foreach.h needs a recursion like walk_ports
     // has it for subports with multiple hashes
 #endif
+
+    check_all_subports(multiple_ports, "a;b;c/d",
+                       "walk_ports with multiple common prefixes", __LINE__);
+
     return test_summary();
 }
 

@@ -326,6 +326,14 @@ void walk_ports(const Ports *base,
                 bool expand_bundles = true,
                 void *runtime = NULL);
 
+//! Options for path_search
+enum class path_search_opts
+{
+    unchanged, //!< Return ports in the order they are found. Fastest option.
+    sorted,
+    sorted_and_unique_prefix //!< If "a/" is found, don't add any "a/..."
+};
+
 /**
  * Returns paths and metadata of all direct children of a port, or of the port
  * itself if that port has no children.
@@ -344,7 +352,7 @@ void walk_ports(const Ports *base,
  */
 void path_search(const rtosc::Ports& root, const char *str, const char *needle,
                  char *types, std::size_t max_types,
-                 rtosc_arg_t* args, std::size_t max_args);
+                 rtosc_arg_t* args, std::size_t max_args, path_search_opts opts);
 
 /**
  * Returns a messages of all paths and metadata of all direct children of a

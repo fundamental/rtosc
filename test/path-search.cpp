@@ -29,6 +29,14 @@ static const rtosc::Ports ports = {
 };
 #undef rObject
 
+static const rtosc::Ports multiple_ports = {
+    {"c/d/e:", 0, 0, null_fn},
+    {"a/x:", 0, 0, null_fn},
+    {"c/d/", 0, 0, null_fn},
+    {"a/", 0, 0, null_fn},
+    {"b/", 0, 0, null_fn},
+};
+
 int main()
 {
     char buffer[1024];
@@ -101,6 +109,14 @@ int main()
 
     path_search(ports, "/doesnt-exist", "", types.data(), max_types, args.data(), max_args);
     assert_str_eq("", types.data(), "\"/doesnt-exist\" - types", __LINE__);
+
+    path_search(multiple_ports, "", "", types.data(), max_types, args.data(), max_args);
+    assert_str_eq("sbsbsbsbsb", types.data(), "multiple ports - types", __LINE__);
+    assert_str_eq("a/", args[0].s, "multiple ports - ports 1", __LINE__);
+    assert_str_eq("a/x:", args[2].s, "multiple ports - ports 2", __LINE__);
+    assert_str_eq("b/", args[4].s, "multiple ports - ports 3", __LINE__);
+    assert_str_eq("c/d/", args[6].s, "multiple ports - ports 4", __LINE__);
+    assert_str_eq("c/d/e:", args[8].s, "multiple ports - ports 5", __LINE__);
 
     return test_summary();
 }
