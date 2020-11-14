@@ -218,7 +218,7 @@ bool port_checker::server::_wait_for_reply(std::vector<char>* buffer,
     // if there's no reply at all after 0.5 seconds, abort
     const int timeout_initial = timeout_msecs;
     int tries_left = 1000, timeout = timeout_initial;
-    while(tries_left-->1 && timeout-->1 && waiting)
+    while(tries_left-->1 && timeout-->1 && waiting) // waiting is set in "on_recv"
     {
         int n = lo_server_recv_noblock(srv, 1 /* 0,001 second = 1 milli second */);
         if(n)
@@ -261,6 +261,8 @@ bool port_checker::port_is_enabled(const char* loc, const char* port,
             m_issues.emplace(issue::enabled_port_not_replied,
                            "/" + std::string(loc) + port);
     }
+    //std::cout << "port \"" << loc << "\" enabled? "
+    //          << (rval ? "yes" : "no") << std::endl;
     return rval;
 }
 

@@ -966,11 +966,14 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
         return true;
 }
 
-void walk_ports_recurse(const Port& p, char* name_buffer,
-                             size_t buffer_size, const Ports& base,
-                             void* data, port_walker_t walker,
-                             void* runtime, const char* old_end,
-                             bool expand_bundles)
+// this is doing nothing else than checking if a port is enabled (using the runtime),
+// and if yes, call walk_ports again
+// in case of no runtime, this is only calling walk_ports
+static void walk_ports_recurse(const Port& p, char* name_buffer,
+                               size_t buffer_size, const Ports& base,
+                               void* data, port_walker_t walker,
+                               void* runtime, const char* old_end,
+                               bool expand_bundles)
 {
     // TODO: all/most of these checks must also be done for the
     // first, non-recursive call
@@ -1032,11 +1035,11 @@ example:
    name_buffer[buffer_size]     old_end    e.g. write_head
 
  */
-void walk_ports_recurse0(const Port& p, char* name_buffer,
-                             size_t buffer_size, const Ports* base,
-                             void* data, port_walker_t walker,
-                             void* runtime, char* const old_end, char* write_head,
-                             bool expand_bundles, const char* read_head)
+static void walk_ports_recurse0(const Port& p, char* name_buffer,
+                                size_t buffer_size, const Ports* base,
+                                void* data, port_walker_t walker,
+                                void* runtime, char* const old_end, char* write_head,
+                                bool expand_bundles, const char* read_head)
 {
     const char* hash_ptr = strchr(read_head + 1,'#');
     std::size_t to_copy = hash_ptr ? hash_ptr - read_head : strlen(read_head);
@@ -1203,10 +1206,30 @@ void walk_ports2(const rtosc::Ports *base,
     }
 }
 
+// this is just an std::array replacement for path_search
+template <typename T, size_t N>
+struct my_array
+{
+    T data[N];
+    inline void swap(my_array &other)
+    {
+        std::swap_ranges(&data[0], &data[0] + N, other.data);
+    }
+    inline T& operator[](const size_t idx)
+    {
+        return data[idx];
+    }
+    inline const T& operator[](const size_t idx) const
+    {
+        return data[idx];
+    }
+};
+
 void rtosc::path_search(const rtosc::Ports& root,
                         const char *str, const char* needle,
                         char *types, std::size_t max_types,
-                        rtosc_arg_t* args, std::size_t max_args)
+                        rtosc_arg_t* args, std::size_t max_args,
+                        path_search_opts opts)
 {
     using rtosc::Ports;
     using rtosc::Port;
@@ -1261,6 +1284,60 @@ void rtosc::path_search(const rtosc::Ports& root,
         for(const Port &p:*ports) fn(p);
     else if(single_port)
         fn(*single_port);
+
+    if (opts == path_search_opts::sorted ||
+        opts == path_search_opts::sorted_and_unique_prefix)
+    {
+        // we could use std::array, but it's internal array does not necessarily
+        // have offset 0
+        using val_on_2 = my_array<rtosc_arg_t, 2>;
+        using ptr_on_2 = val_on_2*;
+        auto is_less = [](const val_on_2 &p1, const val_on_2 &p2) -> bool {
+            return strcmp(p1[0].s, p2[0].s) < 0;
+        };
+        std::size_t n_paths_found = pos >> 1;
+        std::sort((ptr_on_2)args, ((ptr_on_2)(args))+n_paths_found, is_less);
+
+        if (opts == path_search_opts::sorted_and_unique_prefix)
+        {
+            std::size_t prev_pos = 0;
+            std::size_t strlen_prev = n_paths_found > 1 ? strlen(args[prev_pos].s) : 0;
+            std::size_t unused_paths = 0;
+            for(pos = 2; pos < (n_paths_found<<1); ++++pos)
+            {
+                assert(args[prev_pos].s); // invariant
+
+                // is the prev path a (real) sub-path of this path?
+                // i.e. the current can be accessed by recursing into the prev?
+                if(strlen_prev < strlen(args[pos].s) &&
+                   0 == strncmp(args[pos].s, args[prev_pos].s, strlen_prev) &&
+                   args[prev_pos].s[strlen_prev-1] == '/')
+                {
+                    // then mark this as unused
+                    args[pos].s = nullptr;
+                    ++unused_paths;
+                }
+                else
+                {
+                    prev_pos = pos;
+                    strlen_prev = strlen(args[prev_pos].s);
+                }
+            }
+
+            // another sort, only to move unused paths to the end
+            auto is_less_2 = [](const val_on_2 &p1, const val_on_2 &p2) -> bool {
+                return (!(p1[0].s)) ? false // move p1 to the end
+                                    : (!(p2[0].s)) ? true // move p2 to the end
+                                                   // is actually alread sorted:
+                                                   : (strcmp(p1[0].s, p2[0].s) < 0);
+            };
+            std::sort((ptr_on_2)args, ((ptr_on_2)(args))+n_paths_found, is_less_2);
+
+            // cut off unused paths
+            types[(n_paths_found - unused_paths)<<1] = 0;
+        }
+
+    }
 }
 
 std::size_t rtosc::path_search(const Ports &root, const char *m,

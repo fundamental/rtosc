@@ -327,6 +327,32 @@ void walk_ports(const Ports *base,
                 void *runtime = NULL);
 
 /**
+   Options for path_search. Examples see path-search tests.
+   @test path-search.cpp
+*/
+enum class path_search_opts
+{
+    /**
+       Return ports in the order they are found. Fastest option.
+       For "a/", "a/b", "a/", this will return "a/", "a/b", "a/".
+    */
+    unmodified,
+    /**
+       Return ports sorted, but not filtered.
+       For "a/", "a/b", "a/", this will return "a/", "a/", "a/b".
+    */
+    sorted,
+    /**
+       Sorted and prefix-filtered: If "a/" is found, don't add any "a/...".
+       Duplicate ports are still returned twice, because recursing into one of
+       them will not help to access the other (and because duplicate ports
+       shall be reported to port-checker).
+       For "a/", "a/b", "a/", this will return "a/", "a/".
+    */
+    sorted_and_unique_prefix
+};
+
+/**
  * Returns paths and metadata of all direct children of a port, or of the port
  * itself if that port has no children.
  * If you just want to generate a reply message, use the overloaded function.
@@ -344,7 +370,8 @@ void walk_ports(const Ports *base,
  */
 void path_search(const rtosc::Ports& root, const char *str, const char *needle,
                  char *types, std::size_t max_types,
-                 rtosc_arg_t* args, std::size_t max_args);
+                 rtosc_arg_t* args, std::size_t max_args,
+                 path_search_opts opts = path_search_opts::sorted_and_unique_prefix);
 
 /**
  * Returns a messages of all paths and metadata of all direct children of a
