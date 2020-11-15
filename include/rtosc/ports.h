@@ -324,7 +324,8 @@ void walk_ports(const Ports *base,
                 void          *data,
                 port_walker_t  walker,
                 bool expand_bundles = true,
-                void *runtime = NULL);
+                void *runtime = NULL,
+                bool ranges = false);
 
 /**
    Options for path_search. Examples see path-search tests.

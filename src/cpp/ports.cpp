@@ -7,6 +7,7 @@
 #include <cassert>
 #include <limits>
 #include <cstring>
+#include <set>
 #include <string>
 #include <algorithm>
 
@@ -973,7 +974,7 @@ static void walk_ports_recurse(const Port& p, char* name_buffer,
                                size_t buffer_size, const Ports& base,
                                void* data, port_walker_t walker,
                                void* runtime, const char* old_end,
-                               bool expand_bundles)
+                               bool expand_bundles, bool ranges)
 {
     // TODO: all/most of these checks must also be done for the
     // first, non-recursive call
@@ -1019,7 +1020,7 @@ static void walk_ports_recurse(const Port& p, char* name_buffer,
     }
     if(enabled)
         rtosc::walk_ports(p.ports, name_buffer, buffer_size,
-                          data, walker, expand_bundles, runtime);
+                          data, walker, expand_bundles, runtime, ranges);
 };
 
 /*
@@ -1039,7 +1040,8 @@ static void walk_ports_recurse0(const Port& p, char* name_buffer,
                                 size_t buffer_size, const Ports* base,
                                 void* data, port_walker_t walker,
                                 void* runtime, char* const old_end, char* write_head,
-                                bool expand_bundles, const char* read_head)
+                                bool expand_bundles, const char* read_head,
+                                bool ranges)
 {
     const char* hash_ptr = strchr(read_head + 1,'#');
     std::size_t to_copy = hash_ptr ? hash_ptr - read_head : strlen(read_head);
@@ -1061,13 +1063,21 @@ static void walk_ports_recurse0(const Port& p, char* name_buffer,
         for(;isdigit(*read_head); ++read_head) {}
 
         if(*read_head == '/') { ++read_head; }
-        for(unsigned i=0; i<max; ++i)
+        if(ranges)
+        {
+            int written = sprintf(write_head,"[0,%d]/", max-1);
+            //Recurse
+            walk_ports_recurse0(p, name_buffer, buffer_size, base, data, walker,
+                                runtime, old_end, write_head + written,
+                                expand_bundles, read_head, ranges);
+        }
+        else for(unsigned i=0; i<max; ++i)
         {
             int written = sprintf(write_head,"%d/",i);
             //Recurse
             walk_ports_recurse0(p, name_buffer, buffer_size, base, data, walker,
                                 runtime, old_end, write_head + written,
-                                expand_bundles, read_head);
+                                expand_bundles, read_head, ranges);
         }
     }
     else
@@ -1079,7 +1089,7 @@ static void walk_ports_recurse0(const Port& p, char* name_buffer,
         //Recurse
         walk_ports_recurse(p, name_buffer, buffer_size,
                            *base, data, walker, runtime, old_end,
-                           expand_bundles);
+                           expand_bundles, ranges);
     }
 };
 
@@ -1090,7 +1100,8 @@ void rtosc::walk_ports(const Ports  *base,
                        void         *data,
                        port_walker_t walker,
                        bool          expand_bundles,
-                       void*         runtime)
+                       void*         runtime,
+                       bool          ranges)
 {
     //only walk valid ports
     if(!base)
@@ -1111,92 +1122,18 @@ void rtosc::walk_ports(const Ports  *base,
 
             walk_ports_recurse0(p, name_buffer, buffer_size,
                                 base, data, walker, runtime, old_end, old_end,
-                                expand_bundles, p.name);
+                                expand_bundles, p.name, ranges);
 
         } else {
             if(strchr(p.name,'#')) {
                 bundle_foreach(p, p.name, old_end, name_buffer, *base,
-                               data, runtime, walker, expand_bundles);
+                               data, runtime, walker, expand_bundles, true, ranges);
             } else {
                 //Append the path
                 scat(name_buffer, p.name);
 
                 //Apply walker function
                 walker(&p, name_buffer, old_end, *base, data, runtime);
-            }
-        }
-
-        //Remove the rest of the path
-        char *tmp = old_end;
-        while(*tmp) *tmp++=0;
-    }
-}
-
-void walk_ports2(const rtosc::Ports *base,
-                 char         *name_buffer,
-                 size_t        buffer_size,
-                 void         *data,
-                 rtosc::port_walker_t walker)
-{
-    if(!base)
-        return;
-
-    assert(name_buffer);
-    //XXX buffer_size is not properly handled yet
-    if(name_buffer[0] == 0)
-        name_buffer[0] = '/';
-
-    char *old_end         = name_buffer;
-    while(*old_end) ++old_end;
-
-    for(const rtosc::Port &p: *base) {
-        if(strchr(p.name, '/')) {//it is another tree
-            if(strchr(p.name,'#')) {
-                const char *name = p.name;
-                char       *pos  = old_end;
-                while(*name != '#') *pos++ = *name++;
-                const unsigned max = atoi(name+1);
-
-                //for(unsigned i=0; i<max; ++i)
-                {
-                    sprintf(pos,"[0,%d]",max-1);
-
-                    //Ensure the result is a path
-                    if(strrchr(name_buffer, '/')[1] != '/')
-                        strcat(name_buffer, "/");
-
-                    //Recurse
-                    walk_ports2(p.ports, name_buffer, buffer_size,
-                                data, walker);
-                }
-            } else {
-                //Append the path
-                scat(name_buffer, p.name);
-
-                //Recurse
-                walk_ports2(p.ports, name_buffer, buffer_size,
-                        data, walker);
-            }
-        } else {
-            if(strchr(p.name,'#')) {
-                const char *name = p.name;
-                char       *pos  = old_end;
-                while(*name != '#') *pos++ = *name++;
-                const unsigned max = atoi(name+1);
-
-                //for(unsigned i=0; i<max; ++i)
-                {
-                    sprintf(pos,"[0,%d]",max-1);
-
-                    //Apply walker function
-                    walker(&p, name_buffer, old_end, *base, data, nullptr);
-                }
-            } else {
-                //Append the path
-                scat(name_buffer, p.name);
-
-                //Apply walker function
-                walker(&p, name_buffer, old_end, *base, data, nullptr);
             }
         }
 
@@ -1496,8 +1433,7 @@ static ostream &dump_generic_port(ostream &o, string name, string doc, string ty
         return o;
 }
 
-void dump_ports_cb(const rtosc::Port *p, const char *name,const char*,
-                   const Ports&,void *v, void*)
+static bool do_dump_ports(const rtosc::Port *p, const char *name, void *v)
 {
     std::ostream &o  = *(std::ostream*)v;
     auto meta        = p->meta();
@@ -1530,12 +1466,12 @@ void dump_ports_cb(const rtosc::Port *p, const char *name,const char*,
         if(!type) {
             fprintf(stderr, "rtosc port dumper: Cannot handle '%s'\n", name);
             fprintf(stderr, "    args = <%s>\n", args);
-            return;
+            return false;
         }
 
         if(type == 't') {
             dump_t_f_port(o, name, doc);
-            return;
+            return true;
         }
 
         o << " <message_in pattern=\"" << name << "\" typetag=\"" << type << "\">\n";
@@ -1594,8 +1530,24 @@ void dump_ports_cb(const rtosc::Port *p, const char *name,const char*,
         if(args) {
             fprintf(stderr, "    type = %s\n", args);
         }
-    } else
+        return false;
+    } else {
         fprintf(stderr, "Skipping [UNDOCUMENTED] \"%s\"\n", name);
+        return false;
+    }
+    return true;
+}
+
+static void dump_ports_cb(const rtosc::Port *p, const char *name,const char*,
+                          const Ports&,void *v, void*)
+{
+    static std::set<std::pair<std::string, std::string>> already_dumped;
+    if(already_dumped.find(std::make_pair(name, p->name)) == already_dumped.end())
+    {
+        bool dumped = do_dump_ports(p, name, v);
+        if(dumped)
+            already_dumped.emplace(name, p->name);
+    }
 }
 
 std::ostream &rtosc::operator<<(std::ostream &o, rtosc::OscDocFormatter &formatter)
@@ -1611,7 +1563,7 @@ std::ostream &rtosc::operator<<(std::ostream &o, rtosc::OscDocFormatter &formatt
     o << " </meta>\n";
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
-    walk_ports2(formatter.p, buffer, 1024, &o, dump_ports_cb);
+    walk_ports(formatter.p, buffer, 1024, &o, dump_ports_cb, false, nullptr, true);
     o << "</osc_unit>\n";
     return o;
 }

@@ -50,7 +50,8 @@ void bundle_foreach(const struct Port& p, const char* name, char* old_end,
                     void* data, void* runtime, const F& ftor,
                     /* options */
                     bool expand_bundles = true,
-                    bool cut_afterwards = true)
+                    bool cut_afterwards = true,
+                    bool ranges = false)
 {
     char       *pos  = old_end;
     while(*name != '#') *pos++ = *name++;
@@ -59,7 +60,7 @@ void bundle_foreach(const struct Port& p, const char* name, char* old_end,
 
     char* pos2;
 
-    if(expand_bundles)
+    if(expand_bundles && !ranges)
     for(unsigned i=0; i<max; ++i)
     {
         const char* name2_2 = name;
@@ -71,10 +72,12 @@ void bundle_foreach(const struct Port& p, const char* name, char* old_end,
 
         ftor(&p, name_buffer, old_end, base, data, runtime);
     }
-    else
+    else // !expand_bundles || ranges
     {
         const char* name2_2 = name;
         pos2 = pos;
+        if(ranges)
+            pos2 += sprintf(pos,"[0,%d]",max-1);
 
         // append everything behind the '#' (for cases like a#N/b)
         while(*name2_2 && *name2_2 != ':')
