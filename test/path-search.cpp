@@ -39,6 +39,14 @@ static const rtosc::Ports multiple_ports = {
     {"b2", 0, 0, null_fn},
 };
 
+static const rtosc::Ports masterTestPorts =
+{
+    {"HDDRecorder/preparefile:s", rDoc("Init WAV file"), 0, null_fn},
+    {"HDDRecorder/start:", rDoc("Start recording"), 0, null_fn},
+    {"HDDRecorder/stop:", rDoc("Stop recording"), 0, null_fn},
+    {"HDDRecorder/pause:", rDoc("Pause recording"), 0, null_fn}
+};
+
 int main()
 {
     char buffer[1024];
@@ -136,6 +144,21 @@ int main()
     assert_str_eq("b", args[2].s, "multiple ports, unique prefix - ports 2", __LINE__);
     assert_str_eq("b2", args[4].s, "multiple ports, unique prefix - ports 3", __LINE__);
     assert_str_eq("c/d/", args[6].s, "multiple ports, unique prefix - ports 4", __LINE__);
+
+    path_search(masterTestPorts, "HDDRecorder/preparefile", "",
+                types.data(), max_types, args.data(), max_args);
+    assert_str_eq("sb", types.data(), "master test ports - types", __LINE__);
+    assert_str_eq("HDDRecorder/preparefile:s", args[0].s, "master test ports - ports 1", __LINE__);
+
+#ifdef KNOWN_ISSUES
+    path_search(masterTestPorts, "HDDRecorder/", "",
+                types.data(), max_types, args.data(), max_args);
+    assert_str_eq("sbsbsbsb", types.data(), "master test ports 2 - types", __LINE__);
+
+    path_search(masterTestPorts, "HDDRecorder/", "s",
+                types.data(), max_types, args.data(), max_args);
+    assert_str_eq("sbsb", types.data(), "master test ports 3 - types", __LINE__);
+#endif
 
     return test_summary();
 }
