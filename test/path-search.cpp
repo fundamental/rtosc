@@ -47,6 +47,41 @@ static const rtosc::Ports masterTestPorts =
     {"HDDRecorder/pause:", rDoc("Pause recording"), 0, null_fn}
 };
 
+static const rtosc::Ports samePortsSubSub =
+{
+    {"y", 0, 0, null_fn},
+};
+
+static const rtosc::Ports samePortsSub =
+{
+    {"x/", 0, &samePortsSubSub, null_fn},
+};
+
+static const rtosc::Ports samePorts =
+{
+    {"x/", 0, &samePortsSub, null_fn},
+};
+
+static const rtosc::Ports samePortsNoSubports =
+{
+    {"x/", 0, 0, null_fn},
+};
+
+static const rtosc::Ports samePorts2Sub =
+{
+    {"x", 0, 0, null_fn},
+};
+
+static const rtosc::Ports samePorts2 =
+{
+    {"x/", 0, &samePorts2Sub, null_fn},
+};
+
+static const rtosc::Ports samePorts2NoSlash =
+{
+    {"x", 0, &samePorts2Sub, null_fn},
+};
+
 int main()
 {
     char buffer[1024];
@@ -159,6 +194,32 @@ int main()
                 types.data(), max_types, args.data(), max_args);
     assert_str_eq("sbsb", types.data(), "master test ports 3 - types", __LINE__);
 #endif
+
+    // sub-ports with same name as current port: /x/x/y
+    path_search(samePorts, "/x/", "",
+                types.data(), max_types, args.data(), max_args);
+    assert_str_eq("sb", types.data(), "same ports - types", __LINE__);
+    assert_str_eq("x/", args[0].s, "same ports - ports 1", __LINE__);
+
+    // the same, but the Ports coder forgot to add the sub port
+    // => same result
+    path_search(samePortsNoSubports, "/x/", "",
+                types.data(), max_types, args.data(), max_args);
+    assert_str_eq("sb", types.data(), "same ports - types", __LINE__);
+    assert_str_eq("x/", args[0].s, "same ports - ports 1", __LINE__);
+
+    // sub-ports with same name as current port: /x/x
+    path_search(samePorts2, "/x", "",
+                types.data(), max_types, args.data(), max_args);
+    assert_str_eq("sb", types.data(), "same ports - types", __LINE__);
+    assert_str_eq("x", args[0].s, "same ports - ports 1", __LINE__);
+
+    // the same, but the Ports coder forgot to add a slash
+    // => same result
+    path_search(samePorts2NoSlash, "/x", "",
+                types.data(), max_types, args.data(), max_args);
+    assert_str_eq("sb", types.data(), "same ports - types", __LINE__);
+    assert_str_eq("x", args[0].s, "same ports - ports 1", __LINE__);
 
     return test_summary();
 }

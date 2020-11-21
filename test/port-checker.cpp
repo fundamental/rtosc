@@ -20,12 +20,12 @@ namespace rtosc {
 
 static constexpr const issue_t _m_issue_types_arr[(int)issue::number] =
 {
-{
+/*{
     issue::trailing_slash_without_subports,
-    "ports with trainling slashes but no subports",
-    "ports have trainling slashes, but no subports",
+    "ports with trailing slashes but no subports",
+    "ports have trailing slashes, but no subports",
     severity::hint
-},
+},*/
 {
     issue::duplicate_parameter,
     "multiple parameters with same name",
@@ -735,8 +735,8 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
                 // -> it's a single port without subports
                 if(has_subports)
                 {
-                    m_issues.emplace(issue::trailing_slash_without_subports,
-                                     "/" + std::string(loc));
+/*                  m_issues.emplace(issue::trailing_slash_without_subports,
+                                     "/" + std::string(loc));*/
                     has_subports = false;
                 }
             }
@@ -777,7 +777,6 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
 
                     bool next_check_defaults =
                        !has_meta || (meta.find("no defaults") == meta.end());
-
                     do_checks(loc, loc_size - portlen, next_check_defaults);
                 }
             }

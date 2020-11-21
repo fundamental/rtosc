@@ -45,7 +45,7 @@ namespace rtosc {
 enum class issue
 {
     // general:
-    trailing_slash_without_subports,
+    //trailing_slash_without_subports, // not working currently
     duplicate_parameter,
     // callbacks:
     parameter_not_queryable,
