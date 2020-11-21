@@ -152,6 +152,11 @@ int main()
     assert_str_eq("sb", types.data(), "\"\" - types", __LINE__);
     assert_str_eq("a/", args[0].s, "\"\" - ports", __LINE__);
 
+    // the same as before
+    path_search(ports, "/", "", types.data(), max_types, args.data(), max_args);
+    assert_str_eq("sb", types.data(), "\"/\" - types", __LINE__);
+    assert_str_eq("a/", args[0].s, "\"/\" - ports", __LINE__);
+
     path_search(ports, "/doesnt-exist", "", types.data(), max_types, args.data(), max_args);
     assert_str_eq("", types.data(), "\"/doesnt-exist\" - types", __LINE__);
 

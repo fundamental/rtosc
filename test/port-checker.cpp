@@ -240,8 +240,7 @@ bool port_checker::port_is_enabled(const char* loc, const char* port,
     bool rval = true;
     if(enable_port_rel)
     {
-        std::string enable_port = "/";
-        enable_port += loc;
+        std::string enable_port = loc;
         enable_port += enable_port_rel;
 
         const char* collapsed_loc = Ports::collapsePath(&enable_port[0]);
@@ -256,10 +255,10 @@ bool port_checker::port_is_enabled(const char* loc, const char* port,
             }
             else
                 m_issues.emplace(issue::enabled_port_bad_reply,
-                               "/" + std::string(loc) + port);
+                                 std::string(loc) + port);
         } else
             m_issues.emplace(issue::enabled_port_not_replied,
-                           "/" + std::string(loc) + port);
+                             std::string(loc) + port);
     }
     //std::cout << "port \"" << loc << "\" enabled? "
     //          << (rval ? "yes" : "no") << std::endl;
@@ -294,7 +293,7 @@ void port_checker::check_port(const char* loc, const char* portname,
     const char* port_args = strchr(portname, ':');
     if(!port_args)
         port_args = portname + strlen(portname);
-    std::string full_path = "/"; full_path += loc; full_path += portname;
+    std::string full_path = loc; full_path += portname;
     std::string::size_type arg_pos = full_path.find(':');
     if(arg_pos != std::string::npos)
     {
@@ -352,7 +351,7 @@ void port_checker::check_port(const char* loc, const char* portname,
             }
 
             auto raise = [this, loc, portname](issue issue_type) {
-                m_issues.emplace(issue_type, "/" + std::string(loc) + portname);
+                m_issues.emplace(issue_type, std::string(loc) + portname);
             };
 
             for(auto pr : mapping_values)
@@ -694,7 +693,7 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
         }
     }
     if(self_disabled)
-        m_skipped.insert("/" + std::string(loc));
+        m_skipped.insert(loc);
     else
         ++ports_checked;
 
@@ -712,7 +711,7 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
         bool has_subports = portname[portlen-1] == '/';
         if(!has_meta)
            metadata = "";
-        //std::cout << "port /" << loc << ", replied: " << portname
+        //std::cout << "port " << loc << ", replied: " << portname
         //          << " (" << port_no << "/" << port_max
         //          << "), has subports: " << std::boolalpha << has_subports
         //          << std::endl;
@@ -736,7 +735,7 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
                 if(has_subports)
                 {
 /*                  m_issues.emplace(issue::trailing_slash_without_subports,
-                                     "/" + std::string(loc));*/
+                                     loc);*/
                     has_subports = false;
                 }
             }
@@ -786,7 +785,7 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
             }
         }
         else
-            m_skipped.insert("/" + std::string(loc) + portname);
+            m_skipped.insert(std::string(loc) + portname);
         *old_loc = 0;
     }
 
@@ -794,7 +793,7 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
     {
         if(pr.second > 1)
             m_issues.emplace(issue::duplicate_parameter,
-                             "/" + std::string(loc) + pr.first);
+                             std::string(loc) + pr.first);
     }
 }
 
@@ -822,7 +821,7 @@ bool port_checker::operator()(const char* url)
     sender.init(sendtourl.c_str());
     other.init(sendtourl.c_str());
 
-    char loc_buffer[4096] = { 0 };
+    char loc_buffer[4096] = { '/', 0 };
     do_checks(loc_buffer, sizeof(loc_buffer));
 
     finish_time = time(NULL);

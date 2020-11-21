@@ -1184,10 +1184,11 @@ void rtosc::path_search(const rtosc::Ports& root,
     memset(types, 0, max + 1);
     memset(args,  0, max);
 
-    if(!*str) {
+    if(!*str || !strcmp(str, "/")) {
         ports = &root;
     } else {
         const Port *port = root.apropos(str);
+        //fprintf(stderr, "apropos %s -> %s\n",str,port?port->name:"<no result>");
         if(port) {
             if(port->ports) {
                 ports = port->ports;
@@ -1200,7 +1201,7 @@ void rtosc::path_search(const rtosc::Ports& root,
     const auto fn = [&pos,&needle,&types,&args,&max](const Port& p)
     {
         assert(pos < max);
-        //printf("path search iterating port: %s (needle %s) (pos %d)\n", p.name, needle, (int)pos);
+        //fprintf(stderr, "path search iterating port: %s (needle %s) (pos %d)\n", p.name, needle, (int)pos);
         if(p.name && strstr(p.name, needle) == p.name)
         {
             types[pos]    = 's';
@@ -1225,7 +1226,7 @@ void rtosc::path_search(const rtosc::Ports& root,
     if (opts == path_search_opts::sorted ||
         opts == path_search_opts::sorted_and_unique_prefix)
     {
-        // we could use std::array, but it's internal array does not necessarily
+        // we could use std::array, but its internal array does not necessarily
         // have offset 0
         using val_on_2 = my_array<rtosc_arg_t, 2>;
         using ptr_on_2 = val_on_2*;
@@ -1265,7 +1266,7 @@ void rtosc::path_search(const rtosc::Ports& root,
             auto is_less_2 = [](const val_on_2 &p1, const val_on_2 &p2) -> bool {
                 return (!(p1[0].s)) ? false // move p1 to the end
                                     : (!(p2[0].s)) ? true // move p2 to the end
-                                                   // is actually alread sorted:
+                                                   // is actually already sorted:
                                                    : (strcmp(p1[0].s, p2[0].s) < 0);
             };
             std::sort((ptr_on_2)args, ((ptr_on_2)(args))+n_paths_found, is_less_2);
@@ -1273,7 +1274,6 @@ void rtosc::path_search(const rtosc::Ports& root,
             // cut off unused paths
             types[(n_paths_found - unused_paths)<<1] = 0;
         }
-
     }
 }
 
