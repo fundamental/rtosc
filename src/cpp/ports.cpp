@@ -1166,7 +1166,7 @@ void rtosc::path_search(const rtosc::Ports& root,
                         const char *str, const char* needle,
                         char *types, std::size_t max_types,
                         rtosc_arg_t* args, std::size_t max_args,
-                        path_search_opts opts)
+                        path_search_opts opts, bool reply_with_query)
 {
     using rtosc::Ports;
     using rtosc::Port;
@@ -1183,6 +1183,14 @@ void rtosc::path_search(const rtosc::Ports& root,
     //zero out data
     memset(types, 0, max + 1);
     memset(args,  0, max);
+
+    if(reply_with_query) {
+        assert(max >= 2);
+        types[pos]    = 's';
+        args[pos++].s = str;
+        types[pos]    = 's';
+        args[pos++].s = needle;
+    }
 
     if(!*str || !strcmp(str, "/")) {
         ports = &root;
@@ -1279,7 +1287,8 @@ void rtosc::path_search(const rtosc::Ports& root,
 
 std::size_t rtosc::path_search(const Ports &root, const char *m,
                                std::size_t max_ports,
-                               char *msgbuf, std::size_t bufsize)
+                               char *msgbuf, std::size_t bufsize,
+                               path_search_opts opts, bool reply_with_query)
 {
     const char *str    = rtosc_argument(m,0).s;
     const char *needle = rtosc_argument(m,1).s;
@@ -1288,7 +1297,7 @@ std::size_t rtosc::path_search(const Ports &root, const char *m,
     STACKALLOC(char, types, max_types);
     STACKALLOC(rtosc_arg_t, args, max_args);
 
-    path_search(root, str, needle, types, max_types, args, max_args);
+    path_search(root, str, needle, types, max_types, args, max_args, opts, reply_with_query);
     size_t length = rtosc_amessage(msgbuf, bufsize,
                                    "/paths", types, args);
     return length;

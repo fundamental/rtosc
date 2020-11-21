@@ -131,7 +131,13 @@ class port_checker
         lo_address target;
 
         constexpr static int max_exp_paths = 15;
-        const char *exp_paths[max_exp_paths+1];
+        /**
+            max_exp_paths string vectors
+            each first string is the expected paths
+            all further strings must match the respective arguments, if they
+            are of type 's'
+        */
+        std::vector<const char*> exp_paths_n_args[max_exp_paths+1];
 
         // variables from the last expected reply
         int _replied_path;
@@ -139,15 +145,23 @@ class port_checker
         std::vector<rtosc_arg_val_t>* last_args;
 
         bool _wait_for_reply(std::vector<char> *buffer,
-                             std::vector<rtosc_arg_val_t>*args, int unused);
+                             std::vector<rtosc_arg_val_t>*args, int n0, int n1);
 
         template<class ...Args>
         bool _wait_for_reply(std::vector<char> *buffer,
                              std::vector<rtosc_arg_val_t>* args,
-                             int n, const char* path0, Args ...more_paths) {
-            exp_paths[n] = path0;
-            exp_paths[n+1] = nullptr;
-            return _wait_for_reply(buffer, args, 1+n, more_paths...);
+                             int n0, int n1, const char* path0, Args ...more_paths) {
+            if(path0)
+            {
+                n1 = n0 + 1; // do not clear this vector anymore, it's in use
+                exp_paths_n_args[n0].push_back(path0);
+            }
+            else
+            {
+                ++n0; // i.e. n0 == n1
+                exp_paths_n_args[n0].clear();
+            }
+            return _wait_for_reply(buffer, args, n0, n1, more_paths...);
         }
 
         void on_recv(const char *path, const char *types,
@@ -163,16 +177,23 @@ class port_checker
         bool send_msg(const char *address,
                       size_t nargs, const rtosc_arg_val_t *args);
 
-        //! Wait for a reply matching any of the C strings from
-        //! "exp_paths...". Any other received messages are discarded.
-        //! @param buffer Pointer to vector where the address will be
-        //!               written
-        //! @param args Pointer to vector where args will be put
+        /**
+            Wait for a reply matching any of the C strings from
+            "exp_paths_n_args...". Any other received messages are discarded.
+            @param buffer Pointer to vector where the address will be
+                written
+            @param args Pointer to vector where args will be put
+            @param exp_paths Matches that are considered. Those must be
+                separated with nullptrs. Each match begins with the allowed
+                path, followed by optional string matches for the first
+                arguments (only type 's' is being compared)
+        */
         template<class ...Args>
         bool wait_for_reply(std::vector<char>* buffer,
                             std::vector<rtosc_arg_val_t>* args,
                             Args ...exp_paths) {
-            return _wait_for_reply(buffer, args, 0, exp_paths...);
+            exp_paths_n_args[0].clear();
+            return _wait_for_reply(buffer, args, 0, 0, exp_paths...);
         }
     };
 

@@ -368,11 +368,14 @@ enum class path_search_opts
  * @param args An array where the argument values are being written
  * @param max_args maximum number of arguments in array at @p args. Should be
  *   greater or equal than 2 * (maximum no. of child ports of your app's ports).
+ * @param reply_with_query Whether the reply message shall contain the two
+ *   query strings in the beginning
  */
 void path_search(const rtosc::Ports& root, const char *str, const char *needle,
                  char *types, std::size_t max_types,
                  rtosc_arg_t* args, std::size_t max_args,
-                 path_search_opts opts = path_search_opts::sorted_and_unique_prefix);
+                 path_search_opts opts = path_search_opts::sorted_and_unique_prefix,
+                 bool reply_with_query = false);
 
 /**
  * Returns a messages of all paths and metadata of all direct children of a
@@ -393,11 +396,15 @@ void path_search(const rtosc::Ports& root, const char *str, const char *needle,
  *     app's ports.
  * @param msgbuf Buffer for the reply message
  * @param bufsize Size of the message buffer @p msgbuf
+ * @param reply_with_query Whether the reply message shall contain the two
+ *   query strings in the beginning
  * @return The length of the reply message (0 means error)
  */
 std::size_t path_search(const rtosc::Ports& root, const char *m,
                         std::size_t max_ports,
-                        char *msgbuf, std::size_t bufsize);
+                        char *msgbuf, std::size_t bufsize,
+                        path_search_opts opts = path_search_opts::sorted_and_unique_prefix,
+                        bool reply_with_query = false);
 
 /**
  * Return the index with value @p value from the metadata's enumeration.

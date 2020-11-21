@@ -16,6 +16,9 @@
 
 #include "port-checker.h"
 
+// enable this if you need to find bugs in port-checker
+// #define DEBUG_PORT_CHECKER
+
 namespace rtosc {
 
 static constexpr const issue_t _m_issue_types_arr[(int)issue::number] =
@@ -126,17 +129,27 @@ void port_checker::server::on_recv(const char *path, const char *types,
                                    lo_arg **argv, int argc, lo_message msg)
 {
     (void)argv;
-//  std::cout << "on_recv: " << path << ", " << waiting << std::endl;
-//  for(const char** exp_path = exp_paths; *exp_path;
-//      ++exp_path, ++_replied_path)
-//      std::cout << " - exp: " << *exp_path << std::endl;
-    if(waiting && exp_paths[0])
+#ifdef DEBUG_PORT_CHECKER
+    std::cout << "on_recv: " << path << ", " << waiting << std::endl;
+    for(std::vector<const char*>* exp_strs = exp_paths_n_args; exp_strs->size();
+        ++exp_strs, ++_replied_path)
+    {
+        std::cout << " - exp. path: " << (*exp_strs)[0] << std::endl;
+        for(std::size_t i = 1; i < exp_strs->size(); ++i)
+            std::cout << "   - exp. arg " << i-1 << ": " << (*exp_strs)[i] << std::endl;
+    }
+#endif
+    if(waiting && exp_paths_n_args[0].size())
     {
         _replied_path = 0;
-        for(const char** exp_path = exp_paths; *exp_path;
-            ++exp_path, ++_replied_path)
-        if(!strcmp(*exp_path, path))
+        for(std::vector<const char*>* exp_strs = exp_paths_n_args; exp_strs->size();
+            ++exp_strs, ++_replied_path)
+        if(!strcmp((*exp_strs)[0], path))
         {
+#ifdef DEBUG_PORT_CHECKER
+            std::cout << "on_recv: match:" << std::endl;
+            lo_message_pp(msg);
+#endif
             size_t len = lo_message_length(msg, path);
             *last_buffer = std::vector<char>(len);
             size_t written;
@@ -146,13 +159,18 @@ void port_checker::server::on_recv(const char *path, const char *types,
                                          "lo_message_length has been used");
 
             last_args->resize(argc);
-            for(int i = 0; i < argc; ++i)
+            bool still_ok = true;
+            for(std::size_t i = 0; i < (std::size_t)argc; ++i)
             {
                 (*last_args)[i].val = rtosc_argument(last_buffer->data(), i);
                 (*last_args)[i].type = types[i];
+                if(still_ok && (*last_args)[i].type == 's' && i+1 < exp_strs->size())
+                {
+                    still_ok = !strcmp((*last_args)[i].val.s, (*exp_strs)[i+1]);
+                }
             }
 
-            waiting = false;
+            if(still_ok) { waiting = false; }
             break;
         }
     }
@@ -171,13 +189,18 @@ void port_checker::server::init(const char* target_url)
         throw std::runtime_error("Could not create lo server");
     lo_server_add_method(srv, nullptr, nullptr, handle_st, this);
 
-    rtosc_arg_val_t hi[2];
+    rtosc_arg_val_t hi[3];
     hi[0].type = hi[1].type = 's';
     hi[0].val.s = hi[1].val.s = "";
-    send_msg("/path-search", 2, hi);
+    hi[2].type = 'T';
+    hi[2].val.T = 1;
+    send_msg("/path-search", 3, hi);
     std::vector<rtosc_arg_val_t> reply;
     std::vector<char> buf;
-    wait_for_reply(&buf, &reply, "/paths");
+    bool ok = wait_for_reply(&buf, &reply, "/paths", hi[0].val.s, hi[1].val.s);
+    if(!ok) {
+        throw std::runtime_error("OSC app does not reply at all");
+    }
 }
 
 bool port_checker::send_msg(const char* address,
@@ -197,9 +220,10 @@ bool port_checker::server::send_msg(const char* address,
         std::cout << "liblo error code: " << res << std::endl;
         throw std::runtime_error("could not deserialize message");
     }
-    // std::cout << "send message: " << address << ", args:" << std::endl;
-    // lo_message_pp(msg);
-
+#ifdef DEBUG_PORT_CHECKER
+    std::cout << "send message: " << address << ", args:" << std::endl;
+    lo_message_pp(msg);
+#endif
     res = lo_send_message_from(target, srv, buffer, msg);
     if(res == -1)
         throw std::runtime_error("Could not send message");
@@ -208,9 +232,11 @@ bool port_checker::server::send_msg(const char* address,
 
 bool port_checker::server::_wait_for_reply(std::vector<char>* buffer,
                                            std::vector<rtosc_arg_val_t> * args,
-                                           int unused)
+                                           int n0, int n1)
 {
-    (void)unused;
+    (void)n0;
+    exp_paths_n_args[n1].clear();
+
     last_args = args;
     last_buffer = buffer;
 
@@ -459,8 +485,8 @@ void port_checker::check_port(const char* loc, const char* portname,
                     args1.clear();
                     strbuf1.clear();
                     res = sender.wait_for_reply(&strbuf1, &args1,
-                                                full_path.c_str(),
-                                                "/undo_change");
+                                                full_path.c_str(), nullptr,
+                                                "/undo_change", nullptr);
 
                     if(!res)
                         raise(issue::parameter_not_replied);
@@ -659,18 +685,22 @@ bool port_checker::print_sanity_checks() const
 void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
 {
     char* old_loc = loc + strlen(loc);
-//  std::cout << "Checking Ports: \"" << loc << "\"..." << std::endl;
+#ifdef DEBUG_PORT_CHECKER
+    std::cout << "Checking Ports: \"" << loc << "\"..." << std::endl;
+#endif
 
-
-    rtosc_arg_val_t query_args[2];
+    rtosc_arg_val_t query_args[3];
     query_args[0].type = query_args[1].type = 's';
     query_args[0].val.s = loc;
     query_args[1].val.s = "";
-    send_msg("/path-search", 2, query_args);
+    query_args[2].type = 'T';
+    query_args[2].val.T = 1;
+    send_msg("/path-search", 3, query_args);
     std::vector<rtosc_arg_val_t> args;
     std::vector<char> strbuf;
 
-    int res = sender.wait_for_reply(&strbuf, &args, "/paths");
+    int res = sender.wait_for_reply(&strbuf, &args, "/paths",
+                                    query_args[0].val.s, query_args[1].val.s);
     if(!res)
         throw port_error("no reply from path-search", loc);
     if(args.size() % 2)
@@ -678,8 +708,10 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
 
     bool self_disabled = false; // disabled by an rSelf() ?
     size_t port_max = args.size() >> 1;
-    // std::cout << "found " << port_max << " subports" << std::endl;
-    for(size_t port_no = 0; port_no < port_max; ++port_no)
+#ifdef DEBUG_PORT_CHECKER
+    std::cout << "found " << port_max-1 << " subports" << std::endl;
+#endif
+    for(size_t port_no = 1; port_no < port_max; ++port_no)
     {
         if(args[port_no << 1].type != 's' ||
                 args[(port_no << 1) + 1].type != 'b')
@@ -700,7 +732,7 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
     std::map<std::string, unsigned> port_count;
 
     if(!self_disabled)
-    for(size_t port_no = 0; port_no < port_max; ++port_no)
+    for(size_t port_no = 1; port_no < port_max; ++port_no)
     {
         const char* portname = args[port_no << 1].val.s;
         const int portlen = strlen(portname);
@@ -711,11 +743,12 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
         bool has_subports = portname[portlen-1] == '/';
         if(!has_meta)
            metadata = "";
-        //std::cout << "port " << loc << ", replied: " << portname
-        //          << " (" << port_no << "/" << port_max
-        //          << "), has subports: " << std::boolalpha << has_subports
-        //          << std::endl;
-
+#ifdef DEBUG_PORT_CHECKER
+        std::cout << "port " << loc << ", replied: " << portname
+                  << " (" << port_no << "/" << (port_max-1)
+                  << "), has subports: " << std::boolalpha << has_subports
+                  << std::endl;
+#endif
         if(!has_meta || port_is_enabled(loc, portname, metadata))
         {
             Port::MetaContainer meta(metadata);

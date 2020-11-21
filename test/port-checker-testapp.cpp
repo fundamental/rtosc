@@ -256,12 +256,13 @@ void port_checker_tester::on_recv(const char *path, const char *,
 
 void port_checker_tester::on_recv(const char *msg) {
     if(!strcmp(msg, "/path-search") &&
-            !strcmp("ss", rtosc_argument_string(msg)))
+            !strcmp("ssT", rtosc_argument_string(msg)))
     {
 
         char buffer[1024*20];
         std::size_t length =
-            rtosc::path_search(test_ports, msg, 128, buffer, sizeof(buffer));
+            rtosc::path_search(test_ports, msg, 128, buffer, sizeof(buffer),
+                rtosc::path_search_opts::sorted_and_unique_prefix, true);
         if(length) {
             lo_message msg  = lo_message_deserialise((void*)buffer,
                                                      length, NULL);
