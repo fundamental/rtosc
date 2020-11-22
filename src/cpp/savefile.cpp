@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cstring>
 #include <algorithm>
+#include <set>
 
 #include "../util.h"
 #include <rtosc/arg-val-cmp.h>
@@ -35,7 +36,7 @@ std::string get_changed_values(const Ports& ports, void* runtime)
                const char* port_from_base, const Ports& base,
                void* data, void* runtime)
     {
-
+        static std::set<std::string> written;
         assert(runtime);
         const Port::MetaContainer meta = p->meta();
 #if 0
@@ -70,6 +71,9 @@ std::string get_changed_values(const Ports& ports, void* runtime)
             // this param is already saved in another port
             return;
         }
+
+        if(written.find(port_buffer) != written.end()) { return; }
+        else { written.insert(port_buffer); }
 
         char loc[buffersize] = ""; // buffer to hold the dispatched path
         rtosc_arg_val_t arg_vals_default[max_arg_vals];
