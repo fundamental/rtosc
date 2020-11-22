@@ -65,6 +65,12 @@ std::string get_changed_values(const Ports& ports, void* runtime)
             }
         }
 
+        if(meta.find("alias") != meta.end())
+        {
+            // this param is already saved in another port
+            return;
+        }
+
         char loc[buffersize] = ""; // buffer to hold the dispatched path
         rtosc_arg_val_t arg_vals_default[max_arg_vals];
         rtosc_arg_val_t arg_vals_runtime[max_arg_vals];
