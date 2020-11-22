@@ -27,16 +27,20 @@ namespace {
 // * compare: if values are different -> write to savefile
 std::string get_changed_values(const Ports& ports, void* runtime)
 {
-    std::string res;
     char port_buffer[buffersize];
     memset(port_buffer, 0, buffersize); // requirement for walk_ports
+
+    struct data_t
+    {
+        std::string res;
+        std::set<std::string> written;
+    } data;
 
     auto on_reach_port =
             [](const Port* p, const char* port_buffer,
                const char* port_from_base, const Ports& base,
                void* data, void* runtime)
     {
-        static std::set<std::string> written;
         assert(runtime);
         const Port::MetaContainer meta = p->meta();
 #if 0
@@ -72,8 +76,11 @@ std::string get_changed_values(const Ports& ports, void* runtime)
             return;
         }
 
-        if(written.find(port_buffer) != written.end()) { return; }
-        else { written.insert(port_buffer); }
+        {
+            std::set<std::string>& written = ((data_t*)data)->written;
+            if(written.find(port_buffer) != written.end()) { return; }
+            else { written.insert(port_buffer); }
+        }
 
         char loc[buffersize] = ""; // buffer to hold the dispatched path
         rtosc_arg_val_t arg_vals_default[max_arg_vals];
@@ -82,7 +89,7 @@ std::string get_changed_values(const Ports& ports, void* runtime)
         char buffer_with_port[buffersize];
         char strbuf[buffersize]; // temporary string buffer for pretty-printing
 
-        std::string* res = (std::string*)data;
+        std::string* res = &((data_t*)data)->res;
         assert(strlen(port_buffer) + 1 < buffersize);
         // copy the path until before the message
         fast_strcpy(loc, port_buffer, std::min((ptrdiff_t)buffersize,
@@ -268,12 +275,12 @@ std::string get_changed_values(const Ports& ports, void* runtime)
         }
     };
 
-    walk_ports(&ports, port_buffer, buffersize, &res, on_reach_port, false,
+    walk_ports(&ports, port_buffer, buffersize, &data, on_reach_port, false,
                runtime);
 
-    if(res.length()) // remove trailing newline
-        res.resize(res.length()-1);
-    return res;
+    if(data.res.length()) // remove trailing newline
+        data.res.resize(data.res.length()-1);
+    return data.res;
 }
 
 bool savefile_dispatcher_t::do_dispatch(const char* msg)
