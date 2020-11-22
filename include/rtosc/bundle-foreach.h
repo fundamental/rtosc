@@ -58,7 +58,7 @@ void bundle_foreach(const struct Port& p, const char* name, char* old_end,
     const unsigned max = atoi(name+1);
     while(isdigit(*++name)) ;
 
-    char* pos2;
+    char* pos2 = pos;
 
     if(expand_bundles && !ranges)
     for(unsigned i=0; i<max; ++i)
@@ -69,19 +69,20 @@ void bundle_foreach(const struct Port& p, const char* name, char* old_end,
         // append everything behind the '#' (for cases like a#N/b)
         while(*name2_2 && *name2_2 != ':')
             *pos2++ = *name2_2++;
+        *pos2 = 0;
 
         ftor(&p, name_buffer, old_end, base, data, runtime);
     }
     else // !expand_bundles || ranges
     {
         const char* name2_2 = name;
-        pos2 = pos;
         if(ranges)
             pos2 += sprintf(pos,"[0,%d]",max-1);
 
         // append everything behind the '#' (for cases like a#N/b)
         while(*name2_2 && *name2_2 != ':')
             *pos2++ = *name2_2++;
+        *pos2 = 0;
 
         ftor(&p, name_buffer, old_end, base, data, runtime);
     }
