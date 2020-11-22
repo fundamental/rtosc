@@ -999,6 +999,7 @@ static void walk_ports_recurse(const Port& p, char* name_buffer,
         buf_ptr = buf + (old_end - name_buffer);
 
         char locbuf[1024];
+        fast_strcpy(locbuf, name_buffer, sizeof(locbuf));
         RtData r;
         r.obj = runtime;
         r.port = &p;
