@@ -967,9 +967,14 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
         return true;
 }
 
+/**
+    This recursing function is called if walk_ports hits one port @p p which has
+    sub-ports again. The @p runtime object still is the one belonging to the
+    base port which contains @p p as a subport.
+*/
 // this is doing nothing else than checking if a port is enabled (using the runtime),
-// and if yes, call walk_ports again
-// in case of no runtime, this is only calling walk_ports
+// and if yes, call walk_ports on its subports again
+// in case of no runtime, this only calls walk_ports
 static void walk_ports_recurse(const Port& p, char* name_buffer,
                                size_t buffer_size, const Ports& base,
                                void* data, port_walker_t walker,
@@ -1001,7 +1006,7 @@ static void walk_ports_recurse(const Port& p, char* name_buffer,
         char locbuf[1024];
         fast_strcpy(locbuf, name_buffer, sizeof(locbuf));
         RtData r;
-        r.obj = runtime;
+        r.obj = runtime; // runtime object of the port that contains p
         r.port = &p;
         r.message = buf;
         r.loc = locbuf;
@@ -1016,7 +1021,7 @@ static void walk_ports_recurse(const Port& p, char* name_buffer,
             // check if the port is disabled by a switch
             enabled = port_is_enabled(&p, name_buffer, buffer_size,
                                       base, runtime);
-            runtime = r.obj; // callback has stored the child pointer here
+            runtime = r.obj; // callback has stored the pointer of p here
         }
     }
     if(enabled)
@@ -1024,9 +1029,13 @@ static void walk_ports_recurse(const Port& p, char* name_buffer,
                           data, walker, expand_bundles, runtime, ranges);
 };
 
+/**
+    This recursing function is called if walk_ports hits one port @p p which has
+    sub-ports again. The @p runtime object still is the one belonging to the
+    base port which contains @p p as a subport.
+*/
 /*
-
-example:
+char pointer example:
 
           (Ports& base)         p.name       e.g. read_head
                 v               v            v
@@ -1036,7 +1045,7 @@ example:
                 ^               ^          ^
    name_buffer[buffer_size]     old_end    e.g. write_head
 
- */
+*/
 static void walk_ports_recurse0(const Port& p, char* name_buffer,
                                 size_t buffer_size, const Ports* base,
                                 void* data, port_walker_t walker,
@@ -1094,7 +1103,6 @@ static void walk_ports_recurse0(const Port& p, char* name_buffer,
     }
 };
 
-// TODO: copy the changes into walk_ports_2
 void rtosc::walk_ports(const Ports  *base,
                        char         *name_buffer,
                        size_t        buffer_size,
