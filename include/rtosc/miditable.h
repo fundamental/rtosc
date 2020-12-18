@@ -60,13 +60,13 @@ class MidiMapperStorage
             T operator[](int i) const {assert(i>=0 && i<n);return t[i];}
 
             TinyVector insert(const T &t_)
-            {TinyVector next(n+1); for(int i=0;i<n; ++i) next.t[i]=t[i]; next.t[n] = t_;return std::move(next);}
+            {TinyVector next(n+1); for(int i=0;i<n; ++i) next.t[i]=t[i]; next.t[n] = t_;return next;}
             TinyVector one_larger(void)
-            {TinyVector next(n+1); for(int i=0;i<n + 1; ++i) next.t[i]=0; return std::move(next);}
+            {TinyVector next(n+1); for(int i=0;i<n + 1; ++i) next.t[i]=0; return next;}
             TinyVector sized_clone(void)
-            {TinyVector next(n); for(int i=0;i<n; ++i) next.t[i]=0; return std::move(next);}
+            {TinyVector next(n); for(int i=0;i<n; ++i) next.t[i]=0; return next;}
             TinyVector clone(void)
-            {TinyVector next(n); for(int i=0;i<n; ++i) next.t[i]=t[i]; return std::move(next);}
+            {TinyVector next(n); for(int i=0;i<n; ++i) next.t[i]=t[i]; return next;}
             int size(void) const{return n;}
         };
 
