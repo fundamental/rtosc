@@ -70,12 +70,12 @@ class port_checker_tester
                 pc->broadcast_to_remote(msg, buffersize);
             }
 
-            virtual void chain(const char *msg) override
+            virtual void chain(const char * /*msg*/) override
             {
                 assert(false);
             }
 
-            virtual void chain(const char *path, const char *args, ...) override
+            virtual void chain(const char * /*path*/, const char * /*args*/, ...) override
             {
                 assert(false);
             }
@@ -88,7 +88,6 @@ class port_checker_tester
             bool forwarded;
         private:
             char *buffer;
-            pc_data_obj *mwi;
     };
 
     lo_server srv;
@@ -127,7 +126,7 @@ public:
     port_checker_tester(const char *preferred_port);
 };
 
-void null_fn(const char*,rtosc::RtData){}
+void null_fn(const char*,rtosc::RtData&){}
 
 // ports for running port-checker-tester on
 // note: must be conforming to port-checker-tester.cpp
@@ -151,7 +150,7 @@ static const rtosc::Ports test_ports = {
     {"rdefault_without_rparameter_B::i", rPresets(0,1,2), NULL,
         rParamICb(rdefault_without_rparameter)},
     {"no_query::i", rProp(parameter) rDefault(0), nullptr,
-        [](const char* msg, rtosc::RtData& d) {} },
+        [](const char*, rtosc::RtData&) {} },
     {"no_reply_A::i", rProp(parameter) rDefault(0), NULL,
         [](const char* msg, rtosc::RtData& d) {
             const char *args = rtosc_argument_string(msg);
