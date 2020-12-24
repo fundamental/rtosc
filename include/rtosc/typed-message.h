@@ -30,16 +30,10 @@ template<> class rtMsg<>
 };
 
 template<class T>
-struct advance_size
-{
-    static std::true_type size;
-};
+struct advance_size : public std::true_type {};
 
 template<char ... C>
-struct advance_size<irqus::typestring<C...>>
-{
-    static std::false_type size;
-};
+struct advance_size<irqus::typestring<C...>> : public std::false_type {};
 
 template<class T>
 bool valid_char(char) { return false;}
@@ -74,13 +68,13 @@ bool match_path(std::true_type, const char *)
 template<int i, class This, class... Rest>
 bool validate(const char *arg)
 {
-    auto size = advance_size<This>::size;
+    advance_size<This> size;
     if(size && !valid_char<This>(rtosc_type(arg,i)))
         return false;
     else if(!size && !match_path<This>(size, arg))
         return false;
     else
-        return validate<i+advance_size<This>::size,Rest...>(arg);
+        return validate<i+size.value,Rest...>(arg);
 }
 
 //Tuple Like Template Class Definition
