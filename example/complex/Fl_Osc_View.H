@@ -172,7 +172,12 @@ class Fl_Osc_View: public Fl_Double_Window
         memset(buffer, 0, sizeof(buffer));
 
         rtosc::walk_ports(p, buffer, sizeof(buffer), table,
-                [](const rtosc::Port *p, const char *name, void*t) {
+                [](const rtosc::Port *p,
+                    const char *name,
+                    const char *_,
+                    const rtosc::Ports &__,
+                    void*t,
+                    void*runtime) {
                 PortTable *table = (PortTable*)t;
 
                 port_view tmp = {name, *p, -1, -1};

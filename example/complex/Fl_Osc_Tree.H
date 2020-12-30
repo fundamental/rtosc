@@ -72,7 +72,7 @@ class Fl_Osc_Tree:Fl_Tree
                     } else {
                         char tmpa[1024];
                         char tmpb[1024];
-                        strncpy(tmpa, path.c_str(), 1024);
+                        strncpy(tmpa, path.c_str(), 1024-1);
                         char *pound = strchr(tmpa, '#');
                         int N = atoi(pound+1);
                         *pound = 0;

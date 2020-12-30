@@ -152,7 +152,8 @@ void traverse_tree(const Ports *p)
     memset(buffer, 0, sizeof(buffer));
 
     walk_ports(p, buffer, sizeof(buffer), NULL,
-            [](const Port *, const char *name, void*) {
+            [](const Port *, const char *name, const char *,
+                const Ports&, void*, void*) {
                 printf("%s\n", name);});
 }
 
