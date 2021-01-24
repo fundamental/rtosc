@@ -30,6 +30,14 @@ AutomationMgr::AutomationMgr(int slots, int per_slot, int control_points)
 }
 AutomationMgr::~AutomationMgr(void)
 {
+    for(int i=0; i<nslots; ++i) {
+        auto &s = this->slots[i];
+        for(int j=0; j<per_slot; ++j) {
+            delete[] s.automations[j].map.control_points;
+        }
+        delete[] s.automations;
+    }
+    delete[] this->slots;
 }
 
 void AutomationMgr::createBinding(int slot, const char *path, bool start_midi_learn)
