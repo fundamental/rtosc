@@ -253,8 +253,14 @@ typedef std::vector<tuple_t> tvec_t;
 namespace rtosc{
 class Port_Matcher
 {
+        bool *m_enump = nullptr; //!< @invariant nullptr or new[]'ed memory
     public:
-        bool *enump;
+        Port_Matcher(int ports_size) : m_enump(new bool[ports_size]) {}
+        ~Port_Matcher() { delete[] m_enump; }
+
+        const bool* enump() const { return m_enump; }
+        void set_enump(int i, bool val) const { m_enump[i] = val; }
+
         svec_t fixed;
         cvec_t arg_spec;
         ivec_t pos;
@@ -508,7 +514,6 @@ Ports::Ports(std::initializer_list<Port> l)
 
 Ports::~Ports()
 {
-    delete []impl->enump;
     delete impl;
 }
 
@@ -615,7 +620,7 @@ void Ports::dispatch(const char *m, rtosc::RtData &d, bool base_dispatch) const
                     d.matches++;
 
                 //Append the path
-                if(impl->enump[port_num]) {
+                if(impl->enump()[port_num]) {
                     const char *msg = m;
                     char       *pos = old_end;
                     while(*msg && *msg != '/')
@@ -835,11 +840,10 @@ char *Ports::collapsePath(char *p)
 void Ports::refreshMagic()
 {
     delete impl;
-    impl = new Port_Matcher;
+    impl = new Port_Matcher(ports.size());
     generate_minimal_hash(*this, *impl);
-    impl->enump = new bool[ports.size()];
     for(int i=0; i<(int)ports.size(); ++i)
-        impl->enump[i] = strchr(ports[i].name, '#');
+        impl->set_enump(i, !!strchr(ports[i].name, '#'));
 
     elms = ports.size();
 }
