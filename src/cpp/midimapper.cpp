@@ -548,7 +548,10 @@ MidiMapperRT::MidiMapperRT(void)
 {}
 void MidiMapperRT::setBackendCb(std::function<void(const char*)> cb) {backend = cb;}
 void MidiMapperRT::setFrontendCb(std::function<void(const char*)> cb) {frontend = cb;}
-void MidiMapperRT::handleCC(int ID, int val) {
+void MidiMapperRT::handleCC(int par, int val, char chan, bool isNrpn) {
+    
+    if(chan<1) chan=1;
+    int ID = (isNrpn<<18) + (((chan-1)&0x0f)<<14) + par;
     //printf("handling CC(%d,%d){%d,%d,%d}\n", ID, val, (int)storage, pending.has(ID), watchSize);
     if((!storage || !storage->handleCC(ID, val, backend)) && !pending.has(ID) && watchSize) {
         watchSize--;

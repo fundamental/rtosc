@@ -340,7 +340,7 @@ const char *AutomationMgr::getName(int slot_id)
 bool AutomationMgr::handleMidi(int channel, int type, int val)
 {
     bool is_nrpn = false;
-    int par_id;
+    int par_id = 0;
     int value;
     if((type == C_dataentryhi) || (type == C_dataentrylo)
        || (type == C_nrpnhi) || (type == C_nrpnlo)) { //Process RPN and NRPN by the Master (ignore the chan)
