@@ -156,7 +156,7 @@ class MidiMapperRT
         MidiMapperRT(void);
         void setBackendCb(std::function<void(const char*)> cb);
         void setFrontendCb(std::function<void(const char*)> cb);
-        void handleCC(int ID, int val);
+        void handleCC(int par, int val, char chan=1, bool nrpn=false);
         void addWatch(void);
         void remWatch(void);
 
