@@ -49,8 +49,11 @@ struct rtosc_hack_decltype_t
 #define STRINGIFY(a) STRINGIFY2(a)
 
 //Helper for documenting varargs
-#define IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,N, ...) N
-#define LAST_IMP(...) IMPL(__VA_ARGS__,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,0,0,0)
+#define IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,N, ...) N
+#define LAST_IMP(...) IMPL(__VA_ARGS__,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,0,0,0)
+#define DOC_IMP18(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r) a b c d e f g h i j k l m n o p qrDoc(o)
+#define DOC_IMP17(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q) a b c d e f g h i j k l m n o p rDoc(o)
+#define DOC_IMP16(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p) a b c d e f g h i j k l m n o rDoc(o)
 #define DOC_IMP15(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o) a b c d e f g h i j k l m n rDoc(o)
 #define DOC_IMP14(a,b,c,d,e,f,g,h,i,j,k,l,m,n) a b c d e f g h i j k l m rDoc(n)
 #define DOC_IMP13(a,b,c,d,e,f,g,h,i,j,k,l,m) a b c d e f g h i j k l rDoc(m)
@@ -119,6 +122,26 @@ struct rtosc_hack_decltype_t
     MAC_EACH_I(off, mac, data, LAST_IMP(__VA_ARGS__), __VA_ARGS__)
 #define MAC_EACH(mac, data, ...) MAC_EACH_OFF(0, mac, data, __VA_ARGS__)
 
+//                    1 2 3 4 5 6 7 8 910111213141516171819202122
+#define OPTIONS_IMP22(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v) \
+    rOpt(0,a) rOpt(1,b) rOpt(2,c) rOpt(3,d) rOpt(4,e) rOpt(5,f) rOpt(6,g) \
+    rOpt(7,h) rOpt(8,i) rOpt(9,j) rOpt(10,k)rOpt(11,l)rOpt(12,m)rOpt(13,n)\
+    rOpt(14,o)rOpt(15,p)rOpt(16,q)rOpt(17,r)rOpt(18,s)rOpt(19,t)rOpt(20,u)rOpt(21,v)
+//                    1 2 3 4 5 6 7 8 9101112131415161718192021
+#define OPTIONS_IMP21(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u) \
+    rOpt(0,a) rOpt(1,b) rOpt(2,c) rOpt(3,d) rOpt(4,e) rOpt(5,f) rOpt(6,g) \
+    rOpt(7,h) rOpt(8,i) rOpt(9,j) rOpt(10,k)rOpt(11,l)rOpt(12,m)rOpt(13,n)\
+    rOpt(14,o)rOpt(15,p)rOpt(16,q)rOpt(17,r)rOpt(18,s)rOpt(19,t)rOpt(20,u)
+//                    1 2 3 4 5 6 7 8 91011121314151617181920
+#define OPTIONS_IMP20(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t) \
+    rOpt(0,a) rOpt(1,b) rOpt(2,c) rOpt(3,d) rOpt(4,e) rOpt(5,f) rOpt(6,g) \
+    rOpt(7,h) rOpt(8,i) rOpt(9,j) rOpt(10,k)rOpt(11,l)rOpt(12,m)rOpt(13,n)\
+    rOpt(14,o)rOpt(15,p)rOpt(16,q)rOpt(17,r)rOpt(18,s)rOpt(19,t)
+//                    1 2 3 4 5 6 7 8 910111213141516171819
+#define OPTIONS_IMP19(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s) \
+    rOpt(0,a) rOpt(1,b) rOpt(2,c) rOpt(3,d) rOpt(4,e) rOpt(5,f) rOpt(6,g) \
+    rOpt(7,h) rOpt(8,i) rOpt(9,j) rOpt(10,k)rOpt(11,l)rOpt(12,m)rOpt(13,n)\
+    rOpt(14,o)rOpt(15,p)rOpt(16,q)rOpt(17,r)rOpt(18,s)
 //                    1 2 3 4 5 6 7 8 9101112131415161718
 #define OPTIONS_IMP18(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r) \
     rOpt(0,a) rOpt(1,b) rOpt(2,c) rOpt(3,d) rOpt(4,e) rOpt(5,f) rOpt(6,g) \
@@ -179,6 +202,16 @@ struct rtosc_hack_decltype_t
 //Additional Change Callback (after parameters have been changed)
 //This can be used to queue up interpolation or parameter regen
 #define rChangeCb
+
+#define rCrossBroadcast(loc, cross) \
+            char part_loc[128]; \
+            strncpy(part_loc, loc, sizeof(part_loc)); \
+            part_loc[sizeof(part_loc) - 1] = '\0'; \
+            char *end = strrchr(part_loc, '/'); \
+            if(end) { \
+                strcpy(&end[1], STRINGIFY(cross)); \
+                data.broadcast(part_loc, "f", obj->cross); \
+            }
 
 //Normal parameters
 #define rParam(name, ...) \
@@ -297,6 +330,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
 #define rDoc(doc) ":documentation\0=" doc "\0"
 #define rOpt(numeric,symbolic) rMap(map numeric, symbolic)
 #define rOptions(...) OPTIONS(__VA_ARGS__)
+#define rOptionsBound(...) rOptions(__VA_ARGS__), rLinear(0,LAST_IMP(__VA_ARGS__))
 
 //Zest Metadata
 #define rShort(name) ":shortname\0=" name "\0"
