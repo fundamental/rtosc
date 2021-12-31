@@ -245,7 +245,7 @@ void AutomationMgr::setSlotSubPath(int slot, int ind, const char *path)
     if(slot >= nslots || slot < 0)
         return;
 
-	assert(p);
+    assert(p);
     const Port *port = p->apropos(path);
     if(!port) {
         fprintf(stderr, "[Zyn:Error] port '%s' does not exist\n", path);
@@ -291,8 +291,7 @@ void AutomationMgr::setSlotSubPath(int slot, int ind, const char *path)
         au.map.control_scale = 0;
 
     updateMapping(slot, ind);
-	damaged = true;
-
+    damaged = true;
 }
 
 void  AutomationMgr::setSlotSubGain(int slot_id, int sub, float f)
