@@ -254,14 +254,24 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT DEFINED RTOSC_NO_INSTALL)
             DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig/")
     endif()
     install(FILES include/rtosc/rtosc.h
-        include/rtosc/thread-link.h
-        include/rtosc/ports.h
+        include/rtosc/arg-val-cmp.h
+        include/rtosc/arg-val-math.h
+        include/rtosc/automations.h
+        include/rtosc/bundle-foreach.h
+        include/rtosc/default-value.h
         include/rtosc/miditable.h
         include/rtosc/port-sugar.h
-        include/rtosc/undo-history.h
-        include/rtosc/subtree-serialize.h
-        include/rtosc/typed-message.h
+        include/rtosc/ports-runtime.h
+        include/rtosc/ports.h
+        include/rtosc/pretty-format.h
+        include/rtosc/rtosc-time.h
         include/rtosc/rtosc-version.h
+        include/rtosc/savefile.h
+        include/rtosc/subtree-serialize.h
+        include/rtosc/thread-link.h
+        include/rtosc/typed-message.h
+        include/rtosc/typestring.hh
+        include/rtosc/undo-history.h
         DESTINATION include/rtosc)
     install(TARGETS rtosc rtosc-cpp
         DESTINATION ${CMAKE_INSTALL_LIBDIR})
