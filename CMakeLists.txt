@@ -252,6 +252,10 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT DEFINED RTOSC_NO_INSTALL)
             ${CMAKE_BINARY_DIR}/librtosc.pc @ONLY)
         install(FILES ${CMAKE_BINARY_DIR}/librtosc.pc
             DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig/")
+        configure_file(librtosc_cpp.pc.cmake
+            ${CMAKE_BINARY_DIR}/librtosc_cpp.pc @ONLY)
+        install(FILES ${CMAKE_BINARY_DIR}/librtosc_cpp.pc
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig/")
     endif()
     install(FILES include/rtosc/rtosc.h
         include/rtosc/arg-val-cmp.h
