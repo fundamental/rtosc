@@ -3,7 +3,7 @@ project(RTOSC)
 
 set(VERSION_MAJOR 0)
 set(VERSION_MINOR 3)
-set(VERSION_PATCH 0)
+set(VERSION_PATCH 1)
 
 option(PERF_TEST "Run Performance Timing Tests" OFF)
 option(RTOSC_INCLUDE_WHAT_YOU_USE "Check for useless includes" OFF)
