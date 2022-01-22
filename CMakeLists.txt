@@ -7,14 +7,14 @@ set(VERSION_PATCH 0)
 
 option(PERF_TEST "Run Performance Timing Tests" OFF)
 option(RTOSC_INCLUDE_WHAT_YOU_USE "Check for useless includes" OFF)
-option(RTOSC_BUILD_SHARED_LIBS "Build librtosc and librtosc_cpp as shared libraries" OFF)
+option(RTOSC_BUILD_SHARED_LIBS "Build librtosc and librtosc-cpp as shared libraries" OFF)
 mark_as_advanced(FORCE RTOSC_INCLUDE_WHAT_YOU_USE)
 
 if(RTOSC_BUILD_SHARED_LIBS)
   set(BUILD_SHARED_LIBS ON)
-  message(STATUS "Build librtosc and librtosc_cpp as shared libraries")
+  message(STATUS "Build librtosc and librtosc-cpp as shared libraries")
 else()
-  message(STATUS "Build librtosc and librtosc_cpp as static libraries")
+  message(STATUS "Build librtosc and librtosc-cpp as static libraries")
 endif()
 
 include("cmake/ColorMessage.cmake")
@@ -260,9 +260,9 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT DEFINED RTOSC_NO_INSTALL)
             ${CMAKE_BINARY_DIR}/librtosc.pc @ONLY)
         install(FILES ${CMAKE_BINARY_DIR}/librtosc.pc
             DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig/")
-        configure_file(librtosc_cpp.pc.cmake
-            ${CMAKE_BINARY_DIR}/librtosc_cpp.pc @ONLY)
-        install(FILES ${CMAKE_BINARY_DIR}/librtosc_cpp.pc
+        configure_file(librtosc-cpp.pc.cmake
+            ${CMAKE_BINARY_DIR}/librtosc-cpp.pc @ONLY)
+        install(FILES ${CMAKE_BINARY_DIR}/librtosc-cpp.pc
             DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig/")
     endif()
     install(FILES include/rtosc/rtosc.h
