@@ -7,7 +7,15 @@ set(VERSION_PATCH 0)
 
 option(PERF_TEST "Run Performance Timing Tests" OFF)
 option(RTOSC_INCLUDE_WHAT_YOU_USE "Check for useless includes" OFF)
+option(RTOSC_BUILD_SHARED_LIBS "Build librtosc and librtosc_cpp as shared libraries" OFF)
 mark_as_advanced(FORCE RTOSC_INCLUDE_WHAT_YOU_USE)
+
+if(RTOSC_BUILD_SHARED_LIBS)
+  set(BUILD_SHARED_LIBS ON)
+  message(STATUS "Build librtosc and librtosc_cpp as shared libraries")
+else()
+  message(STATUS "Build librtosc and librtosc_cpp as static libraries")
+endif()
 
 include("cmake/ColorMessage.cmake")
 SET(BUILD_RTOSC_EXAMPLES FALSE CACHE BOOL
@@ -63,10 +71,10 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CPP_FLAGS} ${CXX11_FLAG}")
 
-add_library(rtosc STATIC src/rtosc.c src/dispatch.c src/pretty-format.c
+add_library(rtosc src/rtosc.c src/dispatch.c src/pretty-format.c
             src/arg-val-math.c src/arg-val-cmp.c src/rtosc-time.c src/util.c
             ${CMAKE_CURRENT_BINARY_DIR}/version.c)
-add_library(rtosc-cpp STATIC src/cpp/ports.cpp src/cpp/ports-runtime.cpp
+add_library(rtosc-cpp src/cpp/ports.cpp src/cpp/ports-runtime.cpp
     src/cpp/default-value.cpp src/cpp/savefile.cpp
     src/cpp/miditable.cpp
     src/cpp/automations.cpp
