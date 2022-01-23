@@ -204,6 +204,7 @@ maketestcpp(headerlib)
 maketestcpp(test-walker)
 maketestcpp(walk-ports)
 maketestcpp(path-search)
+maketestcpp(port-cmp)
 
 if(PERF_TEST)
     maketestcpp(performance)

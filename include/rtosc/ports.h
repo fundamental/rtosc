@@ -284,6 +284,17 @@ int canonicalize_arg_vals(rtosc_arg_val_t* av, size_t n,
 void map_arg_vals(rtosc_arg_val_t* av, size_t n,
                   Port::MetaContainer meta);
 
+/**
+ * Portname comparison function.
+ * Behaves like strcmp(), but 2-way-comparison and ignoring match patterns.
+ * This means two ports with same name and different match patterns are equal.
+ * @return true iff p1 < p2
+ */
+bool port_is_less(const char* p1, const char* p2);
+inline bool port_is_less(const Port* p1, const Port* p2) {
+    return port_is_less(p1->name, p2->name);
+}
+
 /*********************
  * Port walking code *
  *********************/
@@ -311,6 +322,8 @@ typedef void(*port_walker_t)(const Port*,const char*,const char*,
  *   reset to zero over the full length!
  * @param buffer_size Size of name_buffer
  * @param data Data that should be available in the callback
+ * @param sorted Whether the callbacks shall be sorted alphabetically.
+ *   Ports with the same name before a colon are kept stable.
  * @param walker Callback function
  * @param expand_bundles Whether walking over bundles without subports
  *   invokes walking over each of the bundle's port
@@ -323,6 +336,7 @@ void walk_ports(const Ports *base,
                 size_t         buffer_size,
                 void          *data,
                 port_walker_t  walker,
+                bool           sorted = false,
                 bool expand_bundles = true,
                 void *runtime = NULL,
                 bool ranges = false);

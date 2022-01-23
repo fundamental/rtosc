@@ -56,13 +56,22 @@ void append_str(const rtosc::Port*, const char *name, const char*,
     *res += ";";
 }
 
+void append_str_and_args(const rtosc::Port* p, const char *, const char*,
+                const rtosc::Ports&, void *resVoid, void*)
+{
+    std::string* res = (std::string*)resVoid;
+    *res += p->name;
+    *res += ";";
+}
+
 void check_all_subports(const rtosc::Ports& root, const char* exp,
-                        const char* testcase, int line)
+                        const char* testcase, int line,
+                        bool app_args = false, bool sorted = false)
 {
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
     std::string res;
-    rtosc::walk_ports(&root, buffer, 1024, &res, append_str);
+    rtosc::walk_ports(&root, buffer, 1024, &res, app_args ? append_str_and_args : append_str, sorted);
     assert_str_eq(exp, res.c_str(), testcase, line);
 }
 
@@ -90,6 +99,32 @@ int main()
     // maybe this should once be sorted...
     check_all_subports(multiple_ports, "/c/d/e;/a/x;/a/y;/c/d/;/a/;/b;/b2;",
                        "walk_ports with multiple common prefixes", __LINE__);
+
+    const rtosc::Ports sort_ports = {
+        {"c:ii", 0, 0, null_fn},
+        {"c:i",  0, 0, null_fn},
+        {"c:",   0, 0, null_fn},
+        {"c",    0, 0, null_fn},
+        {"ccc",  0, 0, null_fn},
+        {"b",    0, 0, null_fn},
+        {"a",    0, 0, null_fn},
+    };
+    const rtosc::Ports sort_ports_reversed = {
+        {"ccc",  0, 0, null_fn},
+        {"c",    0, 0, null_fn},
+        {"c:",   0, 0, null_fn},
+        {"c:i",  0, 0, null_fn},
+        {"c:ii", 0, 0, null_fn},
+        {"b",    0, 0, null_fn},
+        {"a",    0, 0, null_fn},
+    };
+
+    check_all_subports(sort_ports, "c:ii;c:i;c:;c;ccc;b;a;",
+                       "walk_ports unsorted", __LINE__, true, false);
+    check_all_subports(sort_ports, "a;b;c:ii;c:i;c:;c;ccc;",
+                       "walk_ports sorted 1", __LINE__, true, true);
+    check_all_subports(sort_ports_reversed, "a;b;c;c:;c:i;c:ii;ccc;",
+                       "walk_ports sorted 2", __LINE__, true, true);
 
     return test_summary();
 }
