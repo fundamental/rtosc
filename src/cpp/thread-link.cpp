@@ -41,7 +41,7 @@ static void ring_write(ringbuffer_t *ring, const char *data, size_t len)
 
     //discontinuous write
     if(next_write < ring->write) {
-        const size_t w1 = ring->size - ring->write - 1;
+        const size_t w1 = ring->size - ring->write;
         const size_t w2 = len - w1;
         memcpy(ring->buffer+ring->write, data,    w1);
         memcpy(ring->buffer,             data+w1, w2);
@@ -57,10 +57,10 @@ static void ring_read(ringbuffer_t *ring, char *data, size_t len)
 
     //discontinuous read
     if(next_read < ring->read) {
-        const size_t r1 = ring->size - ring->read - 1;
+        const size_t r1 = ring->size - ring->read;
         const size_t r2 = len - r1;
         memcpy(data,    ring->buffer+ring->read, r1);
-        memcpy(data+r1, ring->buffer,             r2);
+        memcpy(data+r1, ring->buffer,            r2);
     } else { //contiguous
         memcpy(data, ring->buffer+ring->read, len);
     }
@@ -73,7 +73,7 @@ static void ring_read_vector(ringbuffer_t *ring, ring_t *r)
     off_t  read      = ring->read;
     r[0].data = ring->buffer+ring->read;
     if(read_size+read > ring->size) { //discontinuous
-        size_t r2 = (read_size+1+read)%ring->size;
+        size_t r2 = (read_size+read)%ring->size;
         size_t r1 = read_size - r2;
         r[0].len  = r1;
         r[1].data = ring->buffer;
