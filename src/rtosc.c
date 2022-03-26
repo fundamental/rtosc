@@ -8,7 +8,13 @@
 
 #include <rtosc/rtosc.h>
 #include <rtosc/arg-val-math.h>
-#include "util.h"
+
+/* The MSVC C compiler does not support VLAs, so we need to use `_alloca` there: */
+#ifdef _MSC_VER
+#define STACKALLOC(type, name, size) type *name = (type*)(_alloca((size)*sizeof(type)))
+#else
+#define STACKALLOC(type, name, size) type name[size]
+#endif
 
 const char *rtosc_argument_string(const char *msg)
 {
