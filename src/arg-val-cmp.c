@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include <rtosc/arg-val-cmp.h>
+#include <rtosc/arg-val-itr.h>
 #include <rtosc/rtosc.h>
 
 static const rtosc_cmp_options default_cmp_options = { 0.0 };

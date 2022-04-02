@@ -69,10 +69,11 @@ else()
     endif()
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CPP_FLAGS} ${CXX11_FLAG}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CPP_FLAGS} ${CXX11_FLAG} -Wall -Wextra")
 
 add_library(rtosc src/rtosc.c src/dispatch.c src/pretty-format.c
-            src/arg-val-math.c src/arg-val-cmp.c src/rtosc-time.c src/util.c
+            src/arg-val.c src/arg-val-math.c src/arg-val-cmp.c src/arg-val-itr.c
+            src/rtosc-time.c src/util.c
             ${CMAKE_CURRENT_BINARY_DIR}/version.c)
 add_library(rtosc-cpp src/cpp/ports.cpp src/cpp/ports-runtime.cpp
     src/cpp/default-value.cpp src/cpp/savefile.cpp

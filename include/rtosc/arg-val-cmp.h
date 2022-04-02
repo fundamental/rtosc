@@ -32,26 +32,33 @@
 #ifndef ARG_VAL_CMP
 #define ARG_VAL_CMP
 
+#include <rtosc/arg-val-itr.h>
 #include <rtosc/rtosc.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+typedef struct
+{
+    //!< tolerance to when two floats or doubles are equal
+    double float_tolerance;
+} rtosc_cmp_options;
+
 /*
  * arg val comparing helpers
  */
 int rtosc_arg_vals_cmp_has_next(const rtosc_arg_val_itr* litr,
-                                const rtosc_arg_val_itr* ritr,
+				const rtosc_arg_val_itr* ritr,
                                 size_t lsize, size_t rsize);
 int rtosc_arg_vals_eq_after_abort(const rtosc_arg_val_itr* litr,
-                                  const rtosc_arg_val_itr* ritr,
+				  const rtosc_arg_val_itr* ritr,
                                   size_t lsize, size_t rsize);
 int rtosc_arg_vals_eq_single(const rtosc_arg_val_t* _lhs,
-                             const rtosc_arg_val_t* _rhs,
+			     const rtosc_arg_val_t* _rhs,
                              const rtosc_cmp_options* opt);
 int rtosc_arg_vals_cmp_single(const rtosc_arg_val_t* _lhs,
-                              const rtosc_arg_val_t* _rhs,
+			      const rtosc_arg_val_t* _rhs,
                               const rtosc_cmp_options* opt);
 
 /**

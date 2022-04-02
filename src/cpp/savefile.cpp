@@ -6,6 +6,7 @@
 
 #include "../util.h"
 #include <rtosc/arg-val-cmp.h>
+#include <rtosc/arg-val-itr.h>
 #include <rtosc/pretty-format.h>
 #include <rtosc/bundle-foreach.h>
 #include <rtosc/ports.h>

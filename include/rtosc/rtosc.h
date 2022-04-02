@@ -131,15 +131,6 @@ size_t rtosc_vmessage(char   *buffer,
 /**
  * @see rtosc_message()
  */
-size_t rtosc_avmessage(char        *buffer,
-                       size_t       len,
-                       const char  *address,
-                       size_t       nargs,
-                       const rtosc_arg_val_t *args);
-
-/**
- * @see rtosc_message()
- */
 size_t rtosc_amessage(char        *buffer,
                       size_t       len,
                       const char  *address,
@@ -165,40 +156,6 @@ typedef struct {
     const char    *type_pos;
     const uint8_t *value_pos;
 } rtosc_arg_itr_t;
-
-typedef struct
-{
-    //!< tolerance to when two floats or doubles are equal
-    double float_tolerance;
-} rtosc_cmp_options;
-
-/*
- * arg val iterators
- */
-/**
- * Iterator over arg values
- *
- * Always use this iterator for iterating because it automatically skips
- * to the next offset, even in case of arrays etc.
- * Also, it walks through ranges, as if they were not existing.
- */
-typedef struct
-{
-    const rtosc_arg_val_t* av; //!< the arg val referenced
-    size_t i;                  //!< position of this arg val
-    int range_i;               //!< position of this arg val in its range
-} rtosc_arg_val_itr;
-
-void rtosc_arg_val_itr_init(rtosc_arg_val_itr* itr,
-                            const rtosc_arg_val_t* av);
-//! this usually just returns the value from operand, except for range operands,
-//! where the value is being interpolated
-//! @param buffer Temporary. Don't access it afterwards.
-const rtosc_arg_val_t* rtosc_arg_val_itr_get(
-    const rtosc_arg_val_itr* itr,
-    rtosc_arg_val_t* buffer);
-//! @warning will loop forever on infinite ranges!
-void rtosc_arg_val_itr_next(rtosc_arg_val_itr* itr);
 
 //! va_list container, required for passing va_list as pointers to functions
 typedef struct { va_list a; } rtosc_va_list_t;
