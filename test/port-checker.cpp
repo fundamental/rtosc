@@ -10,6 +10,7 @@
 
 #include <rtosc/ports.h>
 #include <rtosc/pretty-format.h>
+#include <rtosc/arg-val.h>
 #include <rtosc/arg-val-math.h>
 #include <lo/lo.h>
 #include <lo/lo_lowlevel.h>
