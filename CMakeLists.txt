@@ -71,7 +71,7 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CPP_FLAGS} ${CXX11_FLAG} -Wall -Wextra")
 
-add_library(rtosc src/rtosc.c src/dispatch.c src/pretty-format.c
+add_library(rtosc src/rtosc.c src/dispatch.c src/pretty-format.c src/arg-ext.c
             src/arg-val.c src/arg-val-math.c src/arg-val-cmp.c src/arg-val-itr.c
             src/rtosc-time.c src/util.c
             ${CMAKE_CURRENT_BINARY_DIR}/version.c)
