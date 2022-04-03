@@ -7,7 +7,6 @@
 #include <assert.h>
 
 #include <rtosc/rtosc.h>
-#include <rtosc/arg-val-math.h>
 
 /* The MSVC C compiler does not support VLAs, so we need to use `_alloca` there: */
 #ifdef _MSC_VER
