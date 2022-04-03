@@ -212,8 +212,10 @@ void arrays()
     // fill three arrays, both with the ints 1, 2, 3 resp. 1, 2, 2
     rtosc_arg_val_t la[16], ra[16]; // left array, right array
     la[0].type = ra[0].type = 'a';
-    la[0].val.a.type = ra[0].val.a.type = 'i';
-    la[0].val.a.len = ra[0].val.a.len = 3;
+    rtosc_av_arr_type_set(la, 'i');
+    rtosc_av_arr_type_set(ra, 'i');
+    rtosc_av_arr_len_set(la, 3);
+    rtosc_av_arr_len_set(ra, 3);
     la[1].type = la[2].type = la[3].type =
     ra[1].type = ra[2].type = ra[3].type = 'i';
     la[1].val.i = 1; la[2].val.i = 2; la[3].val.i = 3;
@@ -223,7 +225,7 @@ void arrays()
     cmp_gt(la, ra, 4, 4, NULL, "[1 2 3]", "[1 2 2]", __LINE__);
 
     // different size
-    ra[0].val.a.len = 2;
+    rtosc_av_arr_len_set(ra, 2);
     ra[3].val.i = 3;
     cmp_gt(la, ra, 4, 4, NULL, "[1 2 3]", "[1 2] 3", __LINE__);
 }
@@ -234,19 +236,19 @@ void ranges()
 
     // generate range 1 ... 5 inside of an array
     l[0].type = 'a';
-    l[0].val.a.len = 3; // number of arg_val_t inside
-    l[0].val.a.type = 'i';
+    rtosc_av_arr_len_set(l, 3); // number of arg_val_t inside
+    rtosc_av_arr_type_set(l, 'i');
     l[1].type = '-';
-    l[1].val.r.has_delta = 1;
-    l[1].val.r.num = 5;
+    rtosc_av_rep_has_delta_set(l+1, 1);
+    rtosc_av_rep_num_set(l+1, 5);
     l[2].type = 'i';
     l[2].val.i = 1;
     l[3].type = 'i';
     l[3].val.i = 1;
 
     r[0].type = 'a';
-    r[0].val.a.len = 5;
-    r[0].val.a.type = 'i';
+    rtosc_av_arr_len_set(r, 5);
+    rtosc_av_arr_type_set(r, 'i');
     for(size_t i = 0; i < 5; ++i) {
         r[i+1].type = 'i';
         r[i+1].val.i = i+1;
@@ -264,8 +266,8 @@ void ranges()
     l[5].val.i = 7;
     l[4].type = l[5].type = 'i';
     r[4].type = '-';
-    r[4].val.r.has_delta = 1;
-    r[4].val.r.num = 4;
+    rtosc_av_rep_has_delta_set(r+4, 1);
+    rtosc_av_rep_num_set(r+4, 4);
     r[5].type = 'i';
     r[5].val.i = 1;
     r[6].type = 'i';
@@ -276,7 +278,7 @@ void ranges()
 
     // keep    l+1 = 1 ... 5 6 7
     // and let r+1 = 1 2 3 4 ...
-    r[4].val.r.num = 0;
+    rtosc_av_rep_num_set(r+4, 0);
     //r[6].type = 'x';
 
     cmp_1(eq, l+1, r+1, 5, 6, NULL,
@@ -290,24 +292,24 @@ void ranges()
 
     // let      l+1 = 1 ... 7
     // and keep r+1 = 1 2 3 4 ...
-    l[1].val.r.num = 7;
-    cmp_1(eq, l+1, r+1, 3, 6, NULL, "finite range", "infinite range", __LINE__);
+    rtosc_av_rep_num_set(l+1, 7);
+    cmp_1(eq, l+1, r+1, 3, 7, NULL, "finite range", "infinite range", __LINE__);
 
     // let l = 1 2 3 ...
     // and r = 1 2 ...
     l[0].type = l[1].type = 'i';
     l[0].val.i = 1; l[1].val.i = 2;
     l[2].type = '-';
-    l[2].val.r.has_delta = 1;
-    l[2].val.r.num = 0;
+    rtosc_av_rep_has_delta_set(l+2, 1);
+    rtosc_av_rep_num_set(l+2, 0);
     l[3].type = l[4].type = 'i';
     l[3].val.i = 3; l[4].val.i = 1;
 
     r[0].type = 'i';
     r[0].val.i = 1;
     r[1].type = '-';
-    r[1].val.r.has_delta = 1;
-    r[1].val.r.num = 0;
+    rtosc_av_rep_has_delta_set(r+1, 1);
+    rtosc_av_rep_num_set(r+1, 0);
     r[2].type = r[3].type = 'i';
     r[2].val.i = 1; r[3].val.i = 2;
 
@@ -319,7 +321,7 @@ void ranges()
     l[1].val.i = 1;
     l[2].type = 'i';
     l[2].val.i = 1;
-    r[1].val.r.has_delta = 0;
+    rtosc_av_rep_has_delta_set(r+1, 0);
     r[2].val.i = 1;
 
     cmp_1(eq, l, r, 3, 3, NULL,
@@ -333,8 +335,8 @@ void ranges()
     // let      l = 1 ...
     // and keep r = 1 1 ...
     l[0].type = '-';
-    l[0].val.r.num = 0;
-    l[0].val.r.has_delta = 0;
+    rtosc_av_rep_num_set(l, 0);
+    rtosc_av_rep_has_delta_set(l, 0);
     l[1].type = 'i';
     l[1].val.i = 1;
     cmp_1(eq, l, r, 2, 3, NULL,
@@ -344,8 +346,8 @@ void ranges()
     // keep     l = 1 ...
     // and let  r = 1 ...
     r[0].type = '-';
-    r[0].val.r.num = 0;
-    r[0].val.r.has_delta = 0;
+    rtosc_av_rep_num_set(r, 0);
+    rtosc_av_rep_has_delta_set(r, 0);
     r[1].type = 'i';
     r[1].val.i = 1;
     cmp_1(eq, l, r, 2, 2, NULL, "1 ...", "1 ...", __LINE__);

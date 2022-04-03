@@ -822,3 +822,145 @@ uint64_t rtosc_bundle_timetag(const char *msg)
 {
     return extract_uint64((const uint8_t*)msg+8);
 }
+
+typedef union
+{
+    int64_t store;
+    struct {
+        char type;
+        int32_t len;
+    } arr;
+} pack_arr;
+
+char rtosc_arg_arr_type(const rtosc_arg_t *arg)
+{
+    pack_arr pack;
+    pack.store = arg->h;
+    return pack.arr.type;
+}
+
+int32_t rtosc_arg_arr_len(const rtosc_arg_t *arg)
+{
+    pack_arr pack;
+    pack.store = arg->h;
+    return pack.arr.len;
+}
+
+void rtosc_arg_arr_type_set(rtosc_arg_t *arg, char type)
+{
+    pack_arr pack;
+    pack.store = arg->h;
+    pack.arr.type = type;
+    arg->h = pack.store;
+}
+
+void rtosc_arg_arr_len_set(rtosc_arg_t *arg, int32_t len)
+{
+    pack_arr pack;
+    pack.store = arg->h;
+    pack.arr.len = len;
+    arg->h = pack.store;
+}
+
+typedef union
+{
+    int64_t store;
+    struct {
+        int32_t num;
+        int32_t has_delta;
+    } rep;
+} pack_rep;
+
+int32_t rtosc_arg_rep_num(const rtosc_arg_t *arg)
+{
+    pack_rep pack;
+    pack.store = arg->h;
+    return pack.rep.num;
+}
+
+int32_t rtosc_arg_rep_has_delta(const rtosc_arg_t *arg)
+{
+    pack_rep pack;
+    pack.store = arg->h;
+    return pack.rep.has_delta;
+}
+
+void rtosc_arg_rep_num_set(rtosc_arg_t *arg, int32_t num)
+{
+    pack_rep pack;
+    pack.store = arg->h;
+    pack.rep.num = num;
+    arg->h = pack.store;
+}
+
+void rtosc_arg_rep_has_delta_set(rtosc_arg_t *arg, int32_t has_delta)
+{
+    pack_rep pack;
+    pack.store = arg->h;
+    pack.rep.has_delta = has_delta;
+    arg->h = pack.store;
+}
+
+int32_t rtosc_arg_nothing_len(const rtosc_arg_t *arg)
+{
+    return arg->i;
+}
+
+void rtosc_arg_nothing_len_set(rtosc_arg_t *arg, int32_t len)
+{
+    arg->i = len;
+}
+
+/*
+ * comfort functions
+ */
+
+char rtosc_av_arr_type(const rtosc_arg_val_t *arg)
+{
+    return rtosc_arg_arr_type(&arg->val);
+}
+
+int32_t rtosc_av_arr_len(const rtosc_arg_val_t *arg)
+{
+    return rtosc_arg_arr_len(&arg->val);
+}
+
+void rtosc_av_arr_type_set(rtosc_arg_val_t *arg, char type)
+{
+    rtosc_arg_arr_type_set(&arg->val, type);
+}
+
+void rtosc_av_arr_len_set(rtosc_arg_val_t *arg, int32_t len)
+{
+    rtosc_arg_arr_len_set(&arg->val, len);
+}
+
+int32_t rtosc_av_rep_num(const rtosc_arg_val_t *arg)
+{
+    return rtosc_arg_rep_num(&arg->val);
+}
+
+int32_t rtosc_av_rep_has_delta(const rtosc_arg_val_t *arg)
+{
+    return rtosc_arg_rep_has_delta(&arg->val);
+}
+
+void rtosc_av_rep_num_set(rtosc_arg_val_t *arg, int32_t num)
+{
+    rtosc_arg_rep_num_set(&arg->val, num);
+}
+
+void rtosc_av_rep_has_delta_set(rtosc_arg_val_t *arg, int32_t has_delta)
+{
+    rtosc_arg_rep_has_delta_set(&arg->val, has_delta);
+}
+
+int32_t rtosc_av_nothing_len(const rtosc_arg_val_t *arg)
+{
+    return rtosc_arg_nothing_len(&arg->val);
+}
+
+void rtosc_av_nothing_len_set(rtosc_arg_val_t *arg, int32_t len)
+{
+    rtosc_arg_nothing_len_set(&arg->val, len);
+}

@@ -416,19 +416,19 @@ void port_checker::check_port(const char* loc, const char* portname,
                                 int incsize = 0;
                                 bool infinite = false;
                                 for(rtosc_arg_val_t* ptr = avs + 1;
-                                    ptr - (avs+1) < avs[0].val.a.len;
+                                    ptr - (avs+1) < rtosc_av_arr_len(avs);
                                     ptr += incsize, arrsize += cur)
                                 {
                                     switch(ptr->type)
                                     {
                                         case '-':
-                                            cur = ptr->val.r.num;
-                                            incsize = 2 + ptr->val.r.has_delta;
+                                            cur = rtosc_av_rep_num(ptr);
+                                            incsize = 2 + rtosc_av_rep_has_delta(ptr);
                                             if(!cur) infinite = true;
                                             break;
                                         case 'a':
                                             cur = 1;
-                                            incsize = ptr->val.a.len;
+                                            incsize = rtosc_av_arr_len(ptr);
                                             break;
                                         default:
                                             cur = 1;

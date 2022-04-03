@@ -178,8 +178,8 @@ std::string get_changed_values(const Ports& ports, void* runtime)
 
                 // "Go back" to fill arg_vals_runtime + 0
                 arg_vals_runtime[0].type = 'a';
-                arg_vals_runtime[0].val.a.len = nargs_runtime-1;
-                arg_vals_runtime[0].val.a.type = arg_vals_runtime[1].type;
+                rtosc_av_arr_len_set(arg_vals_runtime, nargs_runtime-1);
+                rtosc_av_arr_type_set(arg_vals_runtime, arg_vals_runtime[1].type);
             }
             else
                 ftor(p, port_buffer, port_from_base, base, NULL, runtime);
@@ -246,7 +246,7 @@ std::string get_changed_values(const Ports& ports, void* runtime)
                             rtosc_arg_val_itr_get(&ritr, &rrhs), nullptr))
                     {
                         auto get_sz = [](const rtosc_arg_val_t* a) {
-                            return a->type == 'a' ? (a->val.a.len + 1) : 1; };
+                            return a->type == 'a' ? rtosc_av_arr_len(a) : 1; };
                         // the const-ness does not matter
                         write_msg(lcur,
                             const_cast<rtosc_arg_val_t*>(rcur),
@@ -387,8 +387,8 @@ int dispatch_printed_messages(const char* messages,
                             // neither by rtosc_*message, nor by the inner for
                             // loop below.
                             // arrays will probably have an 'a' (or #)
-                            assert(arg_vals[0].val.a.type != 'a' &&
-                                   arg_vals[0].val.a.type != '#');
+                            assert(rtosc_av_arr_type(arg_vals) != 'a' &&
+                                   rtosc_av_arr_type(arg_vals) != '#');
                             // we won't read the array arg val anymore
                             --nargs;
                             arg_val_ptr = arg_vals + 1;
