@@ -5,6 +5,7 @@
 #include <set>
 
 #include "../util.h"
+#include <rtosc/arg-ext.h>
 #include <rtosc/arg-val-cmp.h>
 #include <rtosc/arg-val-itr.h>
 #include <rtosc/pretty-format.h>

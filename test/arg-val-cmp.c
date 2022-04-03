@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <rtosc/arg-ext.h>
 #include <rtosc/arg-val-cmp.h>
 #include "common.h"
 

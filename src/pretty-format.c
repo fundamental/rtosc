@@ -7,6 +7,7 @@
 #include <time.h>
 #include <stdio.h>
 
+#include <rtosc/arg-ext.h>
 #include <rtosc/arg-val-itr.h>
 #include <rtosc/rtosc.h>
 #include <rtosc/pretty-format.h>

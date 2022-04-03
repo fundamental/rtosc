@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <rtosc/rtosc.h>
+#include <rtosc/arg-ext.h>
 #include <rtosc/pretty-format.h>
 #include "common.h"
 

@@ -1,3 +1,4 @@
+#include <rtosc/arg-ext.h>
 #include <rtosc/arg-val-itr.h>
 #include <rtosc/arg-val-math.h>
 
