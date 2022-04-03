@@ -240,8 +240,8 @@ static size_t vsosc_null(const char        *address,
     return pos;
 }
 
-void rtosc_v2args(rtosc_arg_t* args, size_t nargs, const char* arg_str,
-                  rtosc_va_list_t* ap)
+static void rtosc_v2args(rtosc_arg_t* args, size_t nargs, const char* arg_str,
+                         rtosc_va_list_t* ap)
 {
     unsigned arg_pos = 0;
     uint8_t *midi_tmp;
@@ -286,14 +286,6 @@ void rtosc_v2args(rtosc_arg_t* args, size_t nargs, const char* arg_str,
     }
 }
 
-void rtosc_2args(rtosc_arg_t* args, size_t nargs, const char* arg_str, ...)
-{
-    rtosc_va_list_t va;
-    va_start(va.a, arg_str);
-    rtosc_v2args(args, nargs, arg_str, &va);
-    va_end(va.a);
-}
-
 void rtosc_v2argvals(rtosc_arg_val_t* args, size_t nargs, const char* arg_str, va_list ap)
 {
     rtosc_va_list_t ap2;
@@ -303,14 +295,6 @@ void rtosc_v2argvals(rtosc_arg_val_t* args, size_t nargs, const char* arg_str, v
         args->type = *arg_str;
         rtosc_v2args(&args->val, 1, arg_str, &ap2);
     }
-}
-
-void rtosc_2argvals(rtosc_arg_val_t* args, size_t nargs, const char* arg_str, ...)
-{
-    va_list va;
-    va_start(va, arg_str);
-    rtosc_v2argvals(args, nargs, arg_str, va);
-    va_end(va);
 }
 
 size_t rtosc_vmessage(char   *buffer,
