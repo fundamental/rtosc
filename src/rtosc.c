@@ -285,7 +285,10 @@ static void rtosc_v2args(rtosc_arg_t* args, size_t nargs, const char* arg_str,
     }
 }
 
-void rtosc_v2argvals(rtosc_arg_val_t* args, size_t nargs, const char* arg_str, va_list ap)
+void rtosc_v2argvals(rtosc_arg_val_t *args,
+                     size_t           nargs,
+                     const char     * arg_str,
+                     va_list          ap)
 {
     rtosc_va_list_t ap2;
     va_copy(ap2.a, ap);
@@ -297,11 +300,11 @@ void rtosc_v2argvals(rtosc_arg_val_t* args, size_t nargs, const char* arg_str, v
     va_end(ap2.a);
 }
 
-size_t rtosc_vmessage(char   *buffer,
+size_t rtosc_vmessage(char       *buffer,
                       size_t      len,
                       const char *address,
                       const char *arguments,
-                      va_list ap)
+                      va_list     ap)
 {
     const unsigned nargs = nreserved(arguments);
     if(!nargs)
