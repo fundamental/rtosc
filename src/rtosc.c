@@ -295,6 +295,7 @@ void rtosc_v2argvals(rtosc_arg_val_t* args, size_t nargs, const char* arg_str, v
         args->type = *arg_str;
         rtosc_v2args(&args->val, 1, arg_str, &ap2);
     }
+    va_end(ap2.a);
 }
 
 size_t rtosc_vmessage(char   *buffer,
