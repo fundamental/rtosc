@@ -11,10 +11,10 @@ extern "C" {
  * @see rtosc_message()
  */
 size_t rtosc_avmessage(char        *buffer,
-		       size_t       len,
-		       const char  *address,
-		       size_t       nargs,
-		       const rtosc_arg_val_t *args);
+                       size_t       len,
+                       const char  *address,
+                       size_t       nargs,
+                       const rtosc_arg_val_t *args);
 
 #ifdef __cplusplus
 }

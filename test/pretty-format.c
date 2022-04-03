@@ -359,9 +359,9 @@ void ranges()
     check("[[0 1] ... ]", NULL, "range of arrays", __LINE__);
     check("[true false ... ]", NULL, "alternating true-false-range", __LINE__);
     assert('-' == scanned[2].type);
-    assert_int_eq(0, scanned[2].val.r.num,
+    assert_int_eq(0, rtosc_av_rep_num(scanned+2),
                   "true-false range is inifinite", __LINE__);
-    assert_int_eq(1, scanned[2].val.r.has_delta,
+    assert_int_eq(1, rtosc_av_rep_has_delta(scanned+2),
                   "true-false range has delta", __LINE__);
 }
 

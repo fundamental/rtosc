@@ -663,7 +663,7 @@ int rtosc::canonicalize_arg_vals(rtosc_arg_val_t* av, size_t n,
     bool is_array;
     rtosc_arg_val_t* start = av;
     if(av->type == 'a') {
-        arr_size = av->val.a.len;
+        arr_size = rtosc_av_arr_len(av);
         ++av;
         max = 1; // only one element per bundle element
                  // TODO: multiple may be possible
@@ -708,7 +708,7 @@ int rtosc::canonicalize_arg_vals(rtosc_arg_val_t* av, size_t n,
         }
     }
     if(is_array && arr_size)
-        start->val.a.type = av[-1].type;
+        rtosc_av_arr_type_set(start, av[-1].type);
 
     return errors_found;
 }

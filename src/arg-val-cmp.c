@@ -15,7 +15,7 @@ int rtosc_arg_vals_cmp_has_next(const rtosc_arg_val_itr* litr,
 {
     return     (litr->i < lsize) && (ritr->i < rsize)
             && (litr->av->type != '-' || ritr->av->type != '-' ||
-                litr->av->val.r.num || ritr->av->val.r.num);
+                rtosc_av_rep_num(litr->av) || rtosc_av_rep_num(ritr->av));
 }
 
 // arrays are equal by now, but is one longer?
@@ -26,9 +26,9 @@ int rtosc_arg_vals_eq_after_abort(const rtosc_arg_val_itr* litr,
                                   size_t lsize, size_t rsize)
 {
     return    (litr->i == lsize ||
-                  (litr->av->type == '-' && !litr->av->val.r.num))
+                  (litr->av->type == '-' && !rtosc_av_rep_num(litr->av)))
            && (ritr->i == rsize ||
-                  (ritr->av->type == '-' && !ritr->av->val.r.num));
+                  (ritr->av->type == '-' && !rtosc_av_rep_num(ritr->av)));
 }
 
 // compare single elements, ranges excluded
@@ -94,13 +94,13 @@ int rtosc_arg_vals_eq_single(const rtosc_arg_val_t* _lhs,
         }
         case 'a':
         {
-            if(     _lhs->val.a.type != _rhs->val.a.type
-               && !(_lhs->val.a.type == 'T' && _rhs->val.a.type == 'F')
-               && !(_lhs->val.a.type == 'F' && _rhs->val.a.type == 'T'))
+            if(     rtosc_av_arr_type(_lhs) != rtosc_av_arr_type(_rhs)
+               && !(rtosc_av_arr_type(_lhs) == 'T' && rtosc_av_arr_type(_rhs) == 'F')
+               && !(rtosc_av_arr_type(_lhs) == 'F' && rtosc_av_arr_type(_rhs) == 'T'))
                 rval = 0;
             else
                 rval = rtosc_arg_vals_eq(_lhs+1, _rhs+1,
-                                         _lhs->val.a.len, _rhs->val.a.len,
+                                         rtosc_av_arr_len(_lhs), rtosc_av_arr_len(_rhs),
                                          opt);
             break;
         }
@@ -240,11 +240,11 @@ int rtosc_arg_vals_cmp_single(const rtosc_arg_val_t* _lhs,
         }
         case 'a':
         {
-            int32_t llen = _lhs->val.a.len, rlen = _rhs->val.a.len;
-            if(     _lhs->val.a.type != _rhs->val.a.type
-               && !(_lhs->val.a.type == 'T' && _rhs->val.a.type == 'F')
-               && !(_lhs->val.a.type == 'F' && _rhs->val.a.type == 'T'))
-                rval = (_lhs->val.a.type > _rhs->val.a.type) ? 1 : -1;
+            int32_t llen = rtosc_av_arr_len(_lhs), rlen = rtosc_av_arr_len(_rhs);
+            if(     rtosc_av_arr_type(_lhs) != rtosc_av_arr_type(_rhs)
+               && !(rtosc_av_arr_type(_lhs) == 'T' && rtosc_av_arr_type(_rhs))
+               && !(rtosc_av_arr_type(_lhs) == 'F' && rtosc_av_arr_type(_rhs)))
+                rval = (rtosc_av_arr_type(_lhs) > rtosc_av_arr_type(_rhs)) ? 1 : -1;
             else
             {
                 // the arg vals differ in this array => compare and return
@@ -259,6 +259,8 @@ int rtosc_arg_vals_cmp_single(const rtosc_arg_val_t* _lhs,
             assert(false);
             exit(1);
             break;
+        default:
+            assert(false);
     }
     else
     {
