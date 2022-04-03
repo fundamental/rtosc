@@ -133,29 +133,11 @@ typedef struct {
 typedef struct { va_list a; } rtosc_va_list_t;
 
 /**
- * Pack arguments into pre-allocated rtosc_arg_t array
- *
- * @param args Pre-allocated array; size must be greater or equal @p nargs
- * @param nargs Size of elements to pack
- * @param arg_str Rtosc string specifying the arguments' types
- * @param ap The parameters that shall be packed
- */
-void rtosc_v2args(rtosc_arg_t* args, size_t nargs,
-                  const char* arg_str, rtosc_va_list_t* ap);
-
-/**
  * Pack parameters into pre-allocated rtosc_arg_val-t array
- * @see rtosc_v2args
+ * @see Function rtosc_v2args in rtosc.c
  */
 void rtosc_v2argvals(rtosc_arg_val_t* args, size_t nargs,
                      const char* arg_str, va_list ap);
-
-/**
- * Pack parameters into pre-allocated rtosc_arg_val-t array
- * @see rtosc_v2args
- */
-void rtosc_2argvals(rtosc_arg_val_t* args, size_t nargs,
-                    const char* arg_str, ...);
 
 /**
  * Create an argument iterator for a message
