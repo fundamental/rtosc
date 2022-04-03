@@ -901,16 +901,6 @@ void rtosc_arg_rep_has_delta_set(rtosc_arg_t *arg, int32_t has_delta)
     arg->h = pack.store;
 }
 
-int32_t rtosc_arg_nothing_len(const rtosc_arg_t *arg)
-{
-    return arg->i;
-}
-
-void rtosc_arg_nothing_len_set(rtosc_arg_t *arg, int32_t len)
-{
-    arg->i = len;
-}
-
 /*
  * comfort functions
  */
@@ -955,12 +945,3 @@ void rtosc_av_rep_has_delta_set(rtosc_arg_val_t *arg, int32_t has_delta)
     rtosc_arg_rep_has_delta_set(&arg->val, has_delta);
 }
 
-int32_t rtosc_av_nothing_len(const rtosc_arg_val_t *arg)
-{
-    return rtosc_arg_nothing_len(&arg->val);
-}
-
-void rtosc_av_nothing_len_set(rtosc_arg_val_t *arg, int32_t len)
-{
-    rtosc_arg_nothing_len_set(&arg->val, len);
-}
