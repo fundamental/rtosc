@@ -2,7 +2,7 @@
 
 #include <rtosc/thread-link.h>
 
-int main()
+void test_contiguous_write()
 {
     // max 4 messages of each 32 -> 128 bytes size
     rtosc::ThreadLink thread_link(32,4);
@@ -32,6 +32,11 @@ int main()
             // invalid state, don't crash the test
         }
     }
+}
+
+int main()
+{
+    test_contiguous_write();
 
     return test_summary();
 }
