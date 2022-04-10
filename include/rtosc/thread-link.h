@@ -65,12 +65,33 @@ class ThreadLink
         /**
          * @returns true iff there is another message to be read in the buffer
          */
+        bool hasNext(bool lookahead) const;
+
+        /**
+         * @returns true iff there is another message to be read in the buffer
+         */
         bool hasNext(void) const;
+
+        /**
+         * @returns true iff there is another message to be read in the buffer
+         */
+        bool hasNextLookahead(void) const;
+
+        /**
+         * Read a new message from the ringbuffer, optionally from lookahead
+         * queue
+         */
+        msg_t read(bool lookahead);
 
         /**
          * Read a new message from the ringbuffer
          */
         msg_t read(void);
+
+        /**
+         * Read a new message from the ringbuffer along the lookahead queue
+         */
+        msg_t read_lookahead(void);
 
         /**
          * Peak at last message read without reading another
