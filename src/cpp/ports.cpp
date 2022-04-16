@@ -1001,10 +1001,10 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
 // this is doing nothing else than checking if a port is enabled (using the runtime),
 // and if yes, call walk_ports on its subports again
 // in case of no runtime, this only calls walk_ports
+template<bool Sorted>
 static void walk_ports_recurse(const Port& p, char* name_buffer,
                                size_t buffer_size, const Ports& base,
                                void* data, port_walker_t walker,
-                               bool sorted,
                                void* runtime, const char* old_end,
                                bool expand_bundles, bool ranges)
 {
@@ -1053,7 +1053,7 @@ static void walk_ports_recurse(const Port& p, char* name_buffer,
     }
     if(enabled)
         rtosc::walk_ports(p.ports, name_buffer, buffer_size,
-                          data, walker, sorted, expand_bundles, runtime, ranges);
+                          data, walker, expand_bundles, runtime, ranges);
 };
 
 /**
@@ -1073,10 +1073,10 @@ char pointer example:
    name_buffer[buffer_size]     old_end    e.g. write_head
 
 */
+template<bool Sorted>
 static void walk_ports_recurse0(const Port& p, char* name_buffer,
                                 size_t buffer_size, const Ports* base,
                                 void* data, port_walker_t walker,
-                                bool sorted,
                                 void* runtime, char* const old_end, char* write_head,
                                 bool expand_bundles, const char* read_head,
                                 bool ranges)
@@ -1105,8 +1105,7 @@ static void walk_ports_recurse0(const Port& p, char* name_buffer,
         {
             int written = sprintf(write_head,"[0,%d]/", max-1);
             //Recurse
-            walk_ports_recurse0(p, name_buffer, buffer_size, base, data, walker,
-                                sorted,
+            walk_ports_recurse0<Sorted>(p, name_buffer, buffer_size, base, data, walker,
                                 runtime, old_end, write_head + written,
                                 expand_bundles, read_head, ranges);
         }
@@ -1114,10 +1113,9 @@ static void walk_ports_recurse0(const Port& p, char* name_buffer,
         {
             int written = sprintf(write_head,"%d/",i);
             //Recurse
-            walk_ports_recurse0(p, name_buffer, buffer_size, base, data, walker,
-                                sorted,
-                                runtime, old_end, write_head + written,
-                                expand_bundles, read_head, ranges);
+            walk_ports_recurse0<Sorted>(p, name_buffer, buffer_size, base, data, walker,
+                                        runtime, old_end, write_head + written,
+                                        expand_bundles, read_head, ranges);
         }
     }
     else
@@ -1127,23 +1125,22 @@ static void walk_ports_recurse0(const Port& p, char* name_buffer,
             *write_head++ = '/';
         *write_head = 0;
         //Recurse
-        walk_ports_recurse(p, name_buffer, buffer_size,
-                           *base, data, walker,
-                           sorted,
-                           runtime, old_end,
-                           expand_bundles, ranges);
+        walk_ports_recurse<Sorted>(p, name_buffer, buffer_size,
+                                   *base, data, walker,
+                                   runtime, old_end,
+                                   expand_bundles, ranges);
     }
 };
 
-void rtosc::walk_ports(const Ports  *base,
-                       char         *name_buffer,
-                       size_t        buffer_size,
-                       void         *data,
-                       port_walker_t walker,
-                       bool          sorted,
-                       bool          expand_bundles,
-                       void*         runtime,
-                       bool          ranges)
+template<bool Sorted>
+static void walk_ports_1(const Ports  *base,
+                         char         *name_buffer,
+                         size_t        buffer_size,
+                         void         *data,
+                         port_walker_t walker,
+                         bool          expand_bundles,
+                         void*         runtime,
+                         bool          ranges)
 {
     //only walk valid ports
     if(!base)
@@ -1159,16 +1156,16 @@ void rtosc::walk_ports(const Ports  *base,
     if(port_is_enabled((*base)["self:"], name_buffer, buffer_size, *base,
                        runtime))
     {
-        auto handle_subport = [name_buffer, buffer_size, base, data, walker, sorted,
+        auto handle_subport = [name_buffer, buffer_size, base, data, walker,
                               runtime, old_end, expand_bundles, ranges](const Port& p)
         {
             //if(strchr(p.name, '/')) {//it is another tree
             if(p.ports) {//it is another tree
 
-                walk_ports_recurse0(p, name_buffer, buffer_size,
-                                    base, data, walker, sorted,
-                                    runtime, old_end, old_end,
-                                    expand_bundles, p.name, ranges);
+                walk_ports_recurse0<Sorted>(p, name_buffer, buffer_size,
+                                            base, data, walker,
+                                            runtime, old_end, old_end,
+                                            expand_bundles, p.name, ranges);
 
             } else {
                 if(strchr(p.name,'#')) {
@@ -1188,7 +1185,7 @@ void rtosc::walk_ports(const Ports  *base,
             while(*tmp) *tmp++=0;
         };
 
-        if(sorted)
+        if(Sorted)
         {
             std::vector<const Port*> subports_sorted;
             subports_sorted.reserve(base->size());
@@ -1203,6 +1200,33 @@ void rtosc::walk_ports(const Ports  *base,
         else for(const Port &p: *base) handle_subport(p);
     }
 }
+
+template<>
+void rtosc::walk_ports<true>(const Ports  *base,
+                             char         *name_buffer,
+                             size_t        buffer_size,
+                             void         *data,
+                             port_walker_t walker,
+                             bool          expand_bundles,
+                             void*         runtime,
+                             bool          ranges) {
+    walk_ports_1<true>(base, name_buffer, buffer_size, data, walker,
+                       expand_bundles, runtime, ranges);
+}
+
+template<>
+void rtosc::walk_ports<false>(const Ports  *base,
+                              char         *name_buffer,
+                              size_t        buffer_size,
+                              void         *data,
+                              port_walker_t walker,
+                              bool          expand_bundles,
+                              void*         runtime,
+                              bool          ranges) {
+    walk_ports_1<false>(base, name_buffer, buffer_size, data, walker,
+                       expand_bundles, runtime, ranges);
+}
+
 
 // this is just an std::array replacement for path_search
 template <typename T, size_t N>
@@ -1633,7 +1657,7 @@ std::ostream &rtosc::operator<<(std::ostream &o, rtosc::OscDocFormatter &formatt
     o << " </meta>\n";
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
-    walk_ports(formatter.p, buffer, 1024, &o, dump_ports_cb, false, false, nullptr, true);
+    walk_ports(formatter.p, buffer, 1024, &o, dump_ports_cb, false, nullptr, true);
     o << "</osc_unit>\n";
     return o;
 }

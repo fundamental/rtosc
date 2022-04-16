@@ -275,7 +275,7 @@ std::string get_changed_values(const Ports& ports, void* runtime)
         }
     };
 
-    walk_ports(&ports, port_buffer, buffersize, &data, on_reach_port, false,
+    walk_ports(&ports, port_buffer, buffersize, &data, on_reach_port,
                false, runtime);
 
     if(data.res.length()) // remove trailing newline

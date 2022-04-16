@@ -317,13 +317,13 @@ typedef void(*port_walker_t)(const Port*,const char*,const char*,
 
 /**
  * Call a function on all ports and subports.
+ * @param Sorted Whether the callbacks shall be sorted alphabetically.
+ *   Ports with the same name before a colon are kept stable.
  * @param base The base port of traversing
  * @param name_buffer Buffer which will be filled with the port name; must be
  *   reset to zero over the full length!
  * @param buffer_size Size of name_buffer
  * @param data Data that should be available in the callback
- * @param sorted Whether the callbacks shall be sorted alphabetically.
- *   Ports with the same name before a colon are kept stable.
  * @param walker Callback function
  * @param expand_bundles Whether walking over bundles without subports
  *   invokes walking over each of the bundle's port
@@ -331,12 +331,12 @@ typedef void(*port_walker_t)(const Port*,const char*,const char*,
  *   the runtime object will be used stop recursion if the Ports are disabled
  *   (using the "enabled by" property) and it will be passed to the walker
  */
+template<bool Sorted = false>
 void walk_ports(const Ports *base,
                 char          *name_buffer,
                 size_t         buffer_size,
                 void          *data,
                 port_walker_t  walker,
-                bool           sorted = false,
                 bool expand_bundles = true,
                 void *runtime = NULL,
                 bool ranges = false);

@@ -64,14 +64,15 @@ void append_str_and_args(const rtosc::Port* p, const char *, const char*,
     *res += ";";
 }
 
+template<bool Sorted = false>
 void check_all_subports(const rtosc::Ports& root, const char* exp,
                         const char* testcase, int line,
-                        bool app_args = false, bool sorted = false)
+                        bool app_args = false)
 {
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
     std::string res;
-    rtosc::walk_ports(&root, buffer, 1024, &res, app_args ? append_str_and_args : append_str, sorted);
+    rtosc::walk_ports<Sorted>(&root, buffer, 1024, &res, app_args ? append_str_and_args : append_str);
     assert_str_eq(exp, res.c_str(), testcase, line);
 }
 
@@ -119,12 +120,12 @@ int main()
         {"a",    0, 0, null_fn},
     };
 
-    check_all_subports(sort_ports, "c:ii;c:i;c:;c;ccc;b;a;",
-                       "walk_ports unsorted", __LINE__, true, false);
-    check_all_subports(sort_ports, "a;b;c:ii;c:i;c:;c;ccc;",
-                       "walk_ports sorted 1", __LINE__, true, true);
-    check_all_subports(sort_ports_reversed, "a;b;c;c:;c:i;c:ii;ccc;",
-                       "walk_ports sorted 2", __LINE__, true, true);
+    check_all_subports<false>(sort_ports, "c:ii;c:i;c:;c;ccc;b;a;",
+                              "walk_ports unsorted", __LINE__, true);
+    check_all_subports<true>(sort_ports, "a;b;c:ii;c:i;c:;c;ccc;",
+                             "walk_ports sorted 1", __LINE__, true);
+    check_all_subports<true>(sort_ports_reversed, "a;b;c;c:;c:i;c:ii;ccc;",
+                             "walk_ports sorted 2", __LINE__, true);
 
     return test_summary();
 }
