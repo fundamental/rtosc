@@ -1,6 +1,18 @@
 #include "common.h"
+#include <string>
 
 #include <rtosc/thread-link.h>
+
+void verify_msg(rtosc::msg_t read_msg, const char *portname, int value, const char *test_id, int line)
+{
+    const std::string test_string = test_id;
+
+    assert_str_eq(portname, read_msg, (test_string + " (portname)").c_str(), line);
+    const char* arg_str = rtosc_argument_string(read_msg);
+    assert_str_eq("i", arg_str, (test_string + " (arg type)").c_str(), line);
+    if(!strcmp(arg_str, "i"))
+        assert_int_eq(value, rtosc_argument(read_msg, 0).i, (test_string + " (arg value)").c_str(), line);
+}
 
 void test_contiguous_write()
 {
@@ -20,17 +32,9 @@ void test_contiguous_write()
         thread_link.write(portname, "i", 42);
         read_msg = thread_link.read();
 
-        char test_name [] = "round 0 string equals";
+        char test_name [] = "round 0";
         test_name[6] += round % 10;
-        assert_str_eq(portname, read_msg, test_name, __LINE__);
-
-        const char* arg_str = rtosc_argument_string(read_msg);
-        assert_str_eq("i", arg_str, "arg string correct", __LINE__);
-        if(!strcmp(arg_str, "i"))
-            assert_int_eq(42, rtosc_argument(read_msg, 0).i, "arg 1 correct", __LINE__);
-        else {
-            // invalid state, don't crash the test
-        }
+        verify_msg(read_msg, portname, 42, test_name, __LINE__);
     }
 }
 
