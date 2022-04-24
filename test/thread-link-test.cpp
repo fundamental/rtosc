@@ -29,12 +29,12 @@ void test_contiguous_write()
     for (int round = 0; round < 10; ++round)
     {
         // write 17 bytes + 3 bytes padding + 4 bytes argstr + 4 bytes args = 28 bytes
-        thread_link.write(portname, "i", 42);
+        thread_link.write(portname, "i", 43 + round);
         read_msg = thread_link.read();
 
         char test_name [] = "round 0";
         test_name[6] += round % 10;
-        verify_msg(read_msg, portname, 42, test_name, __LINE__);
+        verify_msg(read_msg, portname, 42 + round, test_name, __LINE__);
     }
 }
 
