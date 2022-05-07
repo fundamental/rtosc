@@ -24,9 +24,6 @@ rtosc_arg_val_t *rtosc_arg_val_current_time(rtosc_arg_val_t *dest)
 rtosc_arg_val_t *rtosc_arg_val_from_params(rtosc_arg_val_t *dest,
                                            struct tm *m_tm, uint64_t secfracs)
 {
-    // adjust ranges to be POSIX conform
-    m_tm->tm_year -= 1900;
-    --m_tm->tm_mon;
     // don't mess around with Daylight Saving Time
     m_tm->tm_isdst = -1;
 

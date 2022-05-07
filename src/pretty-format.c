@@ -1737,6 +1737,9 @@ size_t rtosc_scan_arg_val(const char* src,
                     secfracs = 0;
                 }
 
+                // posix adjustments
+                m_tm.tm_year -= 1900;
+                --m_tm.tm_mon;
                 rtosc_arg_val_from_params(arg, &m_tm, secfracs);
             }
             else
