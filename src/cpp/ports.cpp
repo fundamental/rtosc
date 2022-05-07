@@ -1,4 +1,4 @@
-#include "../util.h"
+#include "util.h"
 #include "../../include/rtosc/arg-ext.h"
 #include "../../include/rtosc/ports.h"
 #include "../../include/rtosc/ports-runtime.h"

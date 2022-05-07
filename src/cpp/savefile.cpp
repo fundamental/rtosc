@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <set>
 
-#include "../util.h"
+#include "util.h"
 #include <rtosc/arg-ext.h>
 #include <rtosc/arg-val-cmp.h>
 #include <rtosc/arg-val-itr.h>

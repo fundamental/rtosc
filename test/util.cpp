@@ -1,9 +1,9 @@
-#include "../src/util.h"
+#include "../src/cpp/util.h"
 #include "common.h"
 
 void test_fast_strcpy()
 {
-    char* src = "rtosc is a good library";
+    const char* src = "rtosc is a good library";
     char dest[32];
     memset(dest, 0, sizeof(dest));
     dest[strlen(src)+1] = 'x';

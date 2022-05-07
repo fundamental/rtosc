@@ -25,8 +25,8 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     include(GNUInstallDirs)
 endif()
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version.c.in
-    ${CMAKE_CURRENT_BINARY_DIR}/version.c)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/version.c.in
+    ${CMAKE_CURRENT_BINARY_DIR}/cpp/version.c)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(CXX11_FLAG "-std=c++11")
@@ -71,12 +71,16 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CPP_FLAGS} ${CXX11_FLAG} -Wall -Wextra")
 
-add_library(rtosc src/rtosc.c src/dispatch.c src/pretty-format.c src/arg-ext.c
-            src/arg-val.c src/arg-val-math.c src/arg-val-cmp.c src/arg-val-itr.c
-            src/rtosc-time.c src/util.c
-            ${CMAKE_CURRENT_BINARY_DIR}/version.c)
-add_library(rtosc-cpp src/cpp/ports.cpp src/cpp/ports-runtime.cpp
+add_library(rtosc src/rtosc.c src/dispatch.c src/rtosc-time.c)
+add_library(rtosc-cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/cpp/version.c
+    src/cpp/ports.cpp src/cpp/ports-runtime.cpp
     src/cpp/default-value.cpp src/cpp/savefile.cpp
+    src/cpp/pretty-format.c
+    src/cpp/arg-ext.c
+    src/cpp/arg-val.c
+    src/cpp/arg-val-math.c src/cpp/arg-val-cmp.c src/cpp/arg-val-itr.c
+    src/cpp/util.c
     src/cpp/miditable.cpp
     src/cpp/automations.cpp
     src/cpp/midimapper.cpp
@@ -171,13 +175,8 @@ macro(maketestcpp fname)
     target_link_libraries(${fname} rtosc-cpp rtosc)
 endmacro(maketestcpp)
 
-maketest(version)
 maketest(rtosc-time)
-maketest(util)
 maketest(osc-spec)
-maketest(arg-val-cmp)
-maketest(arg-val-math)
-maketest(pretty-format)
 maketest(simple-messages)
 maketest(null-messages)
 maketest(bundles)
@@ -198,10 +197,15 @@ if(JACK_FOUND)
     include_directories(${JACK_INCLUDE_DIRS})
 endif()
 
+maketestcpp(version)
+maketestcpp(util)
+maketestcpp(arg-val-cmp)
+maketestcpp(arg-val-math)
 maketestcpp(thread-link-test)
 maketestcpp(test-midi-mapper)
 maketestcpp(metadata)
 maketestcpp(apropos)
+maketestcpp(pretty-format)
 maketestcpp(default-value)
 maketestcpp(headerlib)
 maketestcpp(test-walker)

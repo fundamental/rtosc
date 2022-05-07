@@ -1,4 +1,4 @@
-#include "../util.h"
+#include "util.h"
 #include <rtosc/automations.h>
 #include <cstring>
 #include <cmath>
