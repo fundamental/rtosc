@@ -49,10 +49,9 @@ extern "C" {
  *
  * @param dest      Where to store the result
  * @param time      The input time_t time
- * @param secfracs  "Fractional parts of a second". This integer is in range
- *                  [0,0xFFFFFFFF], and multiplied with 2^32, it returns the
- *                  number of seconds as a float value in [0,1). To get this
- *                  integer from a float value, see rtosc_float2secfracs.
+ * @param secfracs  "Fractional parts of a second", as specified by the OSC
+ *                  specs. To get this integer from a float value, see
+ *                  rtosc_float2secfracs.
  * @return          The same as dest
  */
 rtosc_arg_val_t* rtosc_arg_val_from_time_t(rtosc_arg_val_t* dest, time_t time,
@@ -75,13 +74,19 @@ rtosc_arg_val_t* rtosc_arg_val_current_time(rtosc_arg_val_t* dest);
 rtosc_arg_val_t* rtosc_arg_val_immediatelly(rtosc_arg_val_t* dest);
 
 /**
- * @brief       Convert a float number in [0,1) into an integer in
- *              [0,0xFFFFFFFF], such that the integer, multiplied with 2^32,
- *              gives the float number. The input is how many seconds are
- *              represented, and the output equals the "fractional parts of a
- *              second" required for rtosc_arg_val_from_time_t.
- * @param       The input number as a float.
- * @return      The second fraction. Always in range [0,0xFFFFFFFF].
+ * @brief       Convert time represented by float into OSC secfracs
+ *
+ *              Convert a float number in [0,1) into an integer in
+ *              [0,2^32). The conversion maps 0 -> 0, 1^-32 -> 1
+ *              and ~1 -> 2^32-1 in a linear way.
+ *
+ *              If the input represents an amount of seconds, then the output
+ *              can be interpreted as "fractional parts of a second", as
+ *              required by the OSC spec and especially by
+ *              rtosc_arg_val_from_time_t.
+ *
+ * @param       The input number as a float, in range [0,1).
+ * @return      The second fraction. Always in range [0,2^32).
  */
 uint64_t rtosc_float2secfracs(float secfracsf);
 
@@ -94,36 +99,41 @@ uint64_t rtosc_float2secfracs(float secfracsf);
  * @param arg   The arg val
  * @return      The number of seconds in time_t
  */
-time_t rtosct_time_t_from_arg_val(const rtosc_arg_val_t* arg);
+time_t rtosc_time_t_from_arg_val(const rtosc_arg_val_t* arg);
 
 /**
  * @brief       Return the integer part represented by a time arg val in
  *              struct tm
  * @param arg   The arg val
  * @return      The number of seconds in struct tm
- * @warning     Not thread safe (TODO!)
+ * @warning     Not thread safe! This function uses localtime().
  */
-struct tm *rtosct_params_from_arg_val(const rtosc_arg_val_t* arg);
+struct tm *rtosc_params_from_arg_val(const rtosc_arg_val_t* arg);
 
 /**
  * @brief       Return the fractional part represented by a time arg val as
  *              "fractional parts of a second"
  * @param arg   The arg val
  * @return      The "fractional parts of a second". This integer is in range
- *              [0,0xFFFFFFFF], and multiplied with 2^32, it returns the
- *              number of seconds as a float value in [0,1). For this
- *              conversion, see rtosc_secfracs2float.
+ *              [0,2^32), as required in the OSC specs. To convert the result
+ *              futher into a float value, see rtosc_secfracs2float.
  */
-uint64_t rtosct_secfracs_from_arg_val(const rtosc_arg_val_t* arg);
+uint64_t rtosc_secfracs_from_arg_val(const rtosc_arg_val_t* arg);
 bool rtosc_arg_val_is_immediatelly(const rtosc_arg_val_t* arg);
 
 /**
- * @brief       Convert an integer in [0,0xFFFFFFFF] into a float number
- *              in [0,1), such that the integer, multiplied with 2^32, gives
- *              the float number. The input integer equals the "fractional parts
- *              of a second" returned by rtosct_secfracs_from_arg_val, and the
- *              output is how many seconds it represents.
- * @param       The input integer. Must be in range [0,0xFFFFFFFF].
+ * @brief       Convert time represented by OSC secfracs into float
+ *
+ *              Convert an integer in [0,2^32) into a float number in [0,1).
+ *              The conversion maps 0 -> 0, 1 -> 1^-32 and 2^32-1 -> ~1 in a
+ *              linear way.
+ *
+ *              If the input represents "fractional parts of a second", as
+ *              required by the OSC spec and especially returned by
+ *              rtosc_secfracs_from_arg_val, then the output can be
+ *              interpreted as an amount of seconds.
+ *
+ * @param       The second fraction, in range [0,2^32).
  * @return      The float number. Always in range [0,1).
  */
 float rtosc_secfracs2float(uint64_t secfracs);
