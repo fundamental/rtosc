@@ -2,12 +2,15 @@
 #include <rtosc/rtosc.h>
 #include <cassert>
 namespace rtosc {
-    
+
 #define C_dataentryhi 0x06
 #define C_dataentrylo 0x26
 #define C_nrpnhi 99
 #define C_nrpnlo 98
-    
+
+#define CONTROLER_TYPE_LFO 1
+#define CONTROLER_TYPE_ENV 2
+
 struct AutomationMapping
 {
     //0 - linear
@@ -62,9 +65,12 @@ struct AutomationSlot
 
     //-1 or a valid MIDI CC + MIDI Channel
     int   midi_cc;
-    
+
     //-1 or a valid NRPN ID Channel
     int   midi_nrpn;
+
+    //-1 or a valid generic controller type
+    int   internal;
 
     //Current state supplied by MIDI value or host
     float current_state;
@@ -74,7 +80,7 @@ struct AutomationSlot
 
     //Collection of automations
     Automation *automations;
-    
+
 };
 
 class AutomationMgr
@@ -105,7 +111,7 @@ class AutomationMgr
         void clearSlot(int slot_id);
         void clearSlotSub(int slot_id, int sub);
 
-		void setSlotSubPath(int slot_id, int sub, const char *msg);
+        void setSlotSubPath(int slot_id, int sub, const char *msg);
         void setSlotSubGain(int slot_id, int sub, float f);
         float getSlotSubGain(int slot_id, int sub);
         void setSlotSubOffset(int slot_id, int sub, float f);
@@ -117,7 +123,8 @@ class AutomationMgr
         const char * getName(int slot_id);
 
         bool handleMidi(int channel, int cc, int val);
-        
+        void handleGenericControlers(int type, float val);
+
         void setparameternumber(unsigned int type, int value); //used for RPN and NRPN's
         int getnrpn(int *parhi, int *parlo, int *valhi, int *vallo);
 
@@ -142,7 +149,7 @@ class AutomationMgr
 
         int damaged;
     private:
-    
+
         /** RPN and NPRPN */
         struct { //nrpn
             int parhi, parlo;

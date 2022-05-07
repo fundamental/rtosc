@@ -336,6 +336,15 @@ const char *AutomationMgr::getName(int slot_id)
         return "";
     return slots[slot_id].name;
 }
+void AutomationMgr::handleGenericControlers(int type, float val)
+{
+    for(int i=0; i<nslots; ++i) {
+        if (slots[i].internal == type) {
+            if (val==getSlot(i)) return;
+            setSlot(i, val);
+        }
+    }
+}
 bool AutomationMgr::handleMidi(int channel, int type, int val)
 {
     bool is_nrpn = false;
@@ -343,7 +352,7 @@ bool AutomationMgr::handleMidi(int channel, int type, int val)
     int value;
     if((type == C_dataentryhi) || (type == C_dataentrylo)
        || (type == C_nrpnhi) || (type == C_nrpnlo)) { //Process RPN and NRPN by the Master (ignore the chan)
-        
+
         setparameternumber(type, val);
 
         int parhi = -1, parlo = -1, valhi = -1, vallo = -1;
@@ -362,10 +371,10 @@ bool AutomationMgr::handleMidi(int channel, int type, int val)
         if(bound_nrpn)
             return 1;
         }
-        
+
     }
     else {
-        
+
         par_id = channel*128 + type;
 
         bool bound_cc = false;
@@ -378,7 +387,7 @@ bool AutomationMgr::handleMidi(int channel, int type, int val)
 
         if(bound_cc)
             return 1;
-        
+
     }
 
     //No bound CC, now to see if there's something to learn
