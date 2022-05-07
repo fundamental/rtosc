@@ -172,6 +172,7 @@ macro(maketestcpp fname)
 endmacro(maketestcpp)
 
 maketest(version)
+maketest(rtosc-time)
 maketest(util)
 maketest(osc-spec)
 maketest(arg-val-cmp)
