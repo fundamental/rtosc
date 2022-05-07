@@ -1,4 +1,4 @@
-#include "../util.h"
+#include "util.h"
 #include <math.h>
 #include <rtosc/miditable.h>
 
