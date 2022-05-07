@@ -48,7 +48,7 @@ typedef struct
 } rtosc_print_options;
 
 /**
- * Pretty-print rtosct_arg_val_t structure into buffer.
+ * Pretty-print rtosc_arg_val_t structure into buffer.
  * Ranges are not being compressed (use rtosc_print_arg_vals instead).
  *
  * @param arg Pointer to the structure that shall be printed
@@ -64,7 +64,7 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t* arg, char* buffer,
                            int* cols_used);
 
 /**
- * Pretty-print rtosct_arg_val_t array into buffer.
+ * Pretty-print rtosc_arg_val_t array into buffer.
  * Ranges are being compressed if opt->compress_ranges is true.
  *
  * @see rtosc_print_message

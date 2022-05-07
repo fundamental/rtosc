@@ -104,18 +104,18 @@ rtosc_arg_val_t *rtosc_arg_val_immediatelly(rtosc_arg_val_t *arg)
     return arg;
 }
 
-time_t rtosct_time_t_from_arg_val(const rtosc_arg_val_t *arg)
+time_t rtosc_time_t_from_arg_val(const rtosc_arg_val_t *arg)
 {
     return (time_t)(arg->val.t >> 32);
 }
 
-struct tm* rtosct_params_from_arg_val(const rtosc_arg_val_t *arg)
+struct tm* rtosc_params_from_arg_val(const rtosc_arg_val_t *arg)
 {
-    time_t t = rtosct_time_t_from_arg_val(arg);
+    time_t t = rtosc_time_t_from_arg_val(arg);
     return localtime(&t);
 }
 
-uint64_t rtosct_secfracs_from_arg_val(const rtosc_arg_val_t *arg)
+uint64_t rtosc_secfracs_from_arg_val(const rtosc_arg_val_t *arg)
 {
     return arg->val.t & (0xffffffff);
 }

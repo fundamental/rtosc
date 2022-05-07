@@ -395,8 +395,8 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                 wrt = asnprintf(buffer, bs, "immediately");
             else
             {
-                struct tm* m_tm = rtosct_params_from_arg_val(arg);
-                int32_t secfracs = rtosct_secfracs_from_arg_val(arg);
+                struct tm* m_tm = rtosc_params_from_arg_val(arg);
+                int32_t secfracs = rtosc_secfracs_from_arg_val(arg);
 
                 const char* strtimefmt = (secfracs || m_tm->tm_sec)
                                   ? "%Y-%m-%d %H:%M:%S"
