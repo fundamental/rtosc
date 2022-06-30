@@ -54,7 +54,8 @@ void check_conversions()
     assert_int_eq(71, tpars->tm_year, "params: year", __LINE__);
     // posix: month range is [0,11]
     assert_int_eq(1, tpars->tm_mon, "params: mon", __LINE__);
-    assert_int_eq(2, tpars->tm_mday, "params: mday", __LINE__);
+    // day is ~2, not fully reliable, depends on timezone:
+    assert_true(tpars->tm_mday>=1 && tpars->tm_mday<=3, "params: mday", __LINE__);
     // (hour depends on timezone, not reliable)
     assert_int_eq(1, tpars->tm_min, "params: min", __LINE__);
     assert_int_eq(1, tpars->tm_sec, "params: sec", __LINE__);
