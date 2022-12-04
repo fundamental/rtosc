@@ -92,7 +92,7 @@ void AutomationMgr::createBinding(int slot, const char *path, bool start_midi_le
 
     if(meta["scale"] && strstr(meta["scale"], "log")) {
         au.map.control_scale = 1;
-        au.param_min = logf(au.param_min);
+        au.param_min = meta["logmin"] ? logf(atof(meta["logmin"])) : au.param_min;
         au.param_max = logf(au.param_max);
     } else
         au.map.control_scale = 0;
@@ -285,7 +285,7 @@ void AutomationMgr::setSlotSubPath(int slot, int ind, const char *path)
 
     if(meta["scale"] && strstr(meta["scale"], "log")) {
         au.map.control_scale = 1;
-        au.param_min = logf(au.param_min);
+        au.param_min = logf(meta["logmin"] ? atof(meta["logmin"]) : au.param_min);
         au.param_max = logf(au.param_max);
     } else
         au.map.control_scale = 0;
