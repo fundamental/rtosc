@@ -336,6 +336,8 @@ template<class T> constexpr T spice(T*t) {return *t;}
 //has no special meaning, rLinear shall be used.
 #define rLinear(min_, max_) rMap(min, min_) rMap(max, max_) rMap(scale, linear)
 #define rLog(min_, max_) rMap(min, min_) rMap(max, max_) rMap(scale, logarithmic)
+// rLogWithLogmin: "logmin" is the minimum value of the domain of the logarithm
+#define rLogWithLogmin(min_, max_, logmin_) rMap(min, min_) rMap(max, max_) rMap(logmin, logmin_) rMap(scale, logarithmic)
 
 //Special values
 #define rSpecial(doc) ":special\0" STRINGIFY(doc) "\0"

@@ -259,7 +259,7 @@ float MidiTable::translate(uint8_t val, const char *meta_)
     if(!strcmp(scale,"linear"))
         return x*(max-min)+min;
     else if(!strcmp(scale,"logarithmic")) {
-        const float b = log(min);
+        const float b = log(meta["logmin"] ? atof(meta["logmin"]) : min);
         const float a = log(max)-b;
         return expf(a*x+b);
     }

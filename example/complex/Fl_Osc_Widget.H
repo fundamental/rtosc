@@ -46,7 +46,7 @@ class Fl_Osc_Widget
             if(!strcmp(scale,"linear"))
                 return x*(max-min)+min;
             else if(!strcmp(scale,"logarithmic")) {
-                const float b = log(min);
+                const float b = log(meta["logmin"] ? atof(meta["logmin"]) : min);
                 const float a = log(max)-b;
                 return expf(a*x+b);
             }
@@ -66,7 +66,7 @@ class Fl_Osc_Widget
             if(!strcmp(scale, "linear"))
                 return (x-min)/(max-min);
             else if(!strcmp(scale, "logarithmic")) {
-                const float b = log(min);
+                const float b = log(meta["logmin"] ? atof(meta["logmin"]) : min);
                 const float a = log(max)-b;
                 return (log(x)-b)/a;
             }
