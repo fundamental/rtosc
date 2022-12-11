@@ -347,65 +347,57 @@ void savefiles()
     {
 
         int modify(char* portname,
-                   size_t maxargs, size_t nargs, rtosc_arg_val_t* args,
-                   bool round2)
+                   size_t maxargs, size_t nargs, rtosc_arg_val_t* args)
         {
             int newsize = nargs;
 
-            if(round2)
+            if(rtosc_version_cmp(rtosc_filever,
+                                 rtosc_version{0, 0, 4}) < 0)
+               /* version < 0.0.4 ? */
             {
                 if(rtosc_version_cmp(rtosc_filever,
-                                     rtosc_version{0, 0, 4}) < 0)
-                   /* version < 0.0.4 ? */
+                                     rtosc_version{0, 0, 3}) < 0)
                 {
                     if(rtosc_version_cmp(rtosc_filever,
-                                         rtosc_version{0, 0, 3}) < 0)
+                                         rtosc_version{0, 0, 2}) < 0)
                     {
-                        if(rtosc_version_cmp(rtosc_filever,
-                                             rtosc_version{0, 0, 2}) < 0)
                         {
-                            {
-                                // dispatch an additional message
-                                char buffer[32];
-                                rtosc_message(buffer, 32,
-                                              "/very_old_version", "T");
-                                operator()(buffer);
-                            }
-
-                            if(nargs == 0 && maxargs >= 1)
-                            {
-                                memcpy(portname+1, "new", 3);
-                                args[0].val.i = 42;
-                                args[0].type = 'i';
-                                newsize = 1;
-                            }
-                            else // wrong argument count or not enough space
-                                newsize = abort;
+                            // dispatch an additional message
+                            char buffer[32];
+                            rtosc_message(buffer, 32,
+                                          "/very_old_version", "T");
+                            operator()(buffer);
                         }
-                        else // i.e. version = 0.0.2
-                            newsize = discard;
+
+                        if(nargs == 0 && maxargs >= 1)
+                        {
+                            memcpy(portname+1, "new", 3);
+                            args[0].val.i = 42;
+                            args[0].type = 'i';
+                            newsize = 1;
+                        }
+                        else // wrong argument count or not enough space
+                            newsize = abort;
                     }
-                    else // i.e. version = 0.0.3
-                        newsize = abort;
+                    else // i.e. version = 0.0.2
+                        newsize = discard;
                 }
-                /* for versions >= 0.0.4, we just let "/old_param" pass */
-                /* in order to get a dispatch error */
+                else // i.e. version = 0.0.3
+                    newsize = abort;
             }
-            else {
-                // discard "/old_param" in round 1, since nothing depends on it
-                newsize = discard;
-            }
+            /* for versions >= 0.0.4, we just let "/old_param" pass */
+            /* in order to get a dispatch error */
 
             return newsize;
         }
 
         int on_dispatch(size_t, char* portname,
-                        size_t maxargs, size_t nargs, rtosc_arg_val_t* args,
-                        bool round2, dependency_t dependency)
+                        size_t maxargs, size_t nargs,
+                        rtosc_arg_val_t* args)
         {
             return (portname[1] == 'o' && !strcmp(portname, "/old_param"))
-                ? modify(portname, maxargs, nargs, args, round2)
-                : default_response(nargs, round2, dependency);
+                ? modify(portname, maxargs, nargs, args)
+                : default_response(nargs);
         }
     };
 
@@ -450,8 +442,10 @@ void savefiles()
                           savefile_test_ports, &sft,
                           "savefiletest", rtosc_version {1, 2, 3},
                           &my_dispatcher);
-    assert_int_eq(-59, rval, "savefile: 1 error for v0.0.3", __LINE__);
-    assert_int_eq(123, sft.further_param,
+    // the whole savefile has been parsed correctly, but then a failure
+    // occurred, so the return value is -(number of bytes)=-77
+    assert_int_eq(-77, rval, "savefile: 1 error for v0.0.3", __LINE__);
+    assert_int_eq(0, sft.further_param,
                   "no further parameter is being dispatched for v0.0.3",
                   __LINE__);
     // test with v0.0.4
@@ -460,11 +454,10 @@ void savefiles()
                           savefile_test_ports, &sft,
                           "savefiletest", rtosc_version {1, 2, 3},
                           &my_dispatcher);
-    assert_int_eq(-59, rval, "savefile: 1 error for v0.0.4", __LINE__);
-    assert_int_eq(123, sft.further_param,
+    assert_int_eq(-77, rval, "savefile: 1 error for v0.0.4", __LINE__);
+    assert_int_eq(0, sft.further_param,
                   "no further parameter is being dispatched for v0.0.4",
                   __LINE__);
-
 #undef MAKE_TESTFILE
 }
 

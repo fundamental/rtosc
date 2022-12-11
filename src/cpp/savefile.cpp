@@ -2,7 +2,9 @@
 #include <cassert>
 #include <cstring>
 #include <algorithm>
+#include <map>
 #include <set>
+#include <queue>
 
 #include "util.h"
 #include <rtosc/arg-ext.h>
@@ -365,36 +367,83 @@ bool savefile_dispatcher_t::do_dispatch(const char* msg)
     return !!d.matches;
 }
 
-int savefile_dispatcher_t::default_response(size_t nargs,
-                                            bool first_round,
-                                            savefile_dispatcher_t::dependency_t
-                                                dependency)
+int savefile_dispatcher_t::default_response(size_t nargs)
 {
-    // default implementation:
-    // no dependencies  => round 0,
-    // has dependencies => round 1,
-    // not specified    => both rounds
-    return (dependency == not_specified
-            || !(dependency ^ first_round))
-           ? nargs // argument number is not changed
-           : (int)discard;
+    return nargs;
 }
 
 int savefile_dispatcher_t::on_dispatch(size_t, char *,
                                        size_t, size_t nargs,
-                                       rtosc_arg_val_t *,
-                                       bool round2,
-                                       dependency_t dependency)
+                                       rtosc_arg_val_t *)
 {
-    return default_response(nargs, round2, dependency);
+    return default_response(nargs);
 }
+
+
+struct message_t
+{
+    std::string portname;
+    std::vector<rtosc_arg_val_t> arg_vals;
+    std::vector<std::size_t> dependees;
+    std::vector<char> strbuf;
+};
+
+void scan_deps(const std::string& orig_portname, std::string cur_portname,
+               const Ports& ports, const std::map<std::string, message_t*>& message_map, const std::vector<message_t>& message_v)
+{
+    auto rel2abs=[](const char* relative_path, const std::string& base) -> std::string
+    {
+        std::string abs = base;
+        std::string::size_type last_slash = abs.find_last_of('/');
+        assert(last_slash != std::string::npos);
+        abs.resize(last_slash+1);
+        abs.append(relative_path);
+        std::string::size_type comma_pos = abs.find(',');
+        if(comma_pos != std::string::npos)
+            abs.resize(abs.find(','));
+        return abs;
+    };
+
+    // this port and all parent ports can be enabled by another port, so check them all
+    for(std::string::size_type last_slash;
+        cur_portname.size() && (last_slash = cur_portname.find_last_of('/')) != std::string::npos;
+          cur_portname.resize(last_slash))
+    {
+        const Port* port = ports.apropos(cur_portname.c_str());
+        if(port)
+        {
+            const char* dep_types[3] = { "enabled by", "default depends" };
+            for(const char* dep_type : dep_types)
+            {
+                for(const char* enabled_by = port->meta()[dep_type]; enabled_by != NULL; enabled_by = strchr(enabled_by+1, ','))
+                {
+                    if(*enabled_by==',')
+                        ++enabled_by;
+                    std::string abs = rel2abs(enabled_by, cur_portname);
+                    auto itr = message_map.find(abs);
+                    if(itr != message_map.end())  // port is in the savefile
+                    {
+                        //printf("dependencies: %s depends on %s\n", orig_portname.c_str(), itr->second->portname.c_str());
+                        itr->second->dependees.push_back(std::distance(message_v.data(),(const message_t*)message_map.at(orig_portname)));
+                    }
+                    else
+                    {
+                        //printf("dependencies: %s depends on port %s which has no message\n", orig_portname.c_str(), enabled_by);
+                        // port is not in the savefile => scan transitive deps
+                        scan_deps(orig_portname, abs, ports, message_map, message_v);
+                    }
+                }
+            }
+        }
+    }
+};
 
 int dispatch_printed_messages(const char* messages,
                               const Ports& ports, void* runtime,
                               savefile_dispatcher_t* dispatcher)
 {
     constexpr std::size_t buffersize = 8192;
-    char portname[buffersize], message[buffersize], strbuf[buffersize];
+    char messagebuf[buffersize];
     int rd, rd_total = 0;
     int nargs;
     int msgs_read = 0;
@@ -406,11 +455,9 @@ int dispatch_printed_messages(const char* messages,
     dispatcher->ports = &ports;
     dispatcher->runtime = runtime;
 
-    // scan all messages twice:
-    //  * in the second round, only dispatch those with ports that depend on
-    //    other ports
-    //  * in the first round, only dispatch all others
-    for(int round = 0; round < 2 && ok; ++round)
+    std::vector<message_t> message_v;
+    std::map<std::string, message_t*> message_map;
+
     {
         msgs_read = 0;
         rd_total = 0;
@@ -420,115 +467,18 @@ int dispatch_printed_messages(const char* messages,
             nargs = rtosc_count_printed_arg_vals_of_msg(msg_ptr);
             if(nargs >= 0)
             {
-                // nargs << 1 is usually too much, but it allows the user to use
-                // these values (using on_dispatch())
-                size_t maxargs = std::max(nargs << 1, 16);
-                STACKALLOC(rtosc_arg_val_t, arg_vals, maxargs);
-                rd = rtosc_scan_message(msg_ptr, portname, buffersize,
-                                        arg_vals, nargs, strbuf, buffersize);
+                message_t m;
+                m.arg_vals.resize(nargs);
+                std::vector<char> portname_v;
+                portname_v.resize(buffersize);
+
+                m.strbuf.resize(buffersize);
+                rd = rtosc_scan_message(msg_ptr, portname_v.data(), buffersize,
+                                        m.arg_vals.data(), nargs, m.strbuf.data(), buffersize);
+
+                m.portname = portname_v.data();
                 rd_total += rd;
-
-                const Port* port = ports.apropos(portname);
-                savefile_dispatcher_t::dependency_t dependency =
-                    (savefile_dispatcher_t::dependency_t)
-                    (port
-                    ? !!port->meta()["default depends"]
-                    : (int)savefile_dispatcher_t::not_specified);
-
-                // let the user modify the message and the args
-                // the argument number may have changed, or the user
-                // wants to discard the message or abort the savefile loading
-                nargs = dispatcher->on_dispatch(buffersize, portname,
-                                                maxargs, nargs, arg_vals,
-                                                round, dependency);
-
-                if(nargs == savefile_dispatcher_t::abort)
-                    ok = false;
-                else
-                {
-                    if(nargs != savefile_dispatcher_t::discard)
-                    {
-                        const rtosc_arg_val_t* arg_val_ptr;
-                        bool is_array;
-                        if(nargs && arg_vals[0].type == 'a')
-                        {
-                            is_array = true;
-                            // arrays of arrays are not yet supported -
-                            // neither by rtosc_*message, nor by the inner for
-                            // loop below.
-                            // arrays will probably have an 'a' (or #)
-                            assert(rtosc_av_arr_type(arg_vals) != 'a' &&
-                                   rtosc_av_arr_type(arg_vals) != '#');
-                            // we won't read the array arg val anymore
-                            --nargs;
-                            arg_val_ptr = arg_vals + 1;
-                        }
-                        else {
-                            is_array = false;
-                            arg_val_ptr = arg_vals;
-                        }
-
-                        char* portname_end = portname + strlen(portname);
-
-                        rtosc_arg_val_itr itr;
-                        rtosc_arg_val_t buffer;
-                        const rtosc_arg_val_t* cur;
-
-                        rtosc_arg_val_itr_init(&itr, arg_val_ptr);
-
-                        // for bundles, send each element separately
-                        // for non-bundles, send all elements at once
-                        for(size_t arr_idx = 0;
-                            itr.i < (size_t)std::max(nargs,1) && ok; ++arr_idx)
-                        {
-                            // this will fail for arrays of arrays,
-                            // since it only copies one arg val
-                            // (arrays are not yet specified)
-                            size_t i;
-                            const size_t last_pos = itr.i;
-                            const size_t elem_limit = is_array
-                                  ? 1 : std::numeric_limits<int>::max();
-
-                            // equivalent to the for loop below, in order to
-                            // find out the array size
-                            size_t val_max = 0;
-                            {
-                                rtosc_arg_val_itr itr2 = itr;
-                                for(val_max = 0;
-                                    itr2.i - last_pos < (size_t)nargs &&
-                                        val_max < elem_limit;
-                                    ++val_max)
-                                {
-                                    rtosc_arg_val_itr_next(&itr2);
-                                }
-                            }
-                            STACKALLOC(rtosc_arg_t, vals, val_max);
-                            STACKALLOC(char, argstr, val_max+1);
-
-                            for(i = 0;
-                                itr.i - last_pos < (size_t)nargs &&
-                                    i < elem_limit;
-                                ++i)
-                            {
-                                cur = rtosc_arg_val_itr_get(&itr, &buffer);
-                                vals[i] = cur->val;
-                                argstr[i] = cur->type;
-                                rtosc_arg_val_itr_next(&itr);
-                            }
-
-                            argstr[i] = 0;
-
-                            if(is_array)
-                                snprintf(portname_end, 8, "%d", (int)arr_idx);
-
-                            rtosc_amessage(message, buffersize, portname,
-                                           argstr, vals);
-
-                            ok = (*dispatcher)(message);
-                        }
-                    }
-                }
-
+                message_v.emplace_back(std::move(m));
                 msg_ptr += rd;
                 ++msgs_read;
             }
@@ -542,6 +492,196 @@ int dispatch_printed_messages(const char* messages,
                 ok = false;
             }
         }
+    }
+
+    for(message_t& msg : message_v)
+    {
+        message_map.emplace(msg.portname, &msg);
+    }
+
+    // add "rEnabledBy" and "rDefaultDepends" edges
+    for(std::pair<const std::string, message_t*>& pr : message_map)
+    {
+        std::string portname = pr.first;
+        assert(portname[0] == '/');
+        scan_deps(portname, portname, ports, message_map, message_v);
+    }
+
+    // topologic sort
+    std::vector<bool> already_done(message_v.size(), false);
+    std::vector<std::size_t> order;
+    order.reserve(message_v.size());
+
+    // kahn's algorithm
+
+    std::vector<std::size_t> n_input_edges(message_v.size(), 0);
+    for(const message_t& m : message_v)
+        for(std::size_t dep : m.dependees)
+            ++n_input_edges[dep];
+
+    std::queue<std::size_t> no_incoming_edge;
+    for(std::size_t i = 0; i < n_input_edges.size(); ++i)
+        if(n_input_edges[i] == 0)
+            no_incoming_edge.push(i);
+
+    while(!no_incoming_edge.empty())
+    {
+        std::size_t m_id = no_incoming_edge.front();
+        no_incoming_edge.pop();
+        order.push_back(m_id);
+        for(std::size_t dependee : message_v[m_id].dependees)
+            if(--n_input_edges[dependee] == 0)
+                no_incoming_edge.push(dependee);
+    }
+
+    // check result
+    assert(order.size() == message_v.size());
+    for(std::size_t i = 0; i < n_input_edges.size(); ++i)
+        assert(n_input_edges[i] == 0);  // cyclic rDepends/rEnables/... in the metadata?
+    std::vector<std::size_t> order_copy = order;
+    std::sort(order_copy.begin(), order_copy.end());
+    for(std::size_t i = 0; i < order_copy.size(); ++i)
+    {
+        assert(order_copy[i] == i);
+    }
+
+//#define DUMP_SAVEFILE_GRAPH
+#ifdef DUMP_SAVEFILE_GRAPH
+    {
+        const char* fname = "/tmp/savefile-graph.dot";
+        FILE* dot = fopen(fname, "w");
+        if(dot)
+        {
+            fputs("digraph D {\n\n", dot);
+            for(std::size_t i = 0; i < message_v.size(); ++i)
+                fprintf(dot, "%lu [label=\"%s\"];\n", i, message_v[i].portname.c_str());
+            fputs("\n", dot);
+            /*for(const message_t& m : message_v)
+                for(std::size_t dep : m.dependees)
+                    fprintf(dot, "%s -> %s\n", m.portname.c_str(), message_v[dep].portname.c_str());*/
+            for(std::size_t i = 0; i < message_v.size(); ++i)
+                for(std::size_t dep : message_v[i].dependees)
+                    fprintf(dot, "%lu -> %lu\n", i, dep);
+            fputs("\n\n}\n", dot);
+            fclose(dot);
+        }
+        else
+        {
+            fprintf(stderr, "Saving the graph to %s\n. Not terminating.", fname);
+        }
+    }
+#endif
+
+    // finally, handling messages - in correct order
+    for(std::size_t order_id : order)
+    {
+        message_t& message = message_v[order_id];
+        char portname[buffersize];
+        fast_strcpy(portname, message.portname.c_str(), buffersize);
+
+        // let the user modify the message and the args
+        // the argument number may have changed, or the user
+        // wants to discard the message or abort the savefile loading
+        nargs = message.arg_vals.size();
+        // nargs << 1 is usually too much, but it allows the user to use
+        // these values (using on_dispatch())
+        const size_t maxargs = std::max(nargs << 1, 16);
+        message.arg_vals.resize(maxargs); // allow the user to modify arguments
+        nargs = dispatcher->on_dispatch(buffersize, portname,
+                                        maxargs, nargs, message.arg_vals.data());
+
+        if(nargs == savefile_dispatcher_t::abort)
+        {
+            ok = false;
+        }
+        else
+        {
+            if(nargs != savefile_dispatcher_t::discard)
+            {
+                const rtosc_arg_val_t* arg_val_ptr;
+                bool is_array;
+                if(nargs && message.arg_vals[0].type == 'a')
+                {
+                    is_array = true;
+                    // arrays of arrays are not yet supported -
+                    // neither by rtosc_*message, nor by the inner for
+                    // loop below.
+                    // arrays will probably have an 'a' (or #)
+                    assert(rtosc_av_arr_type(message.arg_vals.data()) != 'a' &&
+                           rtosc_av_arr_type(message.arg_vals.data()) != '#');
+                    // we won't read the array arg val anymore
+                    --nargs;
+                    arg_val_ptr = message.arg_vals.data() + 1;
+                }
+                else {
+                    is_array = false;
+                    arg_val_ptr = message.arg_vals.data();
+                }
+
+                char* portname_end = portname + message.portname.length();
+
+                rtosc_arg_val_itr itr;
+                rtosc_arg_val_t buffer;
+                const rtosc_arg_val_t* cur;
+
+                rtosc_arg_val_itr_init(&itr, arg_val_ptr);
+
+                // for bundles, send each element separately
+                // for non-bundles, send all elements at once
+                for(size_t arr_idx = 0;
+                    itr.i < (size_t)std::max(nargs,1) && ok; ++arr_idx)
+                {
+                    // this will fail for arrays of arrays,
+                    // since it only copies one arg val
+                    // (arrays are not yet specified)
+                    size_t i;
+                    const size_t last_pos = itr.i;
+                    const size_t elem_limit = is_array
+                          ? 1 : std::numeric_limits<int>::max();
+
+                    // equivalent to the for loop below, in order to
+                    // find out the array size
+                    size_t val_max = 0;
+                    {
+                        rtosc_arg_val_itr itr2 = itr;
+                        for(val_max = 0;
+                            itr2.i - last_pos < (size_t)nargs &&
+                                val_max < elem_limit;
+                            ++val_max)
+                        {
+                            rtosc_arg_val_itr_next(&itr2);
+                        }
+                    }
+                    STACKALLOC(rtosc_arg_t, vals, val_max);
+                    STACKALLOC(char, argstr, val_max+1);
+
+                    for(i = 0;
+                        itr.i - last_pos < (size_t)nargs &&
+                            i < elem_limit;
+                        ++i)
+                    {
+                        cur = rtosc_arg_val_itr_get(&itr, &buffer);
+                        vals[i] = cur->val;
+                        argstr[i] = cur->type;
+                        rtosc_arg_val_itr_next(&itr);
+                    }
+
+                    argstr[i] = 0;
+
+                    if(is_array)
+                        snprintf(portname_end, 8, "%d", (int)arr_idx);
+
+                    rtosc_amessage(messagebuf, buffersize, portname,
+                                   argstr, vals);
+
+                    ok = (*dispatcher)(messagebuf);
+                    //printf("%s, %s, %d -> %s\n", messagebuf, portname, nargs, ok ? "yes": "no");
+                }
+            }
+        }
+
+        if (!ok)
+            break;
     }
     return ok ? msgs_read : -rd_total-1;
 }

@@ -82,16 +82,14 @@ protected:
     //! call this to dispatch a message
     bool operator()(const char* msg) { return do_dispatch(msg); }
 
-    static int default_response(size_t nargs, bool first_round,
-                                dependency_t dependency);
+    static int default_response(size_t nargs);
 
 private:
     //! callback for when a message shall be dispatched
     //! implement this if you need to change a message
     virtual int on_dispatch(size_t portname_max, char* portname,
                             size_t maxargs, size_t nargs,
-                            rtosc_arg_val_t* args,
-                            bool round2, dependency_t dependency);
+                            rtosc_arg_val_t* args);
     //! call this to dispatch a message
     virtual bool do_dispatch(const char* msg);
 
