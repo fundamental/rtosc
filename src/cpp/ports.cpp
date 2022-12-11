@@ -960,8 +960,8 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
                         loc_size);
 
             helpers::get_value_from_runtime(runtime,
-                *ask_port, loc_size, collapsed_loc, ask_port_str,
-                buf, 0, 1, &rval);
+                *ask_port, loc_size, collapsed_loc, buf,
+                8192, 1, &rval);
             assert(rval.type == 'T' || rval.type == 'F');
             return rval.type == 'T';
         }
