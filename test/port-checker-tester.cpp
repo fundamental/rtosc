@@ -40,6 +40,7 @@ std::multimap<issue, std::string> get_exp()
     exp.emplace(issue::rdefault_missing, "/no_rdefault::i");
     exp.emplace(issue::rdefault_multiple, "/double_rdefault::i");
     exp.emplace(issue::rpreset_multiple, "/double_rpreset::i");
+    exp.emplace(issue::rpreset_without_rdefaultdepends, "/rpreset_without_rdefaultdepends::i");
     exp.emplace(issue::rdefault_without_rparameter,
                 "/rdefault_without_rparameter_A::i");
     exp.emplace(issue::rdefault_without_rparameter,

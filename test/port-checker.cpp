@@ -77,6 +77,11 @@ static constexpr const issue_t _m_issue_types_arr[(int)issue::number] =
     "parameters have multiple rPreset with the same number",
     severity::error,
 },{
+    issue::rpreset_without_rdefaultdepends,
+    "rPreset without rDefaultDepends",
+    "ports have rPreset(s), but no rDefaultDepends",
+    severity::error,
+},{
     issue::rdefault_without_rparameter,
     "rDefault without rparameter",
     "ports have rDefault, but not rParameter",
@@ -351,7 +356,9 @@ void port_checker::check_port(const char* loc, const char* portname,
         rtosc::Port::MetaContainer meta(metadata);
         if(meta_len && metadata && *metadata)
         {
-            bool is_parameter = false, is_enumerated = false;
+            bool is_parameter = false,
+                 is_enumerated = false,
+                 default_depends = false;
             int n_default_vals = 0;
 
             std::map<std::string, int> presets;
@@ -372,8 +379,10 @@ void port_checker::check_port(const char* loc, const char* portname,
                     ++n_default_vals;
                     default_values.push_back(x.value);
                 }
-                else if(!strncmp(x.title, "default ", strlen("default ")) &&
-                         strcmp(x.title + strlen("default "), "depends")) {
+                else if(!strcmp(x.title, "default depends")) {
+                    default_depends = true;
+                }
+                else if(!strncmp(x.title, "default ", strlen("default "))) {
                     ++presets[x.title + strlen("default ")];
                     default_values.push_back(x.value);
                 }
@@ -467,6 +476,11 @@ void port_checker::check_port(const char* loc, const char* portname,
                             raise(issue::rpreset_multiple);
                             break;
                     }
+                }
+
+                if(presets.size() && !default_depends)
+                {
+                    raise(issue::rpreset_without_rdefaultdepends);
                 }
 
                 if(!strstr(portname, ":i") || !strstr(portname, ":S"))

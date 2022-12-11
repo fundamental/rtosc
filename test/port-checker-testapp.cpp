@@ -110,6 +110,7 @@ public:
     int roption_without_ics = 0;
     int double_rdefault = 0;
     int double_rpreset = 0;
+    int rpreset_without_rdefaultdepends = 0;
     int rpreset_not_in_roptions = 0;
     int perfect_param_1 = 0;
     int duplicate_mapping = 0;
@@ -147,7 +148,8 @@ static const rtosc::Ports test_ports = {
         rParamICb(rdefault_without_rparameter)},
     {"invalid_rdefault::i", rProp(parameter) rDefault($$$), NULL,
         rParamICb(invalid_rdefault)},
-    {"rdefault_without_rparameter_B::i", rPresets(0,1,2), NULL,
+    {"rdefault_without_rparameter_B::i",
+        rDefaultDepends(no_rdefault) rPresets(0,1,2), NULL,
         rParamICb(rdefault_without_rparameter)},
     {"no_query::i", rProp(parameter) rDefault(0), nullptr,
         [](const char*, rtosc::RtData&) {} },
@@ -191,15 +193,19 @@ static const rtosc::Ports test_ports = {
     },
     rParamI(no_rdefault, ""),
     rParamI(double_rdefault, rDefault(0) rDefault(0), ""),
-    rParamI(double_rpreset, rPreset(0, 1), rPreset(1, 0), rPreset(0, 1), ""),
+    rParamI(double_rpreset, rDefaultDepends(no_rdefault),
+            rPreset(0, 1), rPreset(1, 0), rPreset(0, 1), ""),
+    rParamI(rpreset_without_rdefaultdepends, rPreset(0, 1), ""),
     rArrayI(bundle_size, 16, rDefault([15x2]), ""),
-    rOption(rpreset_not_in_roptions, rOptions(one, two, three),
+    rOption(rpreset_not_in_roptions,
+            rDefaultDepends(no_rdefault), rOptions(one, two, three),
             rPresetsAt(2, one, does_not_exist, one), rDefault(two), ""),
 
     rParamI(duplicate_param, rNoDefaults, ""),
     rParamI(duplicate_param, rNoDefaults, ""),
 
     rOption(perfect_param_1, rOptions(one, two, three),
+            rDefaultDepends(no_rdefault),
             rPresetsAt(2, one, three, one), rDefault(two), ""),
     rArrayI(perfect_param_2, 16, rDefault([1 2 3...]), ""),
     rParamI(perfect_param_3, rNoDefaults, ""), // no rDefault, but that's OK here

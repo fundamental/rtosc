@@ -61,6 +61,7 @@ enum class issue
     rdefault_missing,
     rdefault_multiple,
     rpreset_multiple,
+    rpreset_without_rdefaultdepends,
     rdefault_without_rparameter,
     invalid_default_format,
     bundle_size_not_matching_rdefault,
