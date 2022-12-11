@@ -1352,6 +1352,10 @@ const char* rtosc_skip_next_printed_arg(const char* src, int* skipped,
                     {
                         rtosc_scan_arg_val(llhssrc, &llhsarg, 1,
                                            NULL, &zero, 0, 0);
+                        if(!rtosc_arg_vals_cmp_single(&llhsarg, &lhsarg, NULL))
+                        {
+                            llhsarg_is_useless = true;
+                        }
                         // hint: use rtosc_arg_val_range_arg here if
                         // overlapping ranges (1 ... 5 ... 9) shall be
                         // implemented
@@ -1854,7 +1858,9 @@ size_t rtosc_scan_arg_val(const char* src,
         bool llhsarg_is_useless =
             (args_before < 1 ||
             lhsarg.type == '-' || !types_match(llhsarg->type, lhsarg.type)
-            /* this includes llhsarg == '-' */ );
+            /* this includes llhsarg == '-' */
+            || !rtosc_arg_vals_cmp_single(llhsarg, &lhsarg, NULL));
+
 
         bool has_delta = true;
         int32_t num;
