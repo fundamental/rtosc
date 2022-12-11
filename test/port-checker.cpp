@@ -283,8 +283,8 @@ bool port_checker::port_is_enabled(const char* loc, const char* port,
         std::vector<char> strbuf;
         if(sender.wait_for_reply(&strbuf, &args, collapsed_loc)) {
             if(args.size() == 1 &&
-               (args[0].type == 'T' || args[0].type == 'F')) {
-                rval = (args[0].type == 'T');
+               (args[0].type == 'T' || args[0].type == 'F' || args[0].type == 'i')) {
+                rval = args[0].type == 'T' || (args[0].type == 'i' && args[0].val.i != 0);
             }
             else
                 m_issues.emplace(issue::enabled_port_bad_reply,
