@@ -68,8 +68,7 @@ const char* get_value_from_runtime(void* runtime, const struct Ports& ports,
  */
 size_t get_value_from_runtime(void* runtime, const struct Port& port,
                               size_t loc_size, char* loc,
-                              const char* portname_from_base,
-                              char* buffer_with_port, std::size_t buffersize,
+                              const char* portname_from_base, std::size_t buffersize,
                               std::size_t max_args, rtosc_arg_val_t* arg_vals);
 
 // TODO: loc should probably not be passed,

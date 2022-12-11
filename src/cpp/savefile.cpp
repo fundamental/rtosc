@@ -38,6 +38,11 @@ std::string get_changed_values(const Ports& ports, void* runtime)
         std::set<std::string> written;
     } data;
 
+    /* example:
+        port_buffer:     /insefx5/EQ/filter3/Pstages
+        port_from_base:  Pstages
+        p->name          Pstages::i
+     */
     auto on_reach_port =
             [](const Port* p, const char* port_buffer,
                const char* port_from_base, const Ports& base,
@@ -139,10 +144,21 @@ std::string get_changed_values(const Ports& ports, void* runtime)
                 // over to loc_end
                 fast_strcpy(loc_end, old_end, loc_remain_size);
 
+                // example 1:
+                // p->name: "Pstages::i"
+                // loc:     "/insefx5/EQ/filter3/Pstages"
+                // old_end:                      ^
+                // buffer_with_port: "Pstages::i"  // will be overwritten
+
+                // example 2:
+                // p->name: "VoicePar#8/Enabled::T:F"
+                // loc:     "/part0/kit0/adpars/VoicePar5/Enabled"
+                // old_end:                     ^
+                // buffer_with_port: "VoicePar#8/Enabled::T:F"  // will be overwritten
+
                 size_t nargs_runtime_cur =
                     helpers::get_value_from_runtime(runtime, *p,
                                                     buffersize, loc, old_end,
-                                                    buffer_with_port,
                                                     buffersize,
                                                     max_arg_vals,
                                                     arg_vals_runtime +
