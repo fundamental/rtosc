@@ -901,12 +901,16 @@ MergePorts::MergePorts(std::initializer_list<const rtosc::Ports*> c)
  * @param loc_size The maximum usable size of @p loc
  * @param ports The Ports object containing @p port
  * @param runtime The runtime object (optional)
+ * @param walker If given, if the enable port is "disabled" and below @p port,
+ *               the walker will be applied on the enabling port
+ * @param data Data parameter for @p walker
  * @return True if no runtime is provided or @p port has no enabled property.
  *         Otherwise, the state of the "enabled by" toggle
  */
 bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
                      const Ports& base, void *runtime,
-                     bool relative_to_parent)
+                     bool relative_to_parent,
+                     port_walker_t walker, void* data)
 {
     // TODO: this code should be improved
     if(port && runtime)
@@ -958,7 +962,7 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
             //       also be of type a#N/b
             const char* last_slash = strrchr(collapsed_loc, '/');
             fast_strcpy(buf, last_slash ? last_slash + 1 : collapsed_loc,
-                        loc_size);
+                        loc_size); // TODO: bug: VoicePar#8/Enabled
 
             helpers::get_value_from_runtime(runtime,
                 *ask_port, loc_size, collapsed_loc, buf,
@@ -966,6 +970,24 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
             assert(rval.type == 'T' || rval.type == 'F' || rval.type == 'i');
 
             bool res = rval.type == 'T' || (rval.type == 'i' && rval.val.i != 0);
+            /*
+             * If called from walk_ports, an enabling port must always be
+             * traversed. However, if such a port resides inside a the port
+             * which it currently disables, walk_ports would normally *not*
+             * traverse it. So this allows still running walk_ports.
+             */
+            if (walker && !res && (subport || !relative_to_parent)) {
+                // this makes some assumptions on how Ports::collapsePath works:
+                // it starts at the end and keeps the string unchanged until the
+                // first ".." - so we get:
+                //    <loclen><4->
+                //    /loc/abc/../enable
+                //            abc/enable
+                //
+                const char* old_end = loc_copy + loclen + 3;
+                walker(ask_port, collapsed_loc, old_end, base, data, runtime);
+            }
+
             return res;
         }
         else // Port has no "enabled" property, so it is always enabled
@@ -1028,7 +1050,7 @@ static void walk_ports_recurse(const Port& p, char* name_buffer,
         {
             // check if the port is disabled by a switch
             enabled = port_is_enabled(&p, name_buffer, buffer_size,
-                                      base, runtime, true);
+                                      base, runtime, true, walker, data);
             runtime = r.obj; // callback has stored the pointer of p here
         }
     }
@@ -1045,8 +1067,9 @@ static void walk_ports_recurse(const Port& p, char* name_buffer,
 /*
 char pointer example:
 
-          (Ports& base)         p.name       e.g. read_head
-                v               v            v
+                          Ports& base
+                               |p.name       e.g. read_head
+                               vv            v
                "/path/from/root/new#2/path#2/to#2/"
 
                "/path/from/root/new1/path1/"
@@ -1132,7 +1155,7 @@ void rtosc::walk_ports(const Ports  *base,
     char * const old_end = name_buffer + strlen(name_buffer);
 
     if(port_is_enabled((*base)["self:"], name_buffer, buffer_size, *base,
-                       runtime, false))
+                       runtime, false, walker, data))
     for(const Port &p: *base) {
         //if(strchr(p.name, '/')) {//it is another tree
         if(p.ports) {//it is another tree
