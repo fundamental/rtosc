@@ -52,9 +52,14 @@ static constexpr const issue_t _m_issue_types_arr[(int)issue::number] =
     "parameters are not broadcast",
     severity::warning
 },{
-    issue::option_port_not_si,
-    "option port not \"S\" or \"i\"",
-    "parameter using \"enumerated\" property do not accept \"i\" or \"S\"",
+    issue::enumeration_port_not_si,
+    "enumerated port not \"S\" or \"i\"",
+    "parameters using \"enumerated\" property do not accept \"i\" or \"S\"",
+    severity::error
+},{
+    issue::roptions_port_not_si,
+    "port with \"rOptions\" not \"S\" or \"i\"",
+    "parameters using \"rOptions\" property do not accept \"i\" or \"S\"",
     severity::error
 },{
     issue::rdefault_missing,
@@ -476,6 +481,14 @@ void port_checker::check_port(const char* loc, const char* portname,
                 if(presets.size() && !default_depends)
                 {
                     raise(issue::rpreset_without_rdefaultdepends);
+                }
+
+                if(!strstr(portname, ":i") || !strstr(portname, ":S"))
+                {
+                    if(is_enumerated)
+                        raise(issue::enumeration_port_not_si);
+                    if(mappings.size())
+                        raise(issue::roptions_port_not_si);
                 }
 
                 // send and reply...
