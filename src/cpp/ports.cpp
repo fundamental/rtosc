@@ -1369,7 +1369,21 @@ int rtosc::enum_key(Port::MetaContainer meta, const char* value)
         break;
     }
 
+    assert(!meta["min"] || result >= atoi(meta["min"]));
+    assert(!meta["max"] || result <= atoi(meta["max"]));
+
     return result;
+}
+
+int rtosc::enum_key_from_msg(Port::MetaContainer meta, const char* msg)
+{
+    char type = rtosc_type(msg, 0);
+    int val = (type == 'i' || type == 'c')
+        ? rtosc_argument(msg, 0).i
+        : enum_key(meta, rtosc_argument(msg, 0).s);
+    assert(!meta["min"] || val >= atoi(meta["min"]));
+    assert(!meta["max"] || val <= atoi(meta["max"]));
+    return val;
 }
 
 static ostream &add_options(ostream &o, Port::MetaContainer meta)

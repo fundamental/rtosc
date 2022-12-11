@@ -54,7 +54,8 @@ struct RtData
     virtual ~RtData() = default;
 
     /**
-     * Location of where the dispatch routine is currently being called.
+     * Location of where the dispatch routine is currently being called
+     * (including Port::name of this port)
      * If non-NULL, the dispatch routine will update the port name here while
      * walking through the Ports tree
      */
@@ -414,6 +415,20 @@ std::size_t path_search(const rtosc::Ports& root, const char *m,
  *   if none was found
  */
 int enum_key(Port::MetaContainer meta, const char* value);
+
+/**
+ * Return the enum index indicated by a message.
+ *
+ * The message must carry either the index as type "c" or "i", or the symbolic
+ * string as type "S" in the first argument.
+ *
+ * @param meta The metadata
+ * @param msg The message
+ * @return The first key holding value, or `std::numeric_limits<int>::min()`
+ *   if none was found
+ */
+int enum_key_from_msg(Port::MetaContainer meta, const char* msg);
+
 
 /*********************
  * Port Dumping code *
