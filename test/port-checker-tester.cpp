@@ -30,7 +30,8 @@ std::multimap<issue, std::string> get_exp()
     exp.emplace(issue::parameter_not_replied, "/no_reply_B::i");
     exp.emplace(issue::parameter_not_broadcast, "/no_broadcast::i");
 
-    exp.emplace(issue::option_port_not_si, "/roption_without_ics::i:c");
+    exp.emplace(issue::enumeration_port_not_si, "/enumeration_without_ics::i:c");
+    exp.emplace(issue::roptions_port_not_si, "/roptions_without_ics::i:c");
     exp.emplace(issue::duplicate_mapping, "/duplicate_mapping::i:S");
     exp.emplace(issue::enabled_port_not_replied,
                 "/enabled_port_not_existing::i");

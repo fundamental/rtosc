@@ -52,7 +52,8 @@ enum class issue
     parameter_not_replied,
     parameter_not_broadcast,
     // port metadata:
-    option_port_not_si,
+    enumeration_port_not_si,
+    roptions_port_not_si,
     duplicate_mapping,
     enabled_port_not_replied,
     enabled_port_bad_reply,

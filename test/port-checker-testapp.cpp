@@ -183,7 +183,10 @@ static const rtosc::Ports test_ports = {
             }
         }
     },
-    {"roption_without_ics::i:c", rProp(enumerated) rProp(parameter) rDefault(0),
+    {"enumeration_without_ics::i:c", rProp(enumerated) rProp(parameter) rDefault(0),
+        nullptr, rOptionCb(roption_without_ics)
+    },
+    {"roptions_without_ics::i:c", rOptions(a,b,c) rProp(parameter) rDefault(0),
         nullptr, rOptionCb(roption_without_ics)
     },
     rParamI(no_rdefault, ""),
