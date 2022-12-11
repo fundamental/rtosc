@@ -315,6 +315,13 @@ void ranges()
     check_alt("[3...0]", &uncompressed,
               "range with delta -1 in an array", __LINE__,
               "[3 2 1 0]");
+    check_alt("[26 26 ... 18 18]", &uncompressed,
+              "range with delta -1 in an array (2)", __LINE__,
+              "[26 26 25\n"
+              "    24 23\n"
+              "    22 21\n"
+              "    20 19\n"
+              "    18 18]");
 
     /*
         without delta
@@ -355,6 +362,7 @@ void ranges()
               "[false ... ]");
     check("[1 0 0 ... ]", NULL, "delta-less infinite range (4)", __LINE__);
     check("[0 1 ... ]", NULL, "infinite range with delta", __LINE__);
+    assert('-' == scanned[2].type);
     check("[true false false ... ]", NULL,
           "endless range after \"true false false\"", __LINE__);
     check("[[0 1] ... ]", NULL, "range of arrays", __LINE__);

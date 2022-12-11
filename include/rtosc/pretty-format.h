@@ -57,11 +57,12 @@ typedef struct
  * @param opt Printer options, NULL for default options
  * @param cols_used How many columns have been used for writing in this line
  *   (will be updated by this function)
+ * @param prev_arg_if_range Optional hint in case of ranges: previous arg
  * @return The number of bytes written, excluding the null byte
  */
 size_t rtosc_print_arg_val(const rtosc_arg_val_t* arg, char* buffer,
                            size_t buffersize, const rtosc_print_options* opt,
-                           int* cols_used);
+                           int* cols_used, const rtosc_arg_val_t* prev_arg_if_range);
 
 /**
  * Pretty-print rtosc_arg_val_t array into buffer.
