@@ -95,7 +95,7 @@ int main(int argc, char** argv)
 
         std::set<std::string> exp_skipped;
         exp_skipped.insert("/invisible_param::i");
-        assert_true(exp_skipped == checker.skipped(), "Skipped port are as"
+        assert_true(exp_skipped == checker.skipped(), "Skipped ports are as "
                                                       "expected", __LINE__);
     }
     catch(const std::exception& e) {

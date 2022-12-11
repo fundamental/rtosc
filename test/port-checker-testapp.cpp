@@ -202,9 +202,9 @@ static const rtosc::Ports test_ports = {
     rParamI(perfect_param_3, rNoDefaults, ""), // no rDefault, but that's OK here
     // correct enabled-condition
     rEnabledCondition(not_enabled, false),
-    // invalid enabled-condition: returns integer
+    // invalid enabled-condition: returns float
     {"not_enabled_bad:", rProp(internal), NULL,
-        [](const char* , rtosc::RtData& d){d.reply(d.loc, "i", 42); }},
+        [](const char* , rtosc::RtData& d){d.reply(d.loc, "f", 42.f); }},
     // bad parameter, but does not occur since it is disabled:
     {"invisible_param::i", rEnabledByCondition(not_enabled), NULL,
      [](const char* , rtosc::RtData& ){}},
