@@ -905,7 +905,8 @@ MergePorts::MergePorts(std::initializer_list<const rtosc::Ports*> c)
  *         Otherwise, the state of the "enabled by" toggle
  */
 bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
-                     const Ports& base, void *runtime)
+                     const Ports& base, void *runtime,
+                     bool relative_to_parent)
 {
     // TODO: this code should be improved
     if(port && runtime)
@@ -941,10 +942,10 @@ bool port_is_enabled(const Port* port, char* loc, size_t loc_size,
              */
             int loclen = strlen(loc);
             STACKALLOC(char, loc_copy, loc_size);
-            strcpy(loc_copy, loc);
-            if(subport)
-                strncat(loc_copy, "/../", loc_size - loclen - 1);
-            strncat(loc_copy, enable_port, loc_size - loclen - 4 - 1);
+            strcpy(loc_copy, loc); // TODO: clang says strcpy is insecure
+            if(relative_to_parent)
+                strncat(loc_copy, "../", loc_size - loclen - 1);
+            strncat(loc_copy, enable_port, loc_size - loclen - 3 - 1);
 
             char* collapsed_loc = Ports::collapsePath(loc_copy);
             loc_size -= (collapsed_loc - loc_copy);
@@ -1025,7 +1026,7 @@ static void walk_ports_recurse(const Port& p, char* name_buffer,
         {
             // check if the port is disabled by a switch
             enabled = port_is_enabled(&p, name_buffer, buffer_size,
-                                      base, runtime);
+                                      base, runtime, true);
             runtime = r.obj; // callback has stored the pointer of p here
         }
     }
@@ -1129,7 +1130,7 @@ void rtosc::walk_ports(const Ports  *base,
     char * const old_end = name_buffer + strlen(name_buffer);
 
     if(port_is_enabled((*base)["self:"], name_buffer, buffer_size, *base,
-                       runtime))
+                       runtime, false))
     for(const Port &p: *base) {
         //if(strchr(p.name, '/')) {//it is another tree
         if(p.ports) {//it is another tree
