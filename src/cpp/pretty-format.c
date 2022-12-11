@@ -136,7 +136,8 @@ const size_t range_min = 5;
 
 static int rtosc_print_range(const rtosc_arg_val_t* arg,
                              char* buffer, size_t bs,
-                             const rtosc_print_options* opt, int* cols_used)
+                             const rtosc_print_options* opt, int* cols_used,
+                             const rtosc_arg_val_t* prev_arg)
 {
     size_t wrt = 0;
     int start;
@@ -151,7 +152,7 @@ static int rtosc_print_range(const rtosc_arg_val_t* arg,
 
             const rtosc_arg_val_t* first_arg = arg+1+!!rtosc_arg_rep_has_delta(val);
             int tmp = rtosc_print_arg_val(first_arg, buffer, bs,
-                                          opt, cols_used);
+                                          opt, cols_used, NULL);
             COUNT_UP(tmp);
 
             if(rtosc_arg_rep_has_delta(val))
@@ -159,8 +160,24 @@ static int rtosc_print_range(const rtosc_arg_val_t* arg,
                 rtosc_arg_val_t one, m_one;
                 rtosc_arg_val_from_int(  &one, first_arg->type,  1);
                 rtosc_arg_val_from_int(&m_one, first_arg->type, -1);
-                if(   !rtosc_arg_vals_eq_single(arg+1,   &one, NULL)
-                   && !rtosc_arg_vals_eq_single(arg+1, &m_one, NULL))
+                int confusing_prev_arg = false;
+                if(prev_arg)
+                {
+                    confusing_prev_arg =
+                            (prev_arg->type == first_arg->type) &&
+                            !rtosc_arg_vals_eq_single(first_arg, prev_arg, NULL);
+                }
+                if(((   rtosc_arg_vals_eq_single(arg+1,   &one, NULL)
+                    || rtosc_arg_vals_eq_single(arg+1, &m_one, NULL))
+                   && !confusing_prev_arg)
+                   || !rtosc_arg_rep_num(val)) // inifite => special, weird case
+                {
+                    // for -1 and +1, no second number is needed
+                    // however, this only works if
+                    // there was no confusing previous arg (that would imply
+                    // a step size other than +-1)
+                }
+                else
                 {
                     asnprintf(buffer, bs, " ");
                     COUNT_UP_COL(1);
@@ -168,7 +185,7 @@ static int rtosc_print_range(const rtosc_arg_val_t* arg,
                     rtosc_arg_val_t second;
                     rtosc_arg_val_range_arg(arg, 1, &second);
                     tmp = rtosc_print_arg_val(&second, buffer, bs,
-                                              opt, cols_used);
+                                              opt, cols_used, NULL);
                     COUNT_UP(tmp);
                 }
             }
@@ -187,7 +204,7 @@ static int rtosc_print_range(const rtosc_arg_val_t* arg,
             tmp = asnprintf(buffer, bs, "%dx", rtosc_arg_rep_num(val));
             COUNT_UP_COL(tmp);
             tmp = rtosc_print_arg_val(arg+1, buffer, bs,
-                                      opt, cols_used);
+                                      opt, cols_used, NULL);
             COUNT_UP(tmp);
 
             // skip loop below
@@ -216,7 +233,7 @@ static int rtosc_print_range(const rtosc_arg_val_t* arg,
             cur = arg + 1;
 
         size_t tmp = rtosc_print_arg_val(cur, buffer, bs,
-                                         opt, cols_used);
+                                         opt, cols_used, NULL);
         COUNT_UP(tmp);
 
         linebreak_check_after_write(cols_used, &wrt,
@@ -356,7 +373,7 @@ static int32_t rtosc_convert_to_range(const rtosc_arg_val_t* const arg,
 
 size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                            char *buffer, size_t bs,
-                           const rtosc_print_options* opt, int *cols_used)
+                           const rtosc_print_options* opt, int *cols_used, const rtosc_arg_val_t* prev_arg_if_range)
 {
     size_t wrt = 0;
     if(!opt)
@@ -575,7 +592,7 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                 const rtosc_arg_val_t* input = conv ? args_converted : arg+i;
 
                 size_t tmp = rtosc_print_arg_val(input, buffer, bs,
-                                                 opt, cols_used);
+                                                 opt, cols_used, (i == 1) ? NULL : arg + i -1);
                 i += conv ? conv : next_arg_offset(arg+i);
                 COUNT_UP(tmp);
 
@@ -599,7 +616,7 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
         }
         case '-':
         {
-            wrt += rtosc_print_range(arg, buffer, bs, opt, cols_used);
+            wrt += rtosc_print_range(arg, buffer, bs, opt, cols_used, prev_arg_if_range);
             break;
         }
         default:
@@ -642,7 +659,7 @@ size_t rtosc_print_arg_vals(const rtosc_arg_val_t *args, size_t n,
         int32_t conv = rtosc_convert_to_range(args, n-i, args_converted, opt);
         const rtosc_arg_val_t* input = conv ? args_converted : args;
 
-        size_t tmp = rtosc_print_arg_val(input, buffer, bs, opt, &cols_used);
+        size_t tmp = rtosc_print_arg_val(input, buffer, bs, opt, &cols_used, (i == 0) ? NULL : (args-1));
         wrt += tmp;
         buffer += tmp;
         bs -= tmp;
