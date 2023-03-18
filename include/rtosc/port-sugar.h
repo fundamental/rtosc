@@ -374,6 +374,8 @@ template<class T> constexpr T spice(T*t) {return *t;}
 //!< This port and all children have no default values on purpose
 #define rNoDefaults ":no defaults\0"
 
+#define rDepends(dep_path_) rMap(depends, dep_path_)
+
 //Misc properties
 #define rDoc(doc) ":documentation\0=" doc "\0"
 #define rOpt(numeric,symbolic) rMap(map numeric, symbolic)
