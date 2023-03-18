@@ -61,6 +61,8 @@ int rtosc_arg_vals_cmp_single(const rtosc_arg_val_t* _lhs,
 			      const rtosc_arg_val_t* _rhs,
                               const rtosc_cmp_options* opt);
 
+const rtosc_cmp_options* get_default_cmp_options();
+
 /**
  * Check if two arrays of rtosc_arg_val_t are equal
  *

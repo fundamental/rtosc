@@ -22,6 +22,51 @@ namespace {
     constexpr size_t max_arg_vals = 2048;
 }
 
+// mostly a copy of rtosc_arg_vals_eq, but this tells us the first equal index
+// in the final range of equal elements
+size_t first_equal_index(const rtosc_arg_val_t* lhs, rtosc_arg_val_t* rhs,
+                         size_t lsize, size_t rsize)
+{
+    if(lhs[0].type == 'a' && rhs[0].type == 'a')
+    {
+        assert((size_t)(rtosc_arg_arr_len(&lhs[0].val)) == lsize - 1);
+
+        size_t first_equal = 0, count = 0;
+
+        ++lhs;
+        ++rhs;
+        --lsize;
+        --rsize;
+
+        // used if the value of lhs or rhs is range-computed:
+        rtosc_arg_val_t rlhs, rrhs;
+
+        rtosc_arg_val_itr litr, ritr;
+        rtosc_arg_val_itr_init(&litr, lhs);
+        rtosc_arg_val_itr_init(&ritr, rhs);
+
+        for( ; rtosc_arg_vals_cmp_has_next(&litr, &ritr, lsize, rsize);
+            rtosc_arg_val_itr_next(&litr),
+            rtosc_arg_val_itr_next(&ritr),
+            ++count)
+        {
+            const int equal = rtosc_arg_vals_eq_single(
+                                rtosc_arg_val_itr_get(&litr, &rlhs),
+                                rtosc_arg_val_itr_get(&ritr, &rrhs),
+                                get_default_cmp_options());
+            if(!equal)
+            {
+                first_equal = ritr.i + 1;
+            }
+        }
+        rtosc_arg_arr_len_set(&rhs[-1].val, first_equal);
+        assert(1 + first_equal <= rsize + 1); // TODO: <= rsize?
+        return 1 + first_equal;
+    }
+    else
+        return rsize;
+}
+
 // this basically does:
 // walk over all ports and for each port:
 // * get default value
@@ -226,10 +271,15 @@ std::string get_changed_values(const Ports& ports, void* runtime)
 
                     map_arg_vals(arg_vals_runtime, nargs_runtime, meta);
 
+                    // if default and runtime are 2 arrays with common suffix,
+                    // do not print the suffix
+                    nargs_runtime = first_equal_index(arg_vals_default, arg_vals_runtime,
+                                                      nargs_default, nargs_runtime);
+
+                    *res += port_buffer;
                     rtosc_print_arg_vals(arg_vals_runtime, nargs_runtime,
                                          cur_value_pretty + 1, buffersize - 1,
                                          NULL, strlen(port_buffer) + 1);
-                    *res += port_buffer;
                     *res += cur_value_pretty;
                     *res += "\n";
                 }
