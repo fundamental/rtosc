@@ -33,6 +33,7 @@ const char* get_default_value(const char* port_name, const Ports& ports,
     // This generalizes to envelope types nicely if envelopes have a read
     // only port which indicates if they're amplitude/frequency/etc
     const char* dependent = metadata[dependent_annotation];
+    const char* dependent_value = "";
     if(dependent)
     {
         char* dependent_port = buffer;
@@ -52,7 +53,7 @@ const char* get_default_value(const char* port_name, const Ports& ports,
         if(*dependent_port == '/')
             ++dependent_port;
 
-        const char* dependent_value =
+        dependent_value =
             runtime
             ? helpers::get_value_from_runtime(runtime, ports,
                                               buffersize, loc,
@@ -87,6 +88,10 @@ const char* get_default_value(const char* port_name, const Ports& ports,
     if(!return_value)
     {
         return_value = metadata[default_annotation];
+        if(dependent && !return_value)
+        {
+            printf("Invalid metadata for port \"%s\" (dependent value \"%s\" missing)\n", port_name, dependent_value);
+        }
         assert(!dependent || return_value);
     }
 
