@@ -266,6 +266,9 @@ void arrays()
     check("[[0 1] [] [2 3]]", NULL, "arrays inside arrays", __LINE__);
 
     check("[true false]", NULL, "true and false have the same type", __LINE__);
+
+    check("[0.00 (0x0p+0) 0.07 (0x1.242124p-4) 0.07 (0x1.242124p-4) ... ]",
+          NULL, "array of floats", __LINE__);
 }
 
 void ranges()

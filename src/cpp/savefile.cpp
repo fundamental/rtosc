@@ -301,6 +301,7 @@ std::string get_changed_values(const Ports& ports, void* runtime,
 
             if(arg_vals_runtime[0].type == 'a' && strchr(port_from_base, '/'))
             {
+                // E.g. "VoicePar#8/Enabled
                 // These are grouped as an array, but the port structure
                 // implicits that they shall be handled as single values
                 // inside their subtrees
@@ -663,6 +664,30 @@ int dispatch_printed_messages(const char* messages,
 
                     if(is_array)
                         snprintf(portname_end, 8, "%d", (int)arr_idx);
+
+#if 0
+                    if(is_array)
+                    {
+                        const char* portargs = strchr(portname, ':');
+                        if(!portargs)
+                            portargs = portname + strlen(portname);
+
+                        constexpr std::size_t sizeof_argvals = 1024;
+                        rtosc_arg_val_t arg_vals[sizeof_argvals];
+                        char strbuf[8192];
+
+                        get_default_value(portname, portargs, ports, runtime, nullptr, -1, sizeof_argvals, arg_vals, strbuf, sizeof(strbuf));
+
+                        /*
+                        int get_default_value(const char* port_name, const char *port_args,
+                                              const struct Ports& ports,
+                                              void* runtime, const struct Port* port_hint,
+                                              int32_t idx,
+                                              std::size_t n, rtosc_arg_val_t* res,
+                                              char *strbuf, size_t strbufsize); */
+
+                    }
+#endif
 
                     rtosc_amessage(messagebuf, buffersize, portname,
                                    argstr, vals);

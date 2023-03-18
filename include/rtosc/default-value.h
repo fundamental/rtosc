@@ -38,7 +38,7 @@
 namespace rtosc {
 
 /**
- * Return a port's default value
+ * Return a port's default value, pretty-printed version
  *
  * Returns the default value of a given port, if any exists, as a string.
  * For the parameters, see the overloaded function.
@@ -52,7 +52,7 @@ const char* get_default_value(const char* port_name, const struct Ports& ports,
                               int32_t idx = -1, int recursive = 1);
 
 /**
- * Return a port's default value
+ * Return a port's default value, arg-val version
  *
  * Returns the default value of a given port, if any exists, as an array of
  * rtosc_arg_vals . The values in the resulting array are being canonicalized,
