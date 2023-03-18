@@ -32,7 +32,9 @@
 #ifndef RTOSC_SAVEFILE
 #define RTOSC_SAVEFILE
 
+#include <set>
 #include <string>
+#include <vector>
 #include <rtosc/rtosc.h>
 #include <rtosc/rtosc-version.h>
 
@@ -51,7 +53,9 @@ namespace rtosc {
  *   replaces the std::string handling.
  * @return The list of ports and their changed values, linewise
  */
-std::string get_changed_values(const struct Ports& ports, void* runtime);
+std::string get_changed_values(const struct Ports& ports, void* runtime,
+                               std::set<std::string>& alreadyWritten,
+                               const std::vector<std::string>& propsToExclude);
 
 //! @brief Class to modify and dispatch messages loaded from savefiles.
 //! Objects of this class shall be passed to savefile loading routines. You can
@@ -133,6 +137,8 @@ int dispatch_printed_messages(const char* messages,
  */
 std::string save_to_file(const struct Ports& ports, void* runtime,
                          const char* appname, rtosc_version appver,
+                         std::set<std::string>& alreadyWritten,
+                         const std::vector<std::string>& propsToExclude,
                          std::string file_str = "");
 
 /**

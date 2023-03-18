@@ -74,7 +74,9 @@ size_t first_equal_index(const rtosc_arg_val_t* lhs, rtosc_arg_val_t* rhs,
 // * get default value
 // * get current value
 // * compare: if values are different -> write to savefile
-std::string get_changed_values(const Ports& ports, void* runtime)
+std::string get_changed_values(const Ports& ports, void* runtime,
+                               std::set<std::string>& alreadyWritten,
+                               const std::vector<std::string> &propsToExclude)
 {
     char port_buffer[buffersize];
     memset(port_buffer, 0, buffersize); // requirement for walk_ports
@@ -83,7 +85,10 @@ std::string get_changed_values(const Ports& ports, void* runtime)
     {
         std::string res;
         std::set<std::string> written;
+        const std::vector<std::string>* propsToExclude;
     } data;
+    std::swap(data.written, alreadyWritten);
+    data.propsToExclude = &propsToExclude;
 
     /* example:
         port_buffer:     /insefx5/EQ/filter3/Pstages
@@ -130,10 +135,19 @@ std::string get_changed_values(const Ports& ports, void* runtime)
             return;
         }
 
+        for(const std::string& prop : *((data_t*)data)->propsToExclude)
+            if(meta.find(prop.c_str()) != meta.end())
+                return;
+
         {
             std::set<std::string>& written = ((data_t*)data)->written;
-            if(written.find(port_buffer) != written.end()) { return; }
-            else { written.insert(port_buffer); }
+            if(written.find(port_buffer) != written.end()) {
+                // we have already saved this port - duplicate path?
+                // TODO: should this trigger a warning?
+                return;
+            }
+            else
+                written.insert(port_buffer);
         }
 
         char loc[buffersize] = ""; // buffer to hold the dispatched path
@@ -350,6 +364,9 @@ std::string get_changed_values(const Ports& ports, void* runtime)
 
     if(data.res.length()) // remove trailing newline
         data.res.resize(data.res.length()-1);
+
+    std::swap(data.written, alreadyWritten);
+
     return data.res;
 }
 
@@ -663,6 +680,8 @@ int dispatch_printed_messages(const char* messages,
 
 std::string save_to_file(const Ports &ports, void *runtime,
                          const char *appname, rtosc_version appver,
+                         std::set<std::string>& alreadyWritten,
+                         const std::vector<std::string> &propsToExclude,
                          std::string file_str)
 {
     char rtosc_vbuf[12], app_vbuf[12];
@@ -682,7 +701,7 @@ std::string save_to_file(const Ports &ports, void *runtime,
     {
         // append mode - no header
     }
-    file_str += get_changed_values(ports, runtime);
+    file_str += get_changed_values(ports, runtime, alreadyWritten, propsToExclude);
 
     return file_str;
 }

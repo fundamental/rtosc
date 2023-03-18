@@ -213,14 +213,17 @@ void envelope_types()
                   get_default_value("attack_rate::i", envelope_ports, &e2 ),
                   "get default value with runtime (4)", __LINE__);
 
+    std::set<std::string> alreadyWritten;
     assert_str_eq("/sustain 40",
-                  get_changed_values(envelope_ports, &e1).c_str(),
+                  get_changed_values(envelope_ports, &e1, alreadyWritten, {}).c_str(),
                   "get changed values where none are changed", __LINE__);
+    alreadyWritten.clear();
     const char* changed_e2 = "/sustain 0\n/scale_type logarithmic\n"
                              "/array [3 2 1 0]\n/env_type 1";
     assert_str_eq(changed_e2,
-                  get_changed_values(envelope_ports, &e2).c_str(),
+                  get_changed_values(envelope_ports, &e2, alreadyWritten, {}).c_str(),
                   "get changed values where three are changed", __LINE__);
+    alreadyWritten.clear();
 
     // restore values to envelope from a savefile
     // this is indirectly related to default values
@@ -254,7 +257,9 @@ void envelope_types()
     rtosc_version appver = rtosc_version { 0, 0, 1 };
     std::string savefile = save_to_file(envelope_ports, &e2,
                                         appname.c_str(),
-                                        appver);
+                                        appver, alreadyWritten, {});
+    // TODO: check alreadyWritten?
+    alreadyWritten.clear();
     char cur_rtosc_buf[12];
     rtosc_version cur_rtosc = rtosc_current_version();
     rtosc_version_print_to_12byte_str(&cur_rtosc, cur_rtosc_buf);
