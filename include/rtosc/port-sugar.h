@@ -358,6 +358,8 @@ template<class T> constexpr T spice(T*t) {return *t;}
 #define rDefaultMissing "" // macro to denote yet missing default values
 //!< This port and all children have no default values on purpose
 #define rNoDefaults ":no defaults\0"
+#define _rDepends(no, data, dep_path_) STRINGIFY(dep_path_) ","
+#define rDepends(...) ":depends\0=" MAC_EACH_OFF(0, _rDepends, 0, __VA_ARGS__) "\0"
 
 //Misc properties
 #define rDoc(doc) ":documentation\0=" doc "\0"

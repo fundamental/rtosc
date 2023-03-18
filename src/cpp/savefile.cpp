@@ -412,7 +412,7 @@ void scan_deps(const std::string& orig_portname, std::string cur_portname,
         const Port* port = ports.apropos(cur_portname.c_str());
         if(port)
         {
-            const char* dep_types[3] = { "enabled by", "default depends" };
+            const char* dep_types[3] = { "enabled by", "depends", "default depends" };
             for(const char* dep_type : dep_types)
             {
                 for(const char* enabled_by = port->meta()[dep_type]; enabled_by != NULL; enabled_by = strchr(enabled_by+1, ','))
@@ -499,7 +499,7 @@ int dispatch_printed_messages(const char* messages,
         message_map.emplace(msg.portname, &msg);
     }
 
-    // add "rEnabledBy" and "rDefaultDepends" edges
+    // add "rEnabledBy", "rDepends" and "rDefaultDepends" edges
     for(std::pair<const std::string, message_t*>& pr : message_map)
     {
         std::string portname = pr.first;
