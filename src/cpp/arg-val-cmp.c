@@ -9,6 +9,11 @@
 
 static const rtosc_cmp_options default_cmp_options = { 0.0 };
 
+const rtosc_cmp_options* get_default_cmp_options()
+{
+    return &default_cmp_options;
+}
+
 // abort only if one side was finished, or if both are infinite ranges
 int rtosc_arg_vals_cmp_has_next(const rtosc_arg_val_itr* litr,
                                 const rtosc_arg_val_itr* ritr,
