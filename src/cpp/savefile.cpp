@@ -193,6 +193,7 @@ std::string get_changed_values(const Ports& ports, void* runtime,
         if(nargs_default > 0)
         {
             size_t nargs_runtime = 0;
+            std::vector<std::vector<char> > scratch_bufs;
 
             auto ftor = [&](const Port* p, const char* ,
                             const char* old_end,
@@ -223,7 +224,8 @@ std::string get_changed_values(const Ports& ports, void* runtime,
                                                     buffersize,
                                                     max_arg_vals,
                                                     arg_vals_runtime +
-                                                        nargs_runtime);
+                                                        nargs_runtime,
+                                                    &scratch_bufs);
                 nargs_runtime += nargs_runtime_cur;
             };
 
