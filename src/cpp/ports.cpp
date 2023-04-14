@@ -103,7 +103,7 @@ void RtData::broadcast(const char *path, const char *args, ...)
 {
     va_list va;
     va_start(va,args);
-    char buffer[8192];
+    char buffer[1024*1024];
     rtosc_vmessage(buffer,sizeof(buffer)/sizeof(char),path,args,va);
     broadcast(buffer);
     va_end(va);

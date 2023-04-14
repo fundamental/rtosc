@@ -29,6 +29,10 @@ void port_sugar()
                   "Port sugar for presets (3)", __LINE__);
     assert_str_eq("=false", multi_str+29,
                   "Port sugar for presets (4)", __LINE__);
+
+    const char* dep_str = rDepends(depA, depB, depC);
+    assert_str_eq(":depends",         dep_str,    "rDepends (1)", __LINE__);
+    assert_str_eq("=depA,depB,depC,", dep_str+9,  "rDepends (2)", __LINE__);
 }
 
 static const Ports ports = {

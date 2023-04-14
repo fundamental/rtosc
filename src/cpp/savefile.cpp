@@ -20,7 +20,7 @@
 namespace rtosc {
 
 namespace {
-    constexpr std::size_t buffersize = 8192;
+    constexpr std::size_t buffersize = 32*8192;
     constexpr size_t max_arg_vals = 2048;
 }
 
@@ -102,9 +102,9 @@ std::string get_changed_values(const Ports& ports, void* runtime,
     {
         assert(runtime);
         const Port::MetaContainer meta = p->meta();
-#if 0
+#if 1
 // practical for debugging if a parameter was changed, but not saved
-        const char* cmp = "/part15/kit0/adpars/GlobalPar/Reson/Prespoints";
+        const char* cmp = "/part0/kit0/subpars/AmpEnvelope/Penvval";
         if(!strncmp(port_buffer, cmp, strlen(cmp)))
         {
             puts("break here");
@@ -236,6 +236,10 @@ std::string get_changed_values(const Ports& ports, void* runtime,
                                false, false);
             };
 
+            if(strstr(p->name, "::b")) {
+               puts("break here");
+            }
+
             if(strchr(p->name, '#'))
             {
                 // idea:
@@ -260,6 +264,25 @@ std::string get_changed_values(const Ports& ports, void* runtime,
                 arg_vals_runtime[0].type = 'a';
                 rtosc_av_arr_len_set(arg_vals_runtime, nargs_runtime-1);
                 rtosc_av_arr_type_set(arg_vals_runtime, arg_vals_runtime[1].type);
+            }
+            else if(strstr(p->name, "::b")) // blob array
+            {
+                ftor(p, port_buffer, port_from_base, base, NULL, runtime);
+                assert(nargs_runtime == 1);
+                assert(arg_vals_runtime[0].type == 'b');
+                int32_t len = arg_vals_runtime[0].val.b.len / sizeof(float);
+                const float* data = (float*)arg_vals_runtime[0].val.b.data; // TODO: allow different types
+                for (int i = 0; i < len; ++i)
+                {
+                    arg_vals_runtime[1+i].type = 'f';
+                    arg_vals_runtime[1+i].val.f = data[i];
+                }
+
+                // "Go back" to fill arg_vals_runtime + 0
+                arg_vals_runtime[0].type = 'a';
+                rtosc_av_arr_len_set(arg_vals_runtime, len);
+                rtosc_av_arr_type_set(arg_vals_runtime, arg_vals_runtime[1].type);
+                nargs_runtime = 1 + len;
             }
             else
                 ftor(p, port_buffer, port_from_base, base, NULL, runtime);
@@ -292,12 +315,20 @@ std::string get_changed_values(const Ports& ports, void* runtime,
                     nargs_runtime = first_equal_index(arg_vals_default, arg_vals_runtime,
                                                       nargs_default, nargs_runtime);
 
-                    *res += port_buffer;
-                    rtosc_print_arg_vals(arg_vals_runtime, nargs_runtime,
-                                         cur_value_pretty + 1, buffersize - 1,
-                                         NULL, strlen(port_buffer) + 1);
-                    *res += cur_value_pretty;
-                    *res += "\n";
+                    if(arg_vals_runtime->type == 'a' && nargs_runtime == 1)
+                    {
+                        // empty array, after first_equal_index
+                        // => all array elements are equal (TODO: this should be caught earlier in rtosc_arg_vals_eq)
+                    }
+                    else
+                    {
+                        *res += port_buffer;
+                        rtosc_print_arg_vals(arg_vals_runtime, nargs_runtime,
+                                             cur_value_pretty + 1, buffersize - 1,
+                                             NULL, strlen(port_buffer) + 1);
+                        *res += cur_value_pretty;
+                        *res += "\n";
+                    }
                 }
             }; // functor write_msg
 
@@ -396,6 +427,66 @@ int savefile_dispatcher_t::on_dispatch(size_t, char *,
     return default_response(nargs);
 }
 
+
+struct message_t
+{
+    std::string portname;
+    std::vector<rtosc_arg_val_t> arg_vals;
+    std::vector<std::size_t> dependees;
+    std::vector<char> strbuf;
+};
+
+void scan_deps(const std::string& orig_portname, std::string cur_portname,
+               const Ports& ports, const std::map<std::string, message_t*>& message_map, const std::vector<message_t>& message_v)
+{
+    auto rel2abs=[](const char* relative_path, const std::string& base) -> std::string
+    {
+        std::string abs = base;
+        std::string::size_type last_slash = abs.find_last_of('/');
+        assert(last_slash != std::string::npos);
+        abs.resize(last_slash+1);
+        abs.append(relative_path);
+        std::string::size_type comma_pos = abs.find(',');
+        if(comma_pos != std::string::npos)
+            abs.resize(abs.find(','));
+        printf("ABS: %s\n",abs.c_str());
+        return abs;
+    };
+
+    // this port and all parent ports can be enabled by another port, so check them all
+    for(std::string::size_type last_slash;
+        cur_portname.size() && (last_slash = cur_portname.find_last_of('/')) != std::string::npos;
+          cur_portname.resize(last_slash))
+    {
+        const Port* port = ports.apropos(cur_portname.c_str());
+        if(port)
+        {
+            const char* dep_types[3] = { "enabled by", "depends", "default depends" };
+            for(const char* dep_type : dep_types)
+            {
+                for(const char* enabled_by = port->meta()[dep_type]; enabled_by != NULL; enabled_by = strchr(enabled_by+1, ','))
+                {
+                    if(*enabled_by==',')
+                        ++enabled_by;
+                    std::string abs = rel2abs(enabled_by, cur_portname);
+                    auto itr = message_map.find(abs);
+                    if(itr != message_map.end())  // port is in the savefile
+                    {
+                        printf("dependencies: %s depends on %s\n", orig_portname.c_str(), itr->second->portname.c_str());
+                        itr->second->dependees.push_back(std::distance(message_v.data(),(const message_t*)message_map.at(orig_portname)));
+                    }
+                    else
+                    {
+                        printf("dependencies: %s depends on port %s which has no message\n", orig_portname.c_str(), enabled_by);
+                        // port is not in the savefile => scan transitive deps
+                        scan_deps(orig_portname, abs, ports, message_map, message_v);
+                    }
+                }
+            }
+        }
+    }
+};
+
 int dispatch_printed_messages(const char* messages,
                               const Ports& ports, void* runtime,
                               savefile_dispatcher_t* dispatcher)
@@ -413,13 +504,6 @@ int dispatch_printed_messages(const char* messages,
     dispatcher->ports = &ports;
     dispatcher->runtime = runtime;
 
-    struct message_t
-    {
-        std::string portname;
-        std::vector<rtosc_arg_val_t> arg_vals;
-        std::vector<std::size_t> dependees;
-        std::vector<char> strbuf;
-    };
     std::vector<message_t> message_v;
     std::map<std::string, message_t*> message_map;
 
@@ -464,43 +548,12 @@ int dispatch_printed_messages(const char* messages,
         message_map.emplace(msg.portname, &msg);
     }
 
-    auto rel2abs=[](const char* relative_path, const std::string& base) -> std::string
-    {
-        std::string abs = base;
-        std::string::size_type last_slash = abs.find_last_of('/');
-        assert(last_slash != std::string::npos);
-        abs.resize(last_slash+1);
-        abs.append(relative_path);
-        return abs;
-    };
-
     // add "rEnabledBy", "rDepends" and "rDefaultDepends" edges
     for(std::pair<const std::string, message_t*>& pr : message_map)
     {
         std::string portname = pr.first;
         assert(portname[0] == '/');
-        // this port and all parent ports can be enabled by another port, so check them all
-        for(std::string::size_type last_slash;
-            portname.size() && (last_slash = portname.find_last_of('/')) != std::string::npos;
-              portname.resize(last_slash))
-        {
-            const Port* port = ports.apropos(portname.c_str());
-            if(port)
-            {
-                //printf("dependency check: %s\n",portname.c_str());
-                const char* dep_types[3] = { "enabled by", "depends", "default depends" };
-                for(const char* dep_type : dep_types)
-                {
-                    const char* enabled_by = port->meta()[dep_type];
-                    if(enabled_by)
-                    {
-                        auto itr = message_map.find(rel2abs(enabled_by, portname));
-                        if(itr != message_map.end())
-                            itr->second->dependees.push_back(std::distance(message_v.data(), pr.second));
-                    }
-                }
-            }
-        }
+        scan_deps(portname, portname, ports, message_map, message_v);
     }
 
     // topologic sort
@@ -541,7 +594,7 @@ int dispatch_printed_messages(const char* messages,
         assert(order_copy[i] == i);
     }
 
-//#define DUMP_SAVEFILE_GRAPH
+#define DUMP_SAVEFILE_GRAPH
 #ifdef DUMP_SAVEFILE_GRAPH
     {
         const char* fname = "/tmp/savefile-graph.dot";
@@ -594,6 +647,52 @@ int dispatch_printed_messages(const char* messages,
         {
             if(nargs != savefile_dispatcher_t::discard)
             {
+                const Port* apropos = ports.apropos(portname);
+                bool is_blob = apropos && strstr(apropos->name, "::b");
+                //printf("name: %s, type: %c\n",apropos->name,message.arg_vals[0].type);
+                assert(  !apropos
+                       ||strchr(apropos->name, message.arg_vals[0].type)
+                       ||is_blob
+                       ||message.arg_vals[0].type == 'a');
+                if(message.arg_vals.data()[0].type == 'a')
+                {
+                    for(int i = 0; i < rtosc_av_arr_len(message.arg_vals.data()); ++i)
+                    {
+                        printf("%s: %d: %a\n", message.portname.data(), i, message.arg_vals[i+1].val.f);
+                    }
+                }
+
+                float tmp_memory[buffersize];
+                if(nargs && is_blob && message.arg_vals[0].type == 'a')
+                {
+                    // convert array from savefile into blob
+                    rtosc_arg_val_t* av0 = message.arg_vals.data();
+                    int32_t len = rtosc_av_arr_len(av0);
+                    float last_float = 0.f;
+                    int32_t j = 0, todo = 0;
+                    for(int32_t i = 0; i < len; ++i)
+                    {
+                        switch(message.arg_vals[1+i].type)
+                        {
+                            case 'f':
+                                last_float = message.arg_vals[1+i].val.f; // TODO: float
+                                ++todo;
+                                printf("todo: %d\n", todo);
+                                break;
+                            case '-':
+                                todo = rtosc_av_rep_num(&message.arg_vals[i+1]) - 1;
+                                continue;
+                        }
+                        for(; todo>0; --todo)
+                            tmp_memory[j++] = last_float;
+                    }
+                    message.arg_vals.resize(1);
+                    message.arg_vals[0].type = 'b';
+                    message.arg_vals[0].val.b.data = (uint8_t*)tmp_memory;
+                    message.arg_vals[0].val.b.len  = j * sizeof(float);
+                    nargs = 1;
+                }
+
                 const rtosc_arg_val_t* arg_val_ptr;
                 bool is_array;
                 if(nargs && message.arg_vals[0].type == 'a')
@@ -695,7 +794,7 @@ int dispatch_printed_messages(const char* messages,
                                    argstr, vals);
 
                     ok = (*dispatcher)(messagebuf);
-                    //printf("%s, %s, %d -> %s\n", messagebuf, portname, nargs, ok ? "yes": "no");
+                    printf("Reading OSC: %s, %s, %d -> %s\n", messagebuf, portname, nargs, ok ? "yes": "no");
                 }
             }
         }
