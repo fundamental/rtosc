@@ -24,6 +24,16 @@ namespace {
     constexpr size_t max_arg_vals = 2048;
 }
 
+int rtosc_arg_val_size(char type)
+{
+    switch(type)
+    {
+        case 'i': return 4;
+        case 'f': return 4;
+        default: assert(false); // yet unsupported
+    }
+}
+
 // mostly a copy of rtosc_arg_vals_eq, but this tells us the first equal index
 // in the final range of equal elements
 size_t first_equal_index(const rtosc_arg_val_t* lhs, rtosc_arg_val_t* rhs,
@@ -260,6 +270,38 @@ std::string get_changed_values(const Ports& ports, void* runtime,
                 arg_vals_runtime[0].type = 'a';
                 rtosc_av_arr_len_set(arg_vals_runtime, nargs_runtime-1);
                 rtosc_av_arr_type_set(arg_vals_runtime, arg_vals_runtime[1].type);
+            }
+            else if(strstr(p->name, "::b")) // blob array
+            {
+                ftor(p, port_buffer, port_from_base, base, NULL, runtime);
+                assert(nargs_runtime == 1);
+                assert(arg_vals_runtime[0].type == 'b');
+                const char* blob_type = p->meta()["blob type"];
+                assert(blob_type);
+
+                int32_t len = arg_vals_runtime[0].val.b.len / rtosc_arg_val_size(blob_type[0]);
+                const uint8_t* data = arg_vals_runtime[0].val.b.data; // TODO: allow different types
+                for (int i = 0; i < len; ++i)
+                {
+                    arg_vals_runtime[1+i].type = blob_type[0];
+                    switch(blob_type[0])
+                    {
+                        case 'f':
+                            arg_vals_runtime[1+i].val.f = ((float*)data)[i];
+                            break;
+                        case 'i':
+                            arg_vals_runtime[1+i].val.i = ((int32_t*)data)[i];
+                            break;
+                        default:
+                            assert(false);
+                    }
+                }
+
+                // "Go back" to fill arg_vals_runtime + 0
+                arg_vals_runtime[0].type = 'a';
+                rtosc_av_arr_len_set(arg_vals_runtime, len);
+                rtosc_av_arr_type_set(arg_vals_runtime, blob_type[0]);
+                nargs_runtime = 1 + len;
             }
             else
                 ftor(p, port_buffer, port_from_base, base, NULL, runtime);
@@ -615,6 +657,59 @@ int dispatch_printed_messages(const char* messages,
         {
             if(nargs != savefile_dispatcher_t::discard)
             {
+                const Port* apropos = ports.apropos(portname);
+                bool is_blob = apropos && strstr(apropos->name, "::b");
+                assert(  !apropos
+                       ||strchr(apropos->name, message.arg_vals[0].type)
+                       ||is_blob
+                       ||message.arg_vals[0].type == 'a');
+
+                uint8_t tmp_memory[buffersize];
+                if(nargs && is_blob && message.arg_vals[0].type == 'a')
+                {
+                    // convert array from savefile into blob
+                    rtosc_arg_val_t* av0 = message.arg_vals.data();
+                    int32_t len = rtosc_av_arr_len(av0);
+                    rtosc_arg_t last_arg;
+                    int32_t j = 0, todo = 0;
+                    const char* blob_type = apropos->meta()["blob type"];
+                    assert(blob_type); // if this fails, add rBlobType() to port
+                    for(int32_t i = 0; i < len; ++i)
+                    {
+                        const rtosc_arg_val_t& av = message.arg_vals[1+i];
+                        switch(av.type)
+                        {
+                            case '-':
+                                todo = rtosc_av_rep_num(&av) - 1;
+                                continue;
+                            default:
+                                assert(av.type == blob_type[0]);
+                                last_arg = av.val;
+                                ++todo;
+                                break;
+                        }
+                        switch(av.type)
+                        {
+                            case 'f':
+                                for(; todo>0; --todo)
+                                    ((float*)tmp_memory)[j++] = last_arg.f;
+                                break;
+                            case 'i':
+                                for(; todo>0; --todo)
+                                    ((int32_t*)tmp_memory)[j++] = last_arg.i;
+                                break;
+                            default:
+                                assert(false);
+                        }
+                    }
+                    message.arg_vals.resize(1);
+                    message.arg_vals[0].type = 'b';
+                    message.arg_vals[0].val.b.data = (uint8_t*)tmp_memory;
+                    message.arg_vals[0].val.b.len  = j *
+                        rtosc_arg_val_size(blob_type[0]);
+                    nargs = 1;
+                }
+
                 const rtosc_arg_val_t* arg_val_ptr;
                 bool is_array;
                 if(nargs && message.arg_vals[0].type == 'a')

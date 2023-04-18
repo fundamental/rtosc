@@ -366,6 +366,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
 #define rOpt(numeric,symbolic) rMap(map numeric, symbolic)
 #define rOptions(...) OPTIONS(__VA_ARGS__)
 #define rOptionsBound(...) rOptions(__VA_ARGS__), rLinear(0,LAST_IMP(__VA_ARGS__))
+#define rBlobType(letter) rMap(blob type, letter)
 
 //Zest Metadata
 #define rShort(name) ":shortname\0=" name "\0"
