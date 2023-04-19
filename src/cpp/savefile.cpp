@@ -18,7 +18,7 @@
 namespace rtosc {
 
 namespace {
-    constexpr std::size_t buffersize = 8192;
+    constexpr std::size_t buffersize = 32768;
     constexpr size_t max_arg_vals = 2048;
 }
 
