@@ -234,6 +234,9 @@ struct rtosc_hack_decltype_t
 //This can be used to queue up interpolation or parameter regen
 #define rChangeCb
 
+//Common properties for a range of ports
+#define rDefaultProps
+
 #define rCrossBroadcast(loc, cross) \
             char part_loc[128]; \
             strncpy(part_loc, loc, sizeof(part_loc)); \
@@ -246,25 +249,25 @@ struct rtosc_hack_decltype_t
 
 //Normal parameters
 #define rParam(name, ...) \
-  {STRINGIFY(name) "::c",  rProp(parameter) rMap(min, 0) rMap(max, 127) DOC(__VA_ARGS__), NULL, rParamCb(name)}
+  {STRINGIFY(name) "::c",  rProp(parameter) rDefaultProps rMap(min, 0) rMap(max, 127) DOC(__VA_ARGS__), NULL, rParamCb(name)}
 #define rParamF(name, ...) \
-  {STRINGIFY(name) "::f",  rProp(parameter) DOC(__VA_ARGS__), NULL, rParamFCb(name)}
+  {STRINGIFY(name) "::f",  rProp(parameter) rDefaultProps DOC(__VA_ARGS__), NULL, rParamFCb(name)}
 #define rParamI(name, ...) \
-  {STRINGIFY(name) "::i",  rProp(parameter) DOC(__VA_ARGS__), NULL, rParamICb(name)}
+  {STRINGIFY(name) "::i",  rProp(parameter) rDefaultProps DOC(__VA_ARGS__), NULL, rParamICb(name)}
 #define rToggle(name, ...) \
-  {STRINGIFY(name) "::T:F",rProp(parameter) DOC(__VA_ARGS__), NULL, rToggleCb(name)}
+  {STRINGIFY(name) "::T:F",rProp(parameter) rDefaultProps DOC(__VA_ARGS__), NULL, rToggleCb(name)}
 #define rOption(name, ...) \
-  {STRINGIFY(name) "::i:c:S",rProp(parameter) rProp(enumerated) DOC(__VA_ARGS__), NULL, rOptionCb(name)}
+  {STRINGIFY(name) "::i:c:S",rProp(parameter) rDefaultProps rProp(enumerated) DOC(__VA_ARGS__), NULL, rOptionCb(name)}
 
 //Array operators
 #define rArrayF(name, length, ...) \
-{STRINGIFY(name) "#" STRINGIFY(length) "::f", rProp(parameter) DOC(__VA_ARGS__), NULL, rArrayFCb(name)}
+{STRINGIFY(name) "#" STRINGIFY(length) "::f", rProp(parameter) rDefaultProps DOC(__VA_ARGS__), NULL, rArrayFCb(name)}
 #define rArrayT(name, length, ...) \
-{STRINGIFY(name) "#" STRINGIFY(length) "::T:F", rProp(parameter) DOC(__VA_ARGS__), NULL, rArrayTCb(name)}
+{STRINGIFY(name) "#" STRINGIFY(length) "::T:F", rProp(parameter) rDefaultProps DOC(__VA_ARGS__), NULL, rArrayTCb(name)}
 #define rArrayI(name, length, ...) \
-{STRINGIFY(name) "#" STRINGIFY(length) "::i", rProp(parameter) DOC(__VA_ARGS__), NULL, rArrayICb(name)}
+{STRINGIFY(name) "#" STRINGIFY(length) "::i", rProp(parameter) rDefaultProps DOC(__VA_ARGS__), NULL, rArrayICb(name)}
 #define rArrayOption(name, length, ...) \
-{STRINGIFY(name) "#" STRINGIFY(length) "::i:c:S", rProp(parameter) DOC(__VA_ARGS__), NULL, rArrayOptionCb(name)}
+{STRINGIFY(name) "#" STRINGIFY(length) "::i:c:S", rProp(parameter) rDefaultProps DOC(__VA_ARGS__), NULL, rArrayOptionCb(name)}
 #define rArray rArrayI
 
 //Method callback Actions
@@ -324,7 +327,7 @@ template<class T> constexpr T spice(T*t) {return *t;}
 //Misc
 #define rDummy(name, ...) {STRINGIFY(name), rProp(dummy), NULL, [](msg_t, rtosc::RtData &){}}
 #define rString(name, len, ...) \
-    {STRINGIFY(name) "::s", rMap(length, len) rProp(parameter) DOC(__VA_ARGS__), NULL, rStringCb(name,len)}
+    {STRINGIFY(name) "::s", rMap(length, len) rDefaultProps rProp(parameter) DOC(__VA_ARGS__), NULL, rStringCb(name,len)}
 
 //General property operators
 #define rMap(name, value) ":" STRINGIFY(name) "\0=" STRINGIFY(value) "\0"
