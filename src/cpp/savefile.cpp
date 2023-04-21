@@ -237,6 +237,7 @@ std::string get_changed_values(const Ports& ports, void* runtime)
 
             if(arg_vals_runtime[0].type == 'a' && strchr(port_from_base, '/'))
             {
+                // E.g. "VoicePar#8/Enabled
                 // These are grouped as an array, but the port structure
                 // implicits that they shall be handled as single values
                 // inside their subtrees
