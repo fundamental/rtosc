@@ -203,7 +203,7 @@ size_t get_value_from_runtime(void* runtime, const Port& port,
 {
     assert(portname_from_base);
 
-    char buffer_with_port[buffersize]; // TODO: STACKALLOC
+    STACKALLOC(char, buffer_with_port, buffersize);
     fast_strcpy(buffer_with_port, loc, buffersize);
     std::size_t addr_len = strlen(buffer_with_port);
 
