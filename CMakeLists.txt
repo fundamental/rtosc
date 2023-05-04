@@ -105,9 +105,7 @@ endif()
 
 # Example Code
 find_package(FLTK)
-if(NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Windows"))
-    find_package(PkgConfig)
-endif()
+find_package(PkgConfig)
 if(PKG_CONFIG_FOUND)
     pkg_check_modules(NTK ntk)
     pkg_check_modules(JACK jack)
