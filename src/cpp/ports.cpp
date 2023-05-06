@@ -75,8 +75,8 @@ void RtData::reply(const char *path, const char *args, ...)
 {
     va_list va;
     va_start(va,args);
-    char buffer[2048];
-    rtosc_vmessage(buffer,2048,path,args,va);
+    char buffer[8192];
+    rtosc_vmessage(buffer,8192,path,args,va);
     reply(buffer);
     va_end(va);
 }
@@ -103,8 +103,8 @@ void RtData::broadcast(const char *path, const char *args, ...)
 {
     va_list va;
     va_start(va,args);
-    char buffer[2048];
-    rtosc_vmessage(buffer,2048,path,args,va);
+    char buffer[8192];
+    rtosc_vmessage(buffer,8192,path,args,va);
     broadcast(buffer);
     va_end(va);
 }

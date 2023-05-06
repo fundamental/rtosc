@@ -223,7 +223,7 @@ bool port_checker::send_msg(const char* address,
 bool port_checker::server::send_msg(const char* address,
                                     size_t nargs, const rtosc_arg_val_t* args)
 {
-    char buffer[2048];
+    char buffer[8192];
     int len = rtosc_avmessage(buffer, sizeof(buffer), address, nargs, args);
     int res = 0;
     lo_message msg  = lo_message_deserialise(buffer, len, &res);
