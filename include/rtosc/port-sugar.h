@@ -111,6 +111,22 @@ struct rtosc_hack_decltype_t
 #define rINC_14 15
 #define rINC_15 16
 #define rINC_16 17
+#define rINC_17 18
+#define rINC_18 19
+#define rINC_19 20
+#define rINC_20 21
+#define rINC_21 22
+#define rINC_22 23
+#define rINC_23 24
+#define rINC_24 25
+#define rINC_25 26
+#define rINC_26 27
+#define rINC_27 28
+#define rINC_28 29
+#define rINC_29 30
+#define rINC_30 31
+#define rINC_31 32
+
 
 //Helper for applying macro on varargs
 //arguments: counting offset, macro, macro args
