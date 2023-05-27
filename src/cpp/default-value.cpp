@@ -34,9 +34,10 @@ const char* get_default_value(const char* port_name, const Ports& ports,
     // only port which indicates if they're amplitude/frequency/etc
     const char* dependent = metadata[dependent_annotation];
     const char* dependent_value = "";
+    char* dependent_port = nullptr;
     if(dependent)
     {
-        char* dependent_port = buffer;
+        dependent_port = buffer;
         *dependent_port = 0;
 
         assert(strlen(port_name) + strlen(dependent_port) + 5 < buffersize);
@@ -47,7 +48,7 @@ const char* get_default_value(const char* port_name, const Ports& ports,
         strncat(dependent_port, dependent,
                 buffersize - strlen(dependent_port) - 1);
         dependent_port = Ports::collapsePath(dependent_port);
-
+        puts(dependent_port);
         // TODO: collapsePath bug?
         // Relative paths should not start with a slash after collapsing ...
         if(*dependent_port == '/')
