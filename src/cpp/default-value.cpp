@@ -48,7 +48,6 @@ const char* get_default_value(const char* port_name, const Ports& ports,
         strncat(dependent_port, dependent,
                 buffersize - strlen(dependent_port) - 1);
         dependent_port = Ports::collapsePath(dependent_port);
-        puts(dependent_port);
         // TODO: collapsePath bug?
         // Relative paths should not start with a slash after collapsing ...
         if(*dependent_port == '/')
