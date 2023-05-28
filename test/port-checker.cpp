@@ -13,9 +13,10 @@
 #include <rtosc/arg-ext.h>
 #include <rtosc/arg-val.h>
 #include <rtosc/arg-val-math.h>
-#include <rtosc/port-checker.h>
 #include <lo/lo.h>
 #include <lo/lo_lowlevel.h>
+
+#include "port-checker.h"
 
 // enable this if you need to find bugs in port-checker
 // #define DEBUG_PORT_CHECKER

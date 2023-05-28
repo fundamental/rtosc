@@ -1,9 +1,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
-#include <rtosc/port-checker.h>
 
 #include "common.h"
+#include "port-checker.h"
 
 //! @file port-checker-tester.cpp
 //! This tester tests port checker

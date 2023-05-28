@@ -3,7 +3,7 @@
 #include <iostream>
 #include <getopt.h>
 
-#include <rtosc/port-checker.h>
+#include "port-checker.h"
 
 void usage(const char* progname)
 {

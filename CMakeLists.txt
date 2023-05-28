@@ -75,7 +75,7 @@ add_library(rtosc src/rtosc.c src/dispatch.c src/rtosc-time.c)
 add_library(rtosc-cpp
     ${CMAKE_CURRENT_BINARY_DIR}/cpp/version.c
     src/cpp/ports.cpp src/cpp/ports-runtime.cpp
-    src/cpp/default-value.cpp src/cpp/savefile.cpp src/cpp/port-checker.cpp
+    src/cpp/default-value.cpp src/cpp/savefile.cpp
     src/cpp/pretty-format.c
     src/cpp/arg-ext.c
     src/cpp/arg-val.c
@@ -234,9 +234,9 @@ maketestcpp(test-automation)
 
 find_package(Ruby 1.8)
 if(LIBLO_FOUND AND RUBY_FOUND)
-    add_executable(port-checker test/port-checker-main.cpp)
+    add_executable(port-checker test/port-checker.cpp test/port-checker-main.cpp)
     target_link_libraries(port-checker rtosc-cpp rtosc ${LIBLO_LDFLAGS})
-    add_executable(port-checker-tester test/port-checker-tester.cpp)
+    add_executable(port-checker-tester test/port-checker.cpp test/port-checker-tester.cpp)
     target_link_libraries(port-checker-tester rtosc-cpp rtosc ${LIBLO_LDFLAGS})
     add_executable(port-checker-testapp test/port-checker-testapp.cpp)
     target_link_libraries(port-checker-testapp rtosc-cpp rtosc ${LIBLO_LDFLAGS})
@@ -281,7 +281,6 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT DEFINED RTOSC_NO_INSTALL)
         include/rtosc/bundle-foreach.h
         include/rtosc/default-value.h
         include/rtosc/miditable.h
-        include/rtosc/port-checker.h
         include/rtosc/port-sugar.h
         include/rtosc/ports-runtime.h
         include/rtosc/ports.h
