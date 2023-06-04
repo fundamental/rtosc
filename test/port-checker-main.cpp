@@ -19,12 +19,18 @@ void usage(const char* progname)
     std::cout << "Options: --timeout <time in msecs>" << std::endl;
 }
 
+struct port_checker_options
+{
+    int timeout_msecs = 50;
+};
+
 int run_port_checker(const char* url,
-                     const rtosc::port_checker_options& checker_opts)
+                     const port_checker_options& checker_opts)
 {
     int rval = EXIT_SUCCESS;
     try {
-        rtosc::port_checker checker(checker_opts);
+        rtosc::liblo_server sender(checker_opts.timeout_msecs), other(checker_opts.timeout_msecs);
+        rtosc::port_checker checker(&sender, &other);
         checker(url);
 
         if(!checker.print_sanity_checks())
@@ -73,7 +79,7 @@ int main(int argc, char** argv)
     int option_index = 0, opt;
 
     // port checker args
-    rtosc::port_checker_options checker_opts;
+    port_checker_options checker_opts;
     const char* url;
 
     // parse options

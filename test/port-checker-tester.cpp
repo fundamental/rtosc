@@ -77,7 +77,9 @@ int main(int argc, char** argv)
     bool exceptions_thrown = false;
 
     try {
-        rtosc::port_checker checker;
+        int timeout_msecs = 50;
+        rtosc::liblo_server sender(timeout_msecs), other(timeout_msecs);
+        rtosc::port_checker checker(&sender, &other);
         checker(argv[1]);
 
         assert_true(checker.sanity_checks(), "Port checker sanity", __LINE__);

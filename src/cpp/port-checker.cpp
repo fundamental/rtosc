@@ -131,13 +131,30 @@ static void liblo_error_cb(int i, const char *m, const char *loc)
 int handle_st(const char *path, const char *types, lo_arg **argv,
                      int argc, lo_message msg, void *data)
 {
-    static_cast<port_checker::server*>(data)->on_recv(path, types,
-                                                      argv, argc, msg);
+    static_cast<liblo_server*>(data)->on_recv(path, types,
+                                              argv, argc, msg);
     return 0;
 }
 
-void port_checker::server::on_recv(const char *path, const char *types,
-                                   lo_arg **argv, int argc, lo_message msg)
+void port_checker::server::handle_recv(int argc, const char *types, const std::vector<const char*>* exp_strs)
+{
+    last_args->resize(argc);
+    bool still_ok = true;
+    for(std::size_t i = 0; i < (std::size_t)argc; ++i)
+    {
+        (*last_args)[i].val = rtosc_argument(last_buffer->data(), i);
+        (*last_args)[i].type = types[i];
+        if(still_ok && (*last_args)[i].type == 's' && i+1 < exp_strs->size())
+        {
+            still_ok = !strcmp((*last_args)[i].val.s, (*exp_strs)[i+1]);
+        }
+    }
+
+    if(still_ok) { waiting = false; }
+}
+
+void liblo_server::on_recv(const char *path, const char *types,
+                           lo_arg **argv, int argc, lo_message msg)
 {
     (void)argv;
 #ifdef DEBUG_PORT_CHECKER
@@ -169,25 +186,13 @@ void port_checker::server::on_recv(const char *path, const char *types,
                 throw std::runtime_error("can not happen, "
                                          "lo_message_length has been used");
 
-            last_args->resize(argc);
-            bool still_ok = true;
-            for(std::size_t i = 0; i < (std::size_t)argc; ++i)
-            {
-                (*last_args)[i].val = rtosc_argument(last_buffer->data(), i);
-                (*last_args)[i].type = types[i];
-                if(still_ok && (*last_args)[i].type == 's' && i+1 < exp_strs->size())
-                {
-                    still_ok = !strcmp((*last_args)[i].val.s, (*exp_strs)[i+1]);
-                }
-            }
-
-            if(still_ok) { waiting = false; }
+            server::handle_recv(argc, types, exp_strs);
             break;
         }
     }
 }
 
-void port_checker::server::init(const char* target_url)
+void liblo_server::vinit(const char* target_url)
 {
     target = lo_address_new_from_url(target_url);
     if(!target || !lo_address_get_url(target) ||
@@ -199,6 +204,11 @@ void port_checker::server::init(const char* target_url)
     if(srv == nullptr)
         throw std::runtime_error("Could not create lo server");
     lo_server_add_method(srv, nullptr, nullptr, handle_st, this);
+}
+
+void port_checker::server::init(const char *target_url)
+{
+    vinit(target_url);
 
     rtosc_arg_val_t hi[3];
     hi[0].type = hi[1].type = 's';
@@ -217,11 +227,11 @@ void port_checker::server::init(const char* target_url)
 bool port_checker::send_msg(const char* address,
                             size_t nargs, const rtosc_arg_val_t* args)
 {
-    return sender.send_msg(address, nargs, args);
+    return sender->send_msg(address, nargs, args);
 }
 
-bool port_checker::server::send_msg(const char* address,
-                                    size_t nargs, const rtosc_arg_val_t* args)
+bool liblo_server::send_msg(const char* address,
+                            size_t nargs, const rtosc_arg_val_t* args)
 {
     char buffer[8192];
     int len = rtosc_avmessage(buffer, sizeof(buffer), address, nargs, args);
@@ -241,9 +251,9 @@ bool port_checker::server::send_msg(const char* address,
     return true;
 }
 
-bool port_checker::server::_wait_for_reply(std::vector<char>* buffer,
-                                           std::vector<rtosc_arg_val_t> * args,
-                                           int n0, int n1)
+bool liblo_server::_wait_for_reply(std::vector<char>* buffer,
+                                   std::vector<rtosc_arg_val_t> * args,
+                                   int n0, int n1)
 {
     (void)n0;
     exp_paths_n_args[n1].clear();
@@ -285,7 +295,7 @@ bool port_checker::port_is_enabled(const char* loc, const char* port,
 
         std::vector<rtosc_arg_val_t> args;
         std::vector<char> strbuf;
-        if(sender.wait_for_reply(&strbuf, &args, collapsed_loc)) {
+        if(sender->wait_for_reply(&strbuf, &args, collapsed_loc)) {
             if(args.size() == 1 &&
                (args[0].type == 'T' || args[0].type == 'F' || args[0].type == 'i')) {
                 rval = args[0].type == 'T' || (args[0].type == 'i' && args[0].val.i != 0);
@@ -495,8 +505,8 @@ void port_checker::check_port(const char* loc, const char* portname,
                 send_msg(full_path.c_str(), 0, nullptr);
                 std::vector<rtosc_arg_val_t> args1;
                 std::vector<char> strbuf1;
-                int res = sender.wait_for_reply(&strbuf1, &args1,
-                                                full_path.c_str());
+                int res = sender->wait_for_reply(&strbuf1, &args1,
+                                                 full_path.c_str());
 
                 if(res)
                 {
@@ -507,24 +517,24 @@ void port_checker::check_port(const char* loc, const char* portname,
                     send_msg(full_path.c_str(), args1.size(), args1.data());
                     args1.clear();
                     strbuf1.clear();
-                    res = sender.wait_for_reply(&strbuf1, &args1,
-                                                full_path.c_str(), nullptr,
-                                                "/undo_change", nullptr);
+                    res = sender->wait_for_reply(&strbuf1, &args1,
+                                                 full_path.c_str(), nullptr,
+                                                 "/undo_change", nullptr);
 
                     if(!res)
                         raise(issue::parameter_not_replied);
                     else {
-                        if(sender.replied_path() == 1 /* i.e. undo_change */) {
+                        if(sender->replied_path() == 1 /* i.e. undo_change */) {
                             // some apps may reply with undo_change, some may
                             // already catch those... if we get one: retry
-                            res = sender.wait_for_reply(&strbuf1, &args1,
-                                                        full_path.c_str());
+                            res = sender->wait_for_reply(&strbuf1, &args1,
+                                                         full_path.c_str());
                         }
 
                         if(res)
                         {
-                            res = other.wait_for_reply(&strbuf1, &args1,
-                                                       full_path.c_str());
+                            res = other->wait_for_reply(&strbuf1, &args1,
+                                                        full_path.c_str());
                             if(!res)
                                 raise(issue::parameter_not_broadcast);
                         }
@@ -722,8 +732,8 @@ void port_checker::do_checks(char* loc, int loc_size, bool check_defaults)
     std::vector<rtosc_arg_val_t> args;
     std::vector<char> strbuf;
 
-    int res = sender.wait_for_reply(&strbuf, &args, "/paths",
-                                    query_args[0].val.s, query_args[1].val.s);
+    int res = sender->wait_for_reply(&strbuf, &args, "/paths",
+                                     query_args[0].val.s, query_args[1].val.s);
     if(!res)
         throw port_error("no reply from path-search", loc);
     if(args.size() % 2)
@@ -874,8 +884,8 @@ bool port_checker::operator()(const char* url)
     else
         sendtourl = url;
 
-    sender.init(sendtourl.c_str());
-    other.init(sendtourl.c_str());
+    sender->init(sendtourl.c_str());
+    other->init(sendtourl.c_str());
 
     char loc_buffer[4096] = { '/', 0 };
     do_checks(loc_buffer, sizeof(loc_buffer));

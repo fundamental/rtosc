@@ -86,11 +86,6 @@ struct issue_t
     severity sev;
 };
 
-struct port_checker_options
-{
-    int timeout_msecs = 50;
-};
-
 class port_error : public std::runtime_error
 {
 public:
@@ -105,9 +100,6 @@ class port_checker
     time_t start_time, finish_time;
     unsigned ports_checked = 0; //!< ports checked and not disabled
 
-    friend int handle_st(const char *path, const char *types, lo_arg **argv,
-                         int argc, lo_message msg, void *data);
-
     //! issue types
     std::map<issue, issue_t> m_issue_types;
     //! issues found: type and port each
@@ -118,19 +110,12 @@ class port_checker
     //! URL of the app
     std::string sendtourl;
 
-    //! One instance of server connected to the app
-    //! We will have two servers (one for send/reply and one
-    //! for catching broadcasts)
+public:
     class server
     {
-        friend int handle_st(const char *path, const char *types, lo_arg **argv,
-                             int argc, lo_message msg, void *data);
-
+    protected:
         volatile bool waiting = true;
         int timeout_msecs;
-
-        lo_server srv;
-        lo_address target;
 
         constexpr static int max_exp_paths = 15;
         /**
@@ -146,9 +131,9 @@ class port_checker
         std::vector<char>* last_buffer;
         std::vector<rtosc_arg_val_t>* last_args;
 
-        bool _wait_for_reply(std::vector<char> *buffer,
-                             std::vector<rtosc_arg_val_t>*args, int n0, int n1);
-
+        virtual bool _wait_for_reply(std::vector<char>* buffer,
+                                     std::vector<rtosc_arg_val_t> * args,
+                                     int n0, int n1) = 0;
         template<class ...Args>
         bool _wait_for_reply(std::vector<char> *buffer,
                              std::vector<rtosc_arg_val_t>* args,
@@ -166,18 +151,22 @@ class port_checker
             return _wait_for_reply(buffer, args, n0, n1, more_paths...);
         }
 
-        void on_recv(const char *path, const char *types,
-                     lo_arg **argv, int argc, lo_message msg);
+        void handle_recv(int argc, const char *types, const std::vector<const char *> *exp_strs);
+
+        virtual void vinit(const char *target_url) = 0;
 
     public:
         server(int t) : timeout_msecs(t) {}
+        virtual ~server() {}
 
         //! Return which of the expected paths from wait_for_reply() has
         //! has been received
         int replied_path() const { return _replied_path; }
+
         void init(const char *target_url);
-        bool send_msg(const char *address,
-                      size_t nargs, const rtosc_arg_val_t *args);
+
+        virtual bool send_msg(const char* address,
+              size_t nargs, const rtosc_arg_val_t* args) = 0;
 
         /**
             Wait for a reply matching any of the C strings from
@@ -199,8 +188,9 @@ class port_checker
         }
     };
 
-    server sender; //!< send and check replies
-    server other; //!< check broadcasts
+private:
+    server* const sender; //!< send and check replies
+    server* const other; //!< check broadcasts
 
     //! send a message via the sender
     bool send_msg(const char *address,
@@ -222,9 +212,8 @@ class port_checker
     std::set<issue> issues_not_covered() const;
 
 public:
-    port_checker(port_checker_options opts_arg = port_checker_options()) :
-        sender(opts_arg.timeout_msecs),
-        other(opts_arg.timeout_msecs) {}
+    port_checker(server* sender, server* other) :
+        sender(sender), other(other) {}
 
     //! Let the port checker connect to url and find issues for all ports
     //! @param url URL in format osc.udp://xxx.xxx.xxx.xxx:ppppp/, or just
@@ -262,6 +251,30 @@ public:
 
     //! Print statistics like number of ports and time consumed
     void print_statistics() const;
+};
+
+class liblo_server : public port_checker::server
+{
+    lo_server srv;
+    lo_address target;
+
+    friend int handle_st(const char *path, const char *types, lo_arg **argv,
+                         int argc, lo_message msg, void *data);
+
+public:
+    void on_recv(const char *path, const char *types,
+                 lo_arg **argv, int argc, lo_message msg);
+
+    bool send_msg(const char* address,
+                  size_t nargs, const rtosc_arg_val_t* args) override;
+
+    bool _wait_for_reply(std::vector<char>* buffer,
+                         std::vector<rtosc_arg_val_t> * args,
+                         int n0, int n1) override;
+
+    void vinit(const char* target_url) override;
+
+    using server::server;
 };
 
 }
