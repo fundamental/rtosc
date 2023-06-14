@@ -2,6 +2,7 @@
 #include <cstring>
 #include <iostream>
 #include <rtosc/port-checker.h>
+#include "liblo-server.h"
 
 #include "common.h"
 

@@ -4,6 +4,7 @@
 #include <getopt.h>
 
 #include <rtosc/port-checker.h>
+#include "liblo-server.h"
 
 void usage(const char* progname)
 {
