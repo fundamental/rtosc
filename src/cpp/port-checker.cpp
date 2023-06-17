@@ -210,8 +210,7 @@ void alternate_arg_val(rtosc_arg_val_t& a)
         case 'm': a.val.m[3] = a.val.m[3] ? 0 : 1; break;
         case 'S':
         case 's': a.val.s = a.val.s ? "" : "non-empty"; break;
-        case 'b': assert(a.val.b.len);
-            a.val.b.data[0] = a.val.b.data[0] ? 0 : 1; break;
+        case 'b': /* we don't know how to proper alternate the buffer */ break;
         case 'f': a.val.f = a.val.f ? 0.0f : 1.0f; break;
         case 'T': a.val.T = 0; a.type = 'F'; break;
         case 'F': a.val.T = 1; a.type = 'T'; break;
