@@ -246,6 +246,7 @@ void port_checker::check_port(const char* loc, const char* portname,
             );
         }
 
+        bool do_checks = true;
         rtosc::Port::MetaContainer meta(metadata);
         if(meta_len && metadata && *metadata)
         {
@@ -267,6 +268,8 @@ void port_checker::check_port(const char* loc, const char* portname,
                     is_enumerated = true;
                 if(!strcmp(x.title, "no defaults"))
                     check_defaults = false;
+                else if(!strcmp(x.title, "no port checker"))
+                    do_checks = false;
                 else if(!strcmp(x.title, "default")) {
                     // x.value;
                     ++n_default_vals;
@@ -357,6 +360,8 @@ void port_checker::check_port(const char* loc, const char* portname,
 
             if(is_parameter)
             {
+            if(do_checks)
+            {
                 // check metadata
                 if(check_defaults && !n_default_vals && presets.empty())
                     raise(issue::rdefault_missing);
@@ -428,6 +433,7 @@ void port_checker::check_port(const char* loc, const char* portname,
                 else {
                     raise(issue::parameter_not_queryable);
                 }
+            }
             }
             else {
                 if(default_values.size())
