@@ -101,7 +101,7 @@ void scan_and_print_single()
     check("immediately", NULL, "the timestamp \"immediately\"", __LINE__);
     check_alt("now", NULL, "the timestamp \"now\"", __LINE__, "immediately");
 
-    // must be printed lossless, but second fractions are zero => no parantheses
+    // must be printed lossless, but second fractions are zero => no parentheses
     check_alt("2016-11-16 00:00:00.123 (...+0x0p-32s)", NULL,
               "a timestamp with exact second fractions", __LINE__,
               "2016-11-16");
@@ -372,7 +372,7 @@ void ranges()
     check("[true false ... ]", NULL, "alternating true-false-range", __LINE__);
     assert('-' == scanned[2].type);
     assert_int_eq(0, rtosc_av_rep_num(scanned+2),
-                  "true-false range is inifinite", __LINE__);
+                  "true-false range is infinite", __LINE__);
     assert_int_eq(1, rtosc_av_rep_has_delta(scanned+2),
                   "true-false range has delta", __LINE__);
 }
@@ -557,7 +557,7 @@ void scan_invalid()
     BAD(".e3"); // numbers missing
 #if 0
     // reading strtod(3p) these don't look legal,
-    // but "unfortunatelly" they work
+    // but "unfortunately" they work
     BAD("0x1p+"); // exponent missing
     BAD("1.0e"); // exponent missing
 #endif
@@ -566,7 +566,7 @@ void scan_invalid()
     fail_at_arg("1.0 -0x1.8p+0)", 3, __LINE__); // read as 2 ints + ')'
     BAD("1.0 (x1.8p+0)");
     BAD("1.0 (-0x1.8p+0");
-    BAD("(-0x0p-32)"); // parantheses not allowed
+    BAD("(-0x0p-32)"); // parentheses not allowed
 
     /*
         chars
@@ -649,7 +649,7 @@ void scan_invalid()
 
     BAD("2x");
 
-    // infite ranges
+    // infinite ranges
     BAD("1 ..."); // not allowed outside of bundle
 
     /*

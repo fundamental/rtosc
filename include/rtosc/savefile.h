@@ -119,7 +119,7 @@ private:
  *   version structs if needed. All other members shall not be initialized.
  * @return The number of messages read, or, if there was a read error,
  *   or the dispatcher did refuse to dispatch,
- *   the number of bytes read until the read error occured minus one
+ *   the number of bytes read until the read error occurred minus one
  */
 int dispatch_printed_messages(const char* messages,
                               const struct Ports& ports, void* runtime,
@@ -133,7 +133,7 @@ int dispatch_printed_messages(const char* messages,
  * @param appver Version of the application calling this function
  * @param fileStr If given, the new savefile will be appended to
  *   this passed savefile
- * @return The resulting savefile as an std::sting
+ * @return The resulting savefile as an std::string
  */
 std::string save_to_file(const struct Ports& ports, void* runtime,
                          const char* appname, rtosc_version appver,
@@ -151,7 +151,7 @@ std::string save_to_file(const struct Ports& ports, void* runtime,
  * @param appver Version of the application calling this function
  * @param dispatcher Modifier for the messages; NULL if no modifiers are needed
  * @return The number of messages read, or, if there was a read error,
- *   the negated number of bytes read until the read error occured minus one
+ *   the negated number of bytes read until the read error occurred minus one
  */
 int load_from_file(const char* file_content,
                    const struct Ports& ports, void* runtime,

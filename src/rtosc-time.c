@@ -74,7 +74,7 @@ uint64_t rtosc_float2secfracs(float secfracsf)
 
     /*
        Remember that
-       (1) shifting a comma over one hex digits mulitplies/divides by 4
+       (1) shifting a comma over one hex digits multiplies/divides by 4
        (2) that secfracsf was scanned as "%a"
        (3) 0x00000001 counts as one secfrac and 0x100000000 would equal 1,
            which means one secfrac is 2^-32

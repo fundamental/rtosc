@@ -97,7 +97,7 @@ struct RtData
  */
 struct Port {
     const char  *name;    //!< Pattern for messages to match
-    const char  *metadata;//!< Statically accessable data about port
+    const char  *metadata;//!< Statically accessible data about port
     const Ports *ports;   //!< Pointer to further ports
     std::function<void(msg_t, RtData&)> cb;//!< Callback for matching functions
 
@@ -391,7 +391,7 @@ void path_search(const rtosc::Ports& root, const char *str, const char *needle,
  *   port args must be of types
  *   * "s" (location under @p root to look up port, or empty-string to search
  *          directly at @p root)
- *   * "s" (only port names starting with this sting are returned, use
+ *   * "s" (only port names starting with this string are returned, use
  *          empty-string or nullptr to match everything)
  * @param max_ports Maximum number (or higher) of child ports in any of your
  *     app's ports.

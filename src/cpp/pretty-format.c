@@ -170,7 +170,7 @@ static int rtosc_print_range(const rtosc_arg_val_t* arg,
                 if(((   rtosc_arg_vals_eq_single(arg+1,   &one, NULL)
                     || rtosc_arg_vals_eq_single(arg+1, &m_one, NULL))
                    && !confusing_prev_arg)
-                   || !rtosc_arg_rep_num(val)) // inifite => special, weird case
+                   || !rtosc_arg_rep_num(val)) // infinite => special, weird case
                 {
                     // for -1 and +1, no second number is needed
                     // however, this only works if
@@ -766,7 +766,7 @@ static const char* try_fmt(const char* src, int exp, const char* fmt,
 static const char* scanf_fmtstr(const char* src, char* type)
 {
     const char* end = src;
-    // skip to string end, word end or a closing paranthesis
+    // skip to string end, word end or a closing parenthesis
     for(; *end && !isspace(*end) && (*end != ')') && (*end != ']')
                && strncmp(end, "...", 3); ++end);
 
@@ -1735,7 +1735,7 @@ size_t rtosc_scan_arg_val(const char* src,
 
                 uint64_t secfracs;
 
-                // lossless format is appended in parantheses?
+                // lossless format is appended in parentheses?
                 //  => take it directly from there
                 if(skip_fmt(&src, "%*f (%n"))
                 {
@@ -1775,7 +1775,7 @@ size_t rtosc_scan_arg_val(const char* src,
 
                     const char *fmtstr = scanf_fmtstr_scan(src, bytes16,
                                                            &type);
-                    if(!arg->type) // the first occurence determins the type
+                    if(!arg->type) // the first occurrence determines the type
                      arg->type = type;
 
                     switch(type)
@@ -1799,7 +1799,7 @@ size_t rtosc_scan_arg_val(const char* src,
                     }
                     else
                     {
-                        // is a lossless part appended in parantheses?
+                        // is a lossless part appended in parentheses?
                         const char* after_num = src;
                         skip_while(&after_num, isspace);
                         if(*after_num == '(') {
@@ -1847,7 +1847,7 @@ size_t rtosc_scan_arg_val(const char* src,
         rtosc_arg_val_t* llhsarg = (args_before > 2 &&
                                     arg[-3].type == '-' &&
                                     rtosc_av_rep_has_delta(arg-3))
-                      // -2 is a delta arg (followin a range arg)?
+                      // -2 is a delta arg (following a range arg)?
                       ? rtosc_arg_val_range_arg(arg-3, rtosc_av_rep_num(arg-3)-1,
                                                 &tmp)
                       : (args_before > 1 && arg[-2].type == '-')

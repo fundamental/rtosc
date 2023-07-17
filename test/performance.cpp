@@ -126,7 +126,7 @@ void print_results(const char* libname,
     assert(ns_per_dispatch < 100000.00); // fit the field width
 
     printf("%s Performance: %8.2f seconds for the test\n", libname, seconds);
-    printf("%s Performace:  %8.2f ns per dispatch\n", libname, ns_per_dispatch);
+    printf("%s Performance:  %8.2f ns per dispatch\n", libname, ns_per_dispatch);
 }
 
 int main()

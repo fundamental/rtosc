@@ -1,7 +1,7 @@
 #include "rtosc/ports.h"
 #include "common.h"
 
-//Workaround for cygwin compliation where -std=c++11
+//Workaround for cygwin compilation where -std=c++11
 //results in strdup() not getting exposed by string.h
 static char *dupstr(const char *in)
 {

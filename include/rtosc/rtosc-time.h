@@ -66,7 +66,7 @@ rtosc_arg_val_t* rtosc_arg_val_from_params(rtosc_arg_val_t* dest,
 rtosc_arg_val_t* rtosc_arg_val_current_time(rtosc_arg_val_t* dest);
 
 /**
- * @brief       Create a time tag with the "immediatelly" value.
+ * @brief       Create a time tag with the "immediately" value.
  * @note        This is different to the current time, see OSC specs
  * @param dest  Where to store the result
  * @return      The same as dest
@@ -116,7 +116,7 @@ struct tm *rtosc_params_from_arg_val(const rtosc_arg_val_t* arg);
  * @param arg   The arg val
  * @return      The "fractional parts of a second". This integer is in range
  *              [0,2^32), as required in the OSC specs. To convert the result
- *              futher into a float value, see rtosc_secfracs2float.
+ *              further into a float value, see rtosc_secfracs2float.
  */
 uint64_t rtosc_secfracs_from_arg_val(const rtosc_arg_val_t* arg);
 bool rtosc_arg_val_is_immediatelly(const rtosc_arg_val_t* arg);

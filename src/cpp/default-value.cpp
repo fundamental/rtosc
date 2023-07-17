@@ -77,7 +77,7 @@ const char* get_default_value(const char* port_name, const Ports& ports,
     }
 
     // If return_value is NULL, this can have two meanings:
-    //   1. there was no depedent annotation
+    //   1. there was no dependent annotation
     //     => check for a direct (non-dependent) default value
     //        (a non existing direct default value is OK)
     //   2. there was a dependent annotation, but the dependent value has no

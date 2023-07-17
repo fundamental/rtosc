@@ -83,7 +83,7 @@ int main()
 
     ports.dispatch(message_buff, rt);
     assert_int_eq(1, rt.matches,
-            "Verify A Single Leaf Dispatch Has Occured", __LINE__);
+            "Verify A Single Leaf Dispatch Has Occurred", __LINE__);
     assert_int_eq(7, o.b, "Verify State Change Has Been Applied", __LINE__);
 
     rt.enable = false;

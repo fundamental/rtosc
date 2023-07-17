@@ -36,7 +36,7 @@ void speed_liblo_write(void)
 
     double seconds = (t_off - t_on) * 1.0 / CLOCKS_PER_SEC;
     printf("Liblo Write Performance: %f seconds for the test\n", seconds);
-    printf("Liblo Write Performace:  %f ns per message\n", seconds*1e9/repeats);
+    printf("Liblo Write Performance:  %f ns per message\n", seconds*1e9/repeats);
 }
 
 void speed_liblo_read(void)
@@ -63,7 +63,7 @@ void speed_liblo_read(void)
 
     double seconds = (t_off - t_on) * 1.0 / CLOCKS_PER_SEC;
     printf("Liblo Read Performance: %f seconds for the test\n", seconds);
-    printf("Liblo Read Performace:  %f ns per message\n", seconds*1e9/repeats);
+    printf("Liblo Read Performance:  %f ns per message\n", seconds*1e9/repeats);
 }
 
 void speed_rtosc_write(void)
@@ -80,7 +80,7 @@ void speed_rtosc_write(void)
 
     double seconds = (t_off - t_on) * 1.0 / CLOCKS_PER_SEC;
     printf("RTOSC Write Performance: %f seconds for the test\n", seconds);
-    printf("RTOSC Write Performace:  %f ns per message\n", seconds*1e9/repeats);
+    printf("RTOSC Write Performance:  %f ns per message\n", seconds*1e9/repeats);
 }
 
 void speed_rtosc_read(void)
@@ -102,7 +102,7 @@ void speed_rtosc_read(void)
 
     double seconds = (t_off - t_on) * 1.0 / CLOCKS_PER_SEC;
     printf("RTOSC Read Performance: %f seconds for the test\n", seconds);
-    printf("RTOSC Read Performace:  %f ns per message\n", seconds*1e9/repeats);
+    printf("RTOSC Read Performance:  %f ns per message\n", seconds*1e9/repeats);
 }
 
 int result_var = 0;
