@@ -382,7 +382,7 @@ inf
 -----
 * For accepting numeric literals, rtosc first calculates the end of the
   literal by searching for an end of the string, a space character or a
-  closing paranthesis (')'). Then, it behaves like trying out a number of
+  closing parenthesis (')'). Then, it behaves like trying out a number of
   scanf format strings in the order shown below.
   The first format string that matched exactly from the beginning to the
   previously calculated end is being used for scanning, and the corresponding
@@ -390,7 +390,7 @@ inf
   be identical to the behaviour of a C99 parser. For the exact meanings of the
   format strings, consider your fscanf(3p) man page.
   One extension to C99 is that the user can specify the exact value of a float
-  or double inside parantheses using the hex notation.
+  or double inside parentheses using the hex notation.
 ---------------
 "%*"PRIi32"i%n"  % assume 'i' (4 byte int)
 "%*"PRIi64"h%n"  % assume 'h' (8 byte int)
@@ -414,7 +414,7 @@ inf
 0xfp+0                % 'f' (if you wanted the above to be a float, =15.0f)
 0x1f                  % 'i' (no float!, value is 31)
 1f                    % 'f' (1.0f)
-0.000061 (0x0.1p-10)  % 'f' (the exact value is inside of parantheses)
+0.000061 (0x0.1p-10)  % 'f' (the exact value is inside of parentheses)
 -------------
 * ANSII strings and characters are also used like in C99, which includes
 escape sequences. Strings can also be concatenated by appending a backslash
@@ -430,7 +430,7 @@ after the first string's ending quote.
 ----------
 MIDI [0xff 0xff 0xff 0xff]
 ----------
-* Blobs are being printed as an integer "n" folled by "n" hex numbers:
+* Blobs are being printed as an integer "n" followed by "n" hex numbers:
 ----------
 [6 0x72 0x74 0x6f 0x73 0x63 0x00]
 [0]
@@ -514,7 +514,7 @@ Default Values
 ~~~~~~~~~~~~~~
 
 Default values usually describe what an app can answer best if it currently has
-no valid data, or if it is in an initial or resetted state. The datatypes and
+no valid data, or if it is in an initial or reset state. The datatypes and
 the values which the ports reply as such a default response should be passed to
 the rDefault macro family in the <<Pretty-printing Messages, "pretty format">>.
 

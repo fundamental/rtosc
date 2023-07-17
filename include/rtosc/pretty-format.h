@@ -154,7 +154,7 @@ int rtosc_count_printed_arg_vals_of_msg(const char* msg);
  *   almost all cases (except arrays), n being 1 is sufficient.
  * @param buffer_for_strings A buffer with enough space for scanned
  *   strings and blobs
- * @param bufsize Size of @p buffer_for_strings , will be shrinked to the
+ * @param bufsize Size of @p buffer_for_strings , will be shrunk to the
  *   bufferbytes left after the scan
  * @param args_before Number of arguments scanned before this one
  * @param follow_ellipsis Whether an argument followed by an ellipsis is

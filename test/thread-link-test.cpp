@@ -25,7 +25,7 @@ void test_contiguous_write()
     // does not corrupt the "message under test"
     thread_link.write(portname, "i", 42);
 
-    // 10 rounds are enough to have 1 discontigous write
+    // 10 rounds are enough to have 1 discontiguous write
     for (int round = 0; round < 10; ++round)
     {
         // write 17 bytes + 3 bytes padding + 4 bytes argstr + 4 bytes args = 28 bytes

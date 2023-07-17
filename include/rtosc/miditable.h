@@ -160,7 +160,7 @@ class MidiMapperRT
         void addWatch(void);
         void remWatch(void);
 
-        //Depricated
+        //Deprecated
         Port addWatchPort(void);
         Port removeWatchPort(void);
         Port bindPort(void);

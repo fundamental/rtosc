@@ -3,7 +3,7 @@
 
 char buffer[1024];
 
-//verify that empty strings can be retreived
+//verify that empty strings can be retrieved
 int main()
 {
     size_t length = rtosc_message(buffer, 1024, "/path", "sss", "", "", "");

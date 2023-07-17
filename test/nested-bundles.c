@@ -80,11 +80,11 @@ int main()
     assert_int_eq(3, rtosc_bundle_elements(buffer_d, len),
             "Verify Bundle 2's Subelements", __LINE__);
     assert_str_eq("bundle", rtosc_argument(rtosc_bundle_fetch(rtosc_bundle_fetch(buffer_d, 1), 1), 0).s,
-            "Verify Nested Message's Integrety", __LINE__);
+            "Verify Nested Message's Integrity", __LINE__);
 
     //Verify the failure behavior when a bad length is provided
     assert_int_eq(2, rtosc_bundle_elements(buffer_d, len-1),
-            "Verify Aparent Bundles With Truncated Length", __LINE__);
+            "Verify Apparent Bundles With Truncated Length", __LINE__);
     assert_int_eq(0, rtosc_message_length(buffer_d, len-1),
             "Verify Bad Message Is Detected With Truncation", __LINE__);
 

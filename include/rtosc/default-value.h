@@ -73,7 +73,7 @@ const char* get_default_value(const char* port_name, const struct Ports& ports,
  * @param res The output parameter for the argument values.
  * @param strbuf String buffer for storing pretty printed strings and blobs.
  * @param strbufsize Size of @p strbuf
- * @return The actual number of aruments written to @p res (can be smaller
+ * @return The actual number of arguments written to @p res (can be smaller
  *         than @p n) or -1 if there is no valid default annotation
  */
 int get_default_value(const char* port_name, const char *port_args,

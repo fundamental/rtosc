@@ -1,5 +1,5 @@
 #Very non-portable workaround to detect if the current cmake process is
-#outputing to a valid looking terminal (on LINUX only)
+#outputting to a valid looking terminal (on LINUX only)
 if(EXISTS /proc/self/fd/1)
     get_filename_component(STDOUT /proc/self/fd/1 REALPATH)
 else()

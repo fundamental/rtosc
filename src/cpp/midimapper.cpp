@@ -586,7 +586,7 @@ const rtosc::Ports MidiMapperRT::ports = {
                 midi.storage = nstorage;}}
 };
 
-//Depricated
+//Deprecated
 Port MidiMapperRT::addWatchPort(void) {
     return Port{"midi-add-watch","",0, [this](msg_t, RtData&) {
         this->addWatch();

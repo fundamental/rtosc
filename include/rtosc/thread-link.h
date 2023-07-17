@@ -34,7 +34,7 @@ namespace rtosc {
 typedef const char *msg_t;
 
 /**
- * ThreadLink - A simple wrapper around jack's ringbuffers desinged to make
+ * ThreadLink - A simple wrapper around jack's ringbuffers designed to make
  * sending messages via rt-osc trivial.
  * This class provides the basics of reading and writing events via fixed sized
  * buffers, which can be specified at compile time.

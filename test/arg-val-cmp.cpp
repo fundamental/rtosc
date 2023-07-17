@@ -375,7 +375,7 @@ void multiple_args()
     l[2].val.s = "1";
     r[2].val.s = "0"; //different values
 
-    cmp_gt(l, r, 3, 3, NULL, "multiple args 1", "mutliple args 2", __LINE__);
+    cmp_gt(l, r, 3, 3, NULL, "multiple args 1", "multiple args 2", __LINE__);
 
     l[0].type = r[0].type = 't';
     l[0].val.t = r[0].val.t = 1;

@@ -37,7 +37,7 @@ struct Automation
     //relative or absolute
     bool relative;
 
-    //Cached infomation
+    //Cached information
     float       param_base_value;
     char        param_path[128];
     char        param_type;

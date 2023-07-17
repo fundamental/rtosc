@@ -35,7 +35,7 @@ int main()
             "Build A Simple With-Allocation Message", __LINE__);
 
     printf("#Suite 3: misc regression tests\n");
-    //Verify that a string argument can be retreived
+    //Verify that a string argument can be retrieved
     rtosc_message(buffer, 256, "/register", "iis", 2, 13, "/amp-env/av");
     assert_str_eq("/amp-env/av",rtosc_argument(buffer,2).s,
             "Verify Basic String Can Be Read", __LINE__);
@@ -59,7 +59,7 @@ int main()
     float f = 13523.34;
     sz = rtosc_message(buffer, 32, "oscil/freq", "f", f);
     assert_true(sz != 0, "Build Simple Float Message", __LINE__);
-    assert_flt_eq(f, rtosc_argument(buffer,0).f, "Check Float Retreival", __LINE__);
+    assert_flt_eq(f, rtosc_argument(buffer,0).f, "Check Float Retrieval", __LINE__);
 
 
     //Simple Char Ret
@@ -72,11 +72,11 @@ int main()
     assert_int_eq(0xef, rtosc_argument(buffer, 3).i,
             "Check Last Char Argument", __LINE__);
 
-    //Verify argument retreval for short messages
+    //Verify argument retrieval for short messages
     sz = rtosc_message(buffer, 256, "/b", "c", 7);
     assert_int_eq(12, sz, "Build Min-Length Allocated Arg Message", __LINE__);
     assert_int_eq(7, rtosc_argument(buffer+1, 0).i,
-            "Verify Arg Retreival", __LINE__);
+            "Verify Arg Retrieval", __LINE__);
 
     //Work on a recently found bug
     printf("#Check packed blobs\n");
