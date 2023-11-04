@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Johannes Lorenz
+ * Copyright (c) 2017-2024 Johannes Lorenz
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,7 +26,7 @@
  * @file port-checker.h
  * Header providing the port_checker class
  *
- * @test port-checker.c
+ * @test port-checker-tester.cpp
  */
 
 #include <stdexcept>

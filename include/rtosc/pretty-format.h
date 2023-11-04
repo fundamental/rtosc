@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Johannes Lorenz
+ * Copyright (c) 2017-2024 Johannes Lorenz
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,7 +26,7 @@
  * @file pretty-format.h
  * Header for pretty printer and scanner
  *
- * @test pretty-format.c
+ * @test pretty-format.cpp
  */
 
 #ifndef RTOSC_PRETTY_FORMAT
