@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Johannes Lorenz
+ * Copyright (c) 2017-2023 Johannes Lorenz
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -64,7 +64,7 @@ void bundle_foreach(const struct Port& p, const char* name, char* old_end,
     for(unsigned i=0; i<max; ++i)
     {
         const char* name2_2 = name;
-        pos2 = pos + sprintf(pos,"%d",i);
+        pos2 = pos + snprintf(pos,16,"%d",i);  // TODO: check length is >= 16
 
         // append everything behind the '#' (for cases like a#N/b)
         while(*name2_2 && *name2_2 != ':')
@@ -77,7 +77,7 @@ void bundle_foreach(const struct Port& p, const char* name, char* old_end,
     {
         const char* name2_2 = name;
         if(ranges)
-            pos2 += sprintf(pos,"[0,%d]",max-1);
+            pos2 += snprintf(pos,16,"[0,%d]",max-1);  // TODO: check length is >= 16
 
         // append everything behind the '#' (for cases like a#N/b)
         while(*name2_2 && *name2_2 != ':')
