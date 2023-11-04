@@ -111,7 +111,11 @@ uint64_t rtosc_float2secfracs(float secfracsf)
         int scanned = sscanf(secfracs_as_hex + scanpos,
                              "%"PRIx64"p-%i" /* expands to like "%lxp-%i" */,
                              &secfracs, &exp);
+#ifdef NDEBUG
+        (void)scanned;
+#else
         assert(scanned == 2);
+#endif
     }
     const char* p = strchr(secfracs_as_hex, 'p');
     assert(p);
