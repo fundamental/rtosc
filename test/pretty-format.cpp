@@ -1,3 +1,27 @@
+/*
+ * Copyright (c) 2022-2024 Johannes Lorenz
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
 #include <assert.h>
 #include <rtosc/rtosc.h>
 #include <rtosc/arg-ext.h>
@@ -5,6 +29,7 @@
 #include "common.h"
 
 rtosc_arg_val_t scanned[32];
+#define BUF_LEN 256
 
 /**
  * @brief check_alt like check, but specify an alternative expectation
@@ -19,10 +44,10 @@ void check_alt(const char* arg_val_str, const rtosc_print_options* opt,
                const char* tc_base, int line,
                const char* _exp_print)
 {
-    int tc_len = 256;
-    char tc_full[tc_len]; // descr. for full testcase name
-    int strbuflen = 256;
-    char strbuf[strbuflen];
+    const int tc_len = BUF_LEN;
+    char tc_full[BUF_LEN]; // descr. for full testcase name
+    int strbuflen = BUF_LEN;
+    char strbuf[BUF_LEN];
     memset(strbuf, 0x7f, strbuflen); /* init with rubbish */
 
     int num = rtosc_count_printed_arg_vals(arg_val_str);
@@ -40,7 +65,7 @@ void check_alt(const char* arg_val_str, const rtosc_print_options* opt,
     assert_int_eq(strlen(arg_val_str), rd, tc_full, line);
 
     size_t len = 128;
-    char printed[len];
+    char* printed = new char[len];
     memset(printed, 0x7f, len); /* init with rubbish */
     size_t written = rtosc_print_arg_vals(scanned, num, printed, len, opt, 0);
 
@@ -50,6 +75,7 @@ void check_alt(const char* arg_val_str, const rtosc_print_options* opt,
     strncat(tc_full, "\" (value = value before scan)",
             tc_len - strlen(tc_full));
     assert_str_eq(exp_print, printed, tc_full, line);
+    delete[] printed;
 
     strcpy(tc_full, "print \"");
     strncat(tc_full, tc_base, tc_len-8);
@@ -451,14 +477,9 @@ void scan_ranges()
 
 void fail_at_arg(const char* arg_val_str, int exp_fail, int line)
 {
-    int tc_len = 256;
-    char tc_full[tc_len]; // descr. for full testcase name
-
+    char tc_full[BUF_LEN];
     int num = rtosc_count_printed_arg_vals(arg_val_str);
-
-    strcpy(tc_full, "find 1st invalid arg in \"");
-    strncat(tc_full, arg_val_str, tc_len-25);
-    strncat(tc_full, "\"", tc_len);
+    snprintf(tc_full, BUF_LEN, "find 1st invalid arg in \"%s\"", arg_val_str);
     assert_int_eq(exp_fail, -num, tc_full, line);
 }
 
@@ -470,17 +491,17 @@ void messages()
                            "with a slash", __LINE__);
 
     int strbuflen = 256;
-    char strbuf[strbuflen];
+    char* strbuf = new char[strbuflen];
     memset(strbuf, 0x7f, strbuflen); /* init with rubbish */
     int msgbuflen = 256;
-    char msgbuf[msgbuflen];
+    char* msgbuf = new char[msgbuflen];
     memset(msgbuf, 0x7f, msgbuflen); /* init with rubbish */
     const char* input = "%this is a savefile\n"
                         "/noteOn 0 0 0 % a noteOn message";
 
     num = rtosc_count_printed_arg_vals_of_msg(input);
     assert_int_eq(3, num, "read a /noteOn message", __LINE__);
-    rtosc_arg_val_t scanned[num];
+    rtosc_arg_val_t scanned[3];
     size_t rd = rtosc_scan_message(input, msgbuf, msgbuflen,
                                    scanned, num,
                                    strbuf, strbuflen);
@@ -489,7 +510,7 @@ void messages()
     assert_str_eq("/noteOn", msgbuf, "scan address correctly", __LINE__);
 
     size_t len = 128;
-    char printed[len];
+    char* printed = new char[len];
     memset(printed, 0x7f, len); /* init with rubbish */
     rtosc_print_options shortline = ((rtosc_print_options) { true, 3, " ", 7,
                                                              true });
@@ -501,6 +522,7 @@ void messages()
     assert_int_eq(strlen(exp), written,
                   "print a message and return written number of bytes",
                   __LINE__);
+    delete[] printed;
 
     // scan message that has no parameters
     // => a following argument is not considered as an argument of
@@ -509,6 +531,8 @@ void messages()
                             "/second_param 123", msgbuf, msgbuflen,
                             scanned, 0, strbuf, strbuflen);
     assert_int_eq(13, rd, "scan message without arguments", __LINE__);
+    delete[] msgbuf;
+    delete[] strbuf;
 }
 
 void scan_invalid()
