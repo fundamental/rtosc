@@ -225,8 +225,9 @@ rtosc_arg_val_t* rtosc_arg_val_range_arg(const rtosc_arg_val_t *range_arg,
                                          int ith, rtosc_arg_val_t* result)
 {
     rtosc_arg_val_t n_as_arg_val, mult;
-    rtosc_arg_val_from_int(&n_as_arg_val, range_arg[1].type, ith);
-    rtosc_arg_val_mult(&n_as_arg_val, range_arg+1, &mult);
-    rtosc_arg_val_add(range_arg+2, &mult, result);
-    return result;
+    int ok = 1;
+    if(ok) ok = rtosc_arg_val_from_int(&n_as_arg_val, range_arg[1].type, ith);
+    if(ok) ok = rtosc_arg_val_mult(&n_as_arg_val, range_arg+1, &mult);
+    if(ok) ok = rtosc_arg_val_add(range_arg+2, &mult, result);
+    return ok ? result : NULL;
 }
