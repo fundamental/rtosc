@@ -9,8 +9,8 @@ struct Dummy {
 
 #define rObject Dummy
 rtosc::Ports p = {
-    rParam(foo),
-    rParam(bar),
+    rParam(foo, "foo"),
+    rParam(bar, "bar"),
 };
 
 
