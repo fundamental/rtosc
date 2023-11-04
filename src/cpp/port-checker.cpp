@@ -8,6 +8,7 @@
 #include <iostream>
 #include <iomanip>
 
+#include "util.h"
 #include <rtosc/ports.h>
 #include <rtosc/pretty-format.h>
 #include <rtosc/arg-ext.h>
@@ -306,7 +307,7 @@ void port_checker::check_port(const char* loc, const char* portname,
                 else
                 {
                     char pretty_strbuf[8096];
-                    rtosc_arg_val_t avs[nargs];
+                    STACKALLOC(rtosc_arg_val_t, avs, nargs);
                     rtosc_scan_arg_vals(pretty.c_str(), avs, nargs,
                                         pretty_strbuf, sizeof(pretty_strbuf));
 
