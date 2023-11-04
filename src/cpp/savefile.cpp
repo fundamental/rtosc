@@ -30,7 +30,7 @@ int rtosc_arg_val_size(char type)
     {
         case 'i': return 4;
         case 'f': return 4;
-        default: assert(false); // yet unsupported
+        default: assert(false); return 4; // yet unsupported
     }
 }
 
@@ -845,7 +845,7 @@ int load_from_file(const char* file_content,
     int n = 0;
 
     sscanf(file_content,
-           "%% RT OSC v%u.%u.%u savefile%n ", &vma, &vmi, &vre, &n);
+           " %% RT OSC v%u.%u.%u savefile%n ", &vma, &vmi, &vre, &n);
     if(n <= 0 || vma > 255 || vmi > 255 || vre > 255)
         return -bytes_read-1;
     if(dispatcher)
@@ -859,7 +859,7 @@ int load_from_file(const char* file_content,
     n = 0;
 
     sscanf(file_content,
-           "%% %127s v%u.%u.%u%n ", appbuf, &vma, &vmi, &vre, &n);
+           " %% %127s v%u.%u.%u%n ", appbuf, &vma, &vmi, &vre, &n);
     if(n <= 0 || strcmp(appbuf, appname) || vma > 255 || vmi > 255 || vre > 255)
         return -bytes_read-1;
 
