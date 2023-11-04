@@ -117,11 +117,14 @@ class Capture : public RtData
 
     void chain(const char *path, const char *args, ...) override
     {
+        (void)path;
+        (void)args;
         nargs = 0;
     }
 
     void chain(const char *msg) override
     {
+        (void)msg;
         nargs = 0;
     }
 
