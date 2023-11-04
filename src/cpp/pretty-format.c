@@ -45,6 +45,48 @@ static int asnprintf(char* str, size_t size, const char* format, ...)
     return written;
 }
 
+// please keep this function in sync with the same function in src/rtosc-time.c
+static size_t remove_trailing_zeroes(char* str)
+{
+    // [-]0xh.hhhh00000000p±d -> [-]0xh.hhhhp±d
+    // [-]0xh.00000000p±d -> [-]0xh±d
+    if (*str == '-') { ++str; }
+    assert(*str == '0'); { ++str; }
+    assert(*str == 'x'); { ++str; }
+    assert(isxdigit(*str)); { ++str; }
+    size_t removed = 0;
+    if(*str == '.')
+    {
+        char* point = str;
+        { ++str; }
+        char* last_non_0 = NULL;
+        for(; *str && isxdigit(*str); ++str)
+        {
+            if(*str != '0')
+                last_non_0 = str;
+        }
+        assert(*str == 'p');
+        if(last_non_0)
+        {
+            if(last_non_0 + 1 != str) {
+                printf("A: %s %s\n",str,(last_non_0 + 1));
+                removed = str - (last_non_0 + 1);
+                memmove(last_non_0 + 1, str, strlen(str)+1);
+            }
+        }
+        else
+        {
+            printf("B: %s %s\n",str,point);
+            memmove(point, str, strlen(str)+1);
+            removed = str - point;
+        }
+    }
+    else {
+        assert(*str == 'p');
+    }
+    return removed;
+}
+
 //! return the offset of the next arg from cur, arrays seen as one arg and
 //! delta args (from ranges) seen as @p additional_for_delta args
 static int next_arg_offset(const rtosc_arg_val_t* cur)
@@ -445,9 +487,12 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                     memmove(buffer + lastwrt, sep, strlen(sep)+1);
                     wrt -= (sep - (buffer + lastwrt));
 
-                    if(opt->lossless)
+                    if(opt->lossless) {
+                        char* last_pos = buffer + wrt;
                         wrt += asnprintf(buffer + wrt, bs - wrt,
                                          " (...+%as)", flt);
+                        wrt -= remove_trailing_zeroes(last_pos+6);
+                    }
                 } // if secfracs
             } // else
             break;
@@ -473,8 +518,12 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                 asnprintf(fmtstr, 6, "%%#.%df", prec);
                 wrt = asnprintf(buffer, bs, fmtstr, val->f);
                 if(opt->lossless)
+                {
+                    char* last_pos = buffer + wrt;
                     wrt += asnprintf(buffer + wrt, bs - wrt,
                                      " (%a)", val->f);
+                    wrt -= remove_trailing_zeroes(last_pos+2);
+                }
             }
             else
             {
