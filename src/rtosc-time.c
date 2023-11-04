@@ -1,5 +1,30 @@
+/*
+ * Copyright (c) 2017-2024 Johannes Lorenz
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
 #include <inttypes.h>
 #include <assert.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -31,17 +56,59 @@ rtosc_arg_val_t *rtosc_arg_val_from_params(rtosc_arg_val_t *dest,
     return rtosc_arg_val_from_time_t(dest, time, secfracs);
 }
 
+// please keep this function in sync with the same function in src/cpp/pretty-format.c
+static size_t remove_trailing_zeroes(char* str)
+{
+    // [-]0xh.hhhh00000000p±d -> [-]0xh.hhhhp±d
+    // [-]0xh.00000000p±d -> [-]0xh±d
+    if (*str == '-') { ++str; }
+    assert(*str == '0'); { ++str; }
+    assert(*str == 'x'); { ++str; }
+    assert(isxdigit(*str)); { ++str; }
+    size_t removed = 0;
+    if(*str == '.')
+    {
+        char* point = str;
+        { ++str; }
+        char* last_non_0 = NULL;
+        for(; *str && isxdigit(*str); ++str)
+        {
+            if(*str != '0')
+                last_non_0 = str;
+        }
+        assert(*str == 'p');
+        if(last_non_0)
+        {
+            if(last_non_0 + 1 != str) {
+                removed = str - (last_non_0 + 1);
+                memmove(last_non_0 + 1, str, strlen(str)+1);
+            }
+        }
+        else
+        {
+            memmove(point, str, strlen(str)+1);
+            removed = str - point;
+        }
+    }
+    else {
+        assert(*str == 'p');
+    }
+    return removed;
+}
+
 uint64_t rtosc_float2secfracs(float secfracsf)
 {
-    char secfracs_as_hex[16];
+    char secfracs_as_hex[32];
     // print float in hex representation (lossless)
-    int written = snprintf(secfracs_as_hex, 16, "%a", secfracsf);
+    int written = snprintf(secfracs_as_hex, 32, "%a", secfracsf);
     // examples:
     // 0.85 => 0x1.b33334p-1
     // 0.51 => 0x1.051eb8p-1
     // 0.5  => 0x8p-4
+    remove_trailing_zeroes(secfracs_as_hex);
+
     assert(written >= 0); // no error
-    assert(written < 16); // size suffices
+    assert(written < (int)sizeof(secfracs_as_hex)); // size suffices
     (void) written;
     int scanpos;
     if(secfracs_as_hex[3]=='.') // 0x?.???
