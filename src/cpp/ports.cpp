@@ -1084,15 +1084,22 @@ static void walk_ports_recurse0(const Port& p, char* name_buffer,
                                 bool expand_bundles, const char* read_head,
                                 bool ranges)
 {
+    ssize_t write_space = buffer_size - (ssize_t)(write_head - name_buffer);
+#ifdef NDEBUG
+    (void)write_space;
+#endif
     const char* hash_ptr = strchr(read_head + 1,'#');
-    std::size_t to_copy = hash_ptr ? hash_ptr - read_head : strlen(read_head);
+    ssize_t to_copy = hash_ptr ? hash_ptr - read_head : strlen(read_head);
 
+    // Check write space is sufficient
+    // The formula is valid for the whole function
+    assert(write_space >= to_copy + 32);
     //Append the path, until possible '#'
-    //TODO: buffer size checking
     //yes, there are subports with ':', e.g. ".../::i"
     while(to_copy-->0 && *read_head != ':')
     {
         *write_head++ = *read_head++;
+        --write_space;
     }
 
     if(hash_ptr)
@@ -1106,7 +1113,8 @@ static void walk_ports_recurse0(const Port& p, char* name_buffer,
         if(*read_head == '/') { ++read_head; }
         if(ranges)
         {
-            int written = sprintf(write_head,"[0,%d]/", max-1);
+            assert(write_space > 32);
+            int written = snprintf(write_head,32,"[0,%d]/", max-1);
             //Recurse
             walk_ports_recurse0(p, name_buffer, buffer_size, base, data, walker,
                                 runtime, old_end, write_head + written,
@@ -1114,7 +1122,8 @@ static void walk_ports_recurse0(const Port& p, char* name_buffer,
         }
         else for(unsigned i=0; i<max; ++i)
         {
-            int written = sprintf(write_head,"%d/",i);
+            assert(write_space > 32);
+            int written = snprintf(write_head,32,"%d/",i);
             //Recurse
             walk_ports_recurse0(p, name_buffer, buffer_size, base, data, walker,
                                 runtime, old_end, write_head + written,
@@ -1166,7 +1175,7 @@ void rtosc::walk_ports(const Ports  *base,
 
         } else {
             if(strchr(p.name,'#')) {
-                bundle_foreach(p, p.name, old_end, name_buffer, *base,
+                bundle_foreach(p, p.name, old_end, name_buffer, buffer_size, *base,
                                data, runtime, walker, expand_bundles, true, ranges);
             } else {
                 //Append the path
