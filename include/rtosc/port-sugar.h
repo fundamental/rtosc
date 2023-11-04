@@ -48,9 +48,10 @@ struct rtosc_hack_decltype_t
 #define STRINGIFY2(a) #a
 #define STRINGIFY(a) STRINGIFY2(a)
 
-//Helper for documenting varargs
+//Expand works around MSVC specific bugs
+#define EXPAND( x ) x
 #define IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,N, ...) N
-#define LAST_IMP(...) IMPL(__VA_ARGS__,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0)
+#define LAST_IMP(...) EXPAND(IMPL(__VA_ARGS__,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0))
 #define DOC_IMP24(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x) \
                 a b c d e f g h i j k l m n o p q r s t u v w rDoc(x)
 #define DOC_IMP23(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w) \
@@ -88,7 +89,7 @@ struct rtosc_hack_decltype_t
 #define DOC_IMP2(a,b)                      a rDoc(b)
 #define DOC_IMP1(a)                        rDoc(a)
 #define DOC_IMP0() YOU_MUST_DOCUMENT_YOUR_PORTS
-#define DOC_IMP(count, ...) DOC_IMP ##count(__VA_ARGS__)
+#define DOC_IMP(count, ...) EXPAND(DOC_IMP ##count(__VA_ARGS__))
 #define DOC_I(count, ...) DOC_IMP(count,__VA_ARGS__)
 #define DOC(...) DOC_I(LAST_IMP(__VA_ARGS__), __VA_ARGS__)
 
@@ -132,24 +133,24 @@ struct rtosc_hack_decltype_t
 //arguments: counting offset, macro, macro args
 #define MAC_EACH_0(o,m,d,x, ...) INSUFFICIENT_ARGUMENTS_PROVIDED_TO_MAC_EACH
 #define MAC_EACH_1(o,m,d,x, ...) m(o,d,x)
-#define MAC_EACH_2(o,m,d,x, ...) m(o,d,x) MAC_EACH_1(rINC(o),m,d, __VA_ARGS__)
-#define MAC_EACH_3(o,m,d,x, ...) m(o,d,x) MAC_EACH_2(rINC(o),m,d, __VA_ARGS__)
-#define MAC_EACH_4(o,m,d,x, ...) m(o,d,x) MAC_EACH_3(rINC(o),m,d, __VA_ARGS__)
-#define MAC_EACH_5(o,m,d,x, ...) m(o,d,x) MAC_EACH_4(rINC(o),m,d, __VA_ARGS__)
-#define MAC_EACH_6(o,m,d,x, ...) m(o,d,x) MAC_EACH_5(rINC(o),m,d, __VA_ARGS__)
-#define MAC_EACH_7(o,m,d,x, ...) m(o,d,x) MAC_EACH_6(rINC(o),m,d, __VA_ARGS__)
-#define MAC_EACH_8(o,m,d,x, ...) m(o,d,x) MAC_EACH_7(rINC(o),m,d, __VA_ARGS__)
-#define MAC_EACH_9(o,m,d,x, ...) m(o,d,x) MAC_EACH_8(rINC(o),m,d, __VA_ARGS__)
-#define MAC_EACH_10(o,m,d,x, ...) m(o,d,x) MAC_EACH_9(rINC(o),m,d, __VA_ARGS__)
-#define MAC_EACH_11(o,m,d,x, ...) m(o,d,x) MAC_EACH_10(rINC(o),m,d, __VA_ARGS__)
-#define MAC_EACH_12(o,m,d,x, ...) m(o,d,x) MAC_EACH_11(rINC(o),m,d, __VA_ARGS__)
-#define MAC_EACH_13(o,m,d,x, ...) m(o,d,x) MAC_EACH_12(rINC(o),m,d, __VA_ARGS__)
-#define MAC_EACH_14(o,m,d,x, ...) m(o,d,x) MAC_EACH_13(rINC(o),m,d, __VA_ARGS__)
-#define MAC_EACH_15(o,m,d,x, ...) m(o,d,x) MAC_EACH_14(rINC(o),m,d, __VA_ARGS__)
-#define MAC_EACH_16(o,m,d,x, ...) m(o,d,x) MAC_EACH_15(rINC(o),m,d, __VA_ARGS__)
+#define MAC_EACH_2(o,m,d,x, ...) m(o,d,x) EXPAND(MAC_EACH_1(rINC(o),m,d, __VA_ARGS__))
+#define MAC_EACH_3(o,m,d,x, ...) m(o,d,x) EXPAND(MAC_EACH_2(rINC(o),m,d, __VA_ARGS__))
+#define MAC_EACH_4(o,m,d,x, ...) m(o,d,x) EXPAND(MAC_EACH_3(rINC(o),m,d, __VA_ARGS__))
+#define MAC_EACH_5(o,m,d,x, ...) m(o,d,x) EXPAND(MAC_EACH_4(rINC(o),m,d, __VA_ARGS__))
+#define MAC_EACH_6(o,m,d,x, ...) m(o,d,x) EXPAND(MAC_EACH_5(rINC(o),m,d, __VA_ARGS__))
+#define MAC_EACH_7(o,m,d,x, ...) m(o,d,x) EXPAND(MAC_EACH_6(rINC(o),m,d, __VA_ARGS__))
+#define MAC_EACH_8(o,m,d,x, ...) m(o,d,x) EXPAND(MAC_EACH_7(rINC(o),m,d, __VA_ARGS__))
+#define MAC_EACH_9(o,m,d,x, ...) m(o,d,x) EXPAND(MAC_EACH_8(rINC(o),m,d, __VA_ARGS__))
+#define MAC_EACH_10(o,m,d,x, ...) m(o,d,x) EXPAND(MAC_EACH_9(rINC(o),m,d, __VA_ARGS__))
+#define MAC_EACH_11(o,m,d,x, ...) m(o,d,x) EXPAND(MAC_EACH_10(rINC(o),m,d, __VA_ARGS__))
+#define MAC_EACH_12(o,m,d,x, ...) m(o,d,x) EXPAND(MAC_EACH_11(rINC(o),m,d, __VA_ARGS__))
+#define MAC_EACH_13(o,m,d,x, ...) m(o,d,x) EXPAND(MAC_EACH_12(rINC(o),m,d, __VA_ARGS__))
+#define MAC_EACH_14(o,m,d,x, ...) m(o,d,x) EXPAND(MAC_EACH_13(rINC(o),m,d, __VA_ARGS__))
+#define MAC_EACH_15(o,m,d,x, ...) m(o,d,x) EXPAND(MAC_EACH_14(rINC(o),m,d, __VA_ARGS__))
+#define MAC_EACH_16(o,m,d,x, ...) m(o,d,x) EXPAND(MAC_EACH_15(rINC(o),m,d, __VA_ARGS__))
 
 #define MAC_EACH_IMP(off, mac, data, count, ...) \
-    MAC_EACH_ ##count(off, mac, data, __VA_ARGS__)
+    EXPAND(MAC_EACH_ ##count(off, mac, data, __VA_ARGS__))
 #define MAC_EACH_I(off, mac, data, count, ...) \
     MAC_EACH_IMP(off, mac, data, count, __VA_ARGS__)
 #define MAC_EACH_OFF(off, mac, data, ...) \
@@ -242,7 +243,7 @@ struct rtosc_hack_decltype_t
 #define OPTIONS_IMP1(a) \
     rOpt(0,a)
 #define OPTIONS_IMP0() YOU_MUST_PROVIDE_OPTIONS
-#define OPTIONS_IMP(count, ...) OPTIONS_IMP ##count(__VA_ARGS__)
+#define OPTIONS_IMP(count, ...) EXPAND(OPTIONS_IMP ##count(__VA_ARGS__))
 #define OPTIONS_I(count, ...) OPTIONS_IMP(count, __VA_ARGS__)
 #define OPTIONS(...) OPTIONS_I(LAST_IMP(__VA_ARGS__), __VA_ARGS__)
 
