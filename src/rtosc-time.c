@@ -1,5 +1,6 @@
 #include <inttypes.h>
 #include <assert.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -31,17 +32,61 @@ rtosc_arg_val_t *rtosc_arg_val_from_params(rtosc_arg_val_t *dest,
     return rtosc_arg_val_from_time_t(dest, time, secfracs);
 }
 
+// please keep this function in sync with the same function in src/cpp/pretty-format.c
+static size_t remove_trailing_zeroes(char* str)
+{
+    // [-]0xh.hhhh00000000p±d -> [-]0xh.hhhhp±d
+    // [-]0xh.00000000p±d -> [-]0xh±d
+    if (*str == '-') { ++str; }
+    assert(*str == '0'); { ++str; }
+    assert(*str == 'x'); { ++str; }
+    assert(isxdigit(*str)); { ++str; }
+    size_t removed = 0;
+    if(*str == '.')
+    {
+        char* point = str;
+        { ++str; }
+        char* last_non_0 = NULL;
+        for(; *str && isxdigit(*str); ++str)
+        {
+            if(*str != '0')
+                last_non_0 = str;
+        }
+        assert(*str == 'p');
+        if(last_non_0)
+        {
+            if(last_non_0 + 1 != str) {
+                printf("A: %s %s\n",str,(last_non_0 + 1));
+                removed = str - (last_non_0 + 1);
+                memmove(last_non_0 + 1, str, strlen(str)+1);
+            }
+        }
+        else
+        {
+            printf("B: %s %s\n",str,point);
+            memmove(point, str, strlen(str)+1);
+            removed = str - point;
+        }
+    }
+    else {
+        assert(*str == 'p');
+    }
+    return removed;
+}
+
 uint64_t rtosc_float2secfracs(float secfracsf)
 {
-    char secfracs_as_hex[16];
+    char secfracs_as_hex[32];
     // print float in hex representation (lossless)
-    int written = snprintf(secfracs_as_hex, 16, "%a", secfracsf);
+    int written = snprintf(secfracs_as_hex, 32, "%a", secfracsf);
     // examples:
     // 0.85 => 0x1.b33334p-1
     // 0.51 => 0x1.051eb8p-1
     // 0.5  => 0x8p-4
+    remove_trailing_zeroes(secfracs_as_hex);
+
     assert(written >= 0); // no error
-    assert(written < 16); // size suffices
+    assert(written < sizeof(secfracs_as_hex)); // size suffices
     (void) written;
     int scanpos;
     if(secfracs_as_hex[3]=='.') // 0x?.???
