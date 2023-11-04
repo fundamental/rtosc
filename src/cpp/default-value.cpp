@@ -131,8 +131,12 @@ int get_default_value(const char* port_name, const char* port_args,
     if(pretty)
     {
         nargs = rtosc_count_printed_arg_vals(pretty);
+#ifdef NDEBUG
+        (void)n;
+#else
         assert(nargs > 0); // parse error => error in the metadata?
         assert((size_t)nargs < n);
+#endif
 
         rtosc_scan_arg_vals(pretty, res, nargs, strbuf, strbufsize);
 
