@@ -97,6 +97,22 @@ void check(const char* arg_val_str, const rtosc_print_options* opt,
     check_alt(arg_val_str, opt, tc_base, line, NULL);
 }
 
+rtosc_print_options make_print_options(
+    bool lossless, // will add hex notation behind floats
+    int floating_point_precision,
+    const char* sep, // separator for multiple argument values
+    int linelength,
+    int compress_ranges)
+{
+    rtosc_print_options res;
+    res.lossless = lossless; //!< will add hex notation behind floats
+    res.floating_point_precision = floating_point_precision;
+    res.sep = sep; //!< separator for multiple argument values
+    res.linelength = linelength;
+    res.compress_ranges = compress_ranges;
+    return res;
+}
+
 void scan_and_print_single()
 {
     /*
@@ -115,8 +131,7 @@ void scan_and_print_single()
     /*
         timestamps
     */
-    rtosc_print_options lossy = ((rtosc_print_options) { false, 3, " ", 80,
-                                                         true });
+    auto lossy = make_print_options(false, 3, " ", 80, true);
     check_alt("1970-01-02 00:00:00", NULL, "one day after the epoch", __LINE__,
               "1970-01-02");
     check("2016-11-16 19:44:06", NULL, "a timestamp", __LINE__);
@@ -139,8 +154,7 @@ void scan_and_print_single()
         doubles
     */
     // saving this as a float will lose precision
-    rtosc_print_options prec6 = ((rtosc_print_options) { true, 6, " ", 80,
-                                                         true });
+    auto prec6 = make_print_options(true, 6, " ", 80, true);
     check_alt("1234567890.098700d", &prec6,
               "a double that would not fit into a float", __LINE__,
               "1234567890.098700d (0x1.26580b486511ap+30)");
@@ -154,8 +168,7 @@ void scan_and_print_single()
     // rtosc *must* discard the first number and read the lossless one
     check_alt("0.0f (-0x1.8p+0)", NULL, "the zero float (0.0f)", __LINE__,
               "-1.50 (-0x1.8p+0)");
-    rtosc_print_options prec0 = ((rtosc_print_options) { true, 0, " ", 80,
-                                                         true });
+    auto prec0 = make_print_options(true, 0, " ", 80, true);
     // this float may not lose its period (otherwise,
     // it would be read as an int!)
     check_alt("1.", &prec0, "a float with zero precision", __LINE__,
@@ -209,8 +222,7 @@ void scan_and_print_single()
     /*
         identifiers aka symbols
     */
-    rtosc_print_options shortline_9 = ((rtosc_print_options) { true, 3, " ", 9,
-                                                               true });
+    auto shortline_9 = make_print_options(true, 3, " ", 9, true);
     check("an_identifier_42", NULL, "a simple identifier", __LINE__);
     check("_", NULL, "the identifier \"_\"", __LINE__);
     check("truely falseeee infinite nilpferd immediatelyly nowhere MIDINOTE",
@@ -246,8 +258,7 @@ void scan_and_print_single()
     /*
         linebreaks
     */
-    rtosc_print_options shortline = ((rtosc_print_options) { true, 3, " ", 10,
-                                                             true });
+    auto shortline = make_print_options(true, 3, " ", 10, true);
     check_alt("\"0123456789012345678\"", &shortline,
               "string exceeding line length", __LINE__,
               "\"0123456\"\\\n"
@@ -279,8 +290,7 @@ void arrays()
     check("[0 1 2]", NULL, "simple integer array", __LINE__);
     check("[]", NULL, "empty array", __LINE__);
 
-    rtosc_print_options shortline = ((rtosc_print_options)
-                                     { true, 3, " ", 12, true });
+    auto shortline = make_print_options(true, 3, " ", 12, true);
     // TODO: arrays with strings print newline positions wrong
     //       write *one* generic function rtosc_insert_newlines?
     check("[\"123\" \"45\" \"\"\\\n    \"6\"]", &shortline,
@@ -299,10 +309,8 @@ void arrays()
 
 void ranges()
 {
-    rtosc_print_options uncompressed = ((rtosc_print_options) { false, 3, " ",
-                                                                10, false });
-    rtosc_print_options simplefloats = ((rtosc_print_options) { false, 2, " ",
-                                                                80, true });
+    auto uncompressed = make_print_options(false, 3, " ", 10, false);
+    auto simplefloats = make_print_options(false, 2, " ", 80, true);
 
     /*
         with delta
@@ -409,10 +417,8 @@ void scan_ranges()
     /*
         no range conversion
      */
-    rtosc_print_options uncompressed = ((rtosc_print_options) { false, 3, " ",
-                                                                80, false });
-    rtosc_print_options simplefloats = ((rtosc_print_options) { false, 2, " ",
-                                                                80, true });
+    auto uncompressed = make_print_options(false, 3, " ", 80, false);
+    auto simplefloats = make_print_options(false, 2, " ", 80, true);
     check("0 1 2 3", NULL, "too less args for range conversion", __LINE__);
     check("0.00 1.00 2.00 3.00 4.00", &simplefloats,
           "wrong type for range conversion", __LINE__);
@@ -512,8 +518,7 @@ void messages()
     size_t len = 128;
     char* printed = new char[len];
     memset(printed, 0x7f, len); /* init with rubbish */
-    rtosc_print_options shortline = ((rtosc_print_options) { true, 3, " ", 7,
-                                                             true });
+    auto shortline = make_print_options(true, 3, " ", 7, true);
     size_t written = rtosc_print_message("/noteOn", scanned, num,
                                          printed, len, &shortline, 0);
 
