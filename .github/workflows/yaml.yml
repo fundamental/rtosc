@@ -1,0 +1,13 @@
+---
+name: Build CI
+on: [push]  # yamllint disable-line rule:truthy
+jobs:
+  yamllint:
+    name: yamllint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: yamllint-this
+        run: yamllint -s .github/workflows/yaml.yml
+      - name: yamllint-ccpp
+        run: yamllint -s .github/workflows/ccpp.yml
