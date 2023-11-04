@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Johannes Lorenz
+ * Copyright (c) 2017-2023 Johannes Lorenz
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -48,8 +48,7 @@ namespace rtosc {
  */
 const char* get_default_value(const char* port_name, const struct Ports& ports,
                               void* runtime,
-                              const struct Port* port_hint = nullptr,
-                              int32_t idx = -1, int recursive = 1);
+                              const struct Port* port_hint = nullptr, int recursive = 1);
 
 /**
  * Return a port's default value, arg-val version
@@ -66,8 +65,6 @@ const char* get_default_value(const char* port_name, const struct Ports& ports,
  *        default values dependent on others, such as presets.
  * @param port_hint The port itself corresponding to portname (including
  *        the args). If not specified, will be found using @p portname .
- * @param idx If the port is an array (using the '#' notation), this specifies
- *        the index required for the default value
  * @param n Size of the output parameter @res . This size can not be known,
  *        so you should provide a large enough array.
  * @param res The output parameter for the argument values.
@@ -79,7 +76,6 @@ const char* get_default_value(const char* port_name, const struct Ports& ports,
 int get_default_value(const char* port_name, const char *port_args,
                       const struct Ports& ports,
                       void* runtime, const struct Port* port_hint,
-                      int32_t idx,
                       std::size_t n, rtosc_arg_val_t* res,
                       char *strbuf, size_t strbufsize);
 

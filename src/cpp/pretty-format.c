@@ -131,12 +131,10 @@ static int as_escaped_char(int c, int chr)
 }
 
 // internal function for rtosc_print_arg_val
-static void break_string(char** buffer, size_t bs, int wrt, int* cols_used)
+static void break_string(char** buffer, size_t bs, int* cols_used)
 {
     // unquoted, this means: "\<newline>    "
-    int tmp = asnprintf(*buffer, bs, "\"\\\n    \"");
-    wrt += tmp;
-    *buffer += tmp;
+    *buffer += asnprintf(*buffer, bs, "\"\\\n    \"");
     *cols_used = 5;
 }
 
@@ -576,7 +574,7 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
             {
                 // "3": 2 quote signs and escaping backslash
                 if(!plain && *cols_used > opt->linelength - 3)
-                    break_string(&b, bs, wrt, cols_used);
+                    break_string(&b, bs, cols_used);
                 assert(bs);
                 int as_esc = as_escaped_char(*s, false);
                 if(as_esc != -1) {
@@ -585,7 +583,7 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                     *b++ = as_esc;
                     *cols_used += 2;
                     if(!plain && as_esc == 'n')
-                        break_string(&b, bs, wrt, cols_used);
+                        break_string(&b, bs, cols_used);
                 }
                 else {
                     *b++ = *s;

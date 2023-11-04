@@ -9,7 +9,7 @@ namespace rtosc {
 
 const char* get_default_value(const char* port_name, const Ports& ports,
                               void* runtime, const Port* port_hint,
-                              int32_t idx, int recursive)
+                              int recursive)
 {
     constexpr std::size_t buffersize = 8192;
     char buffer[buffersize];
@@ -18,8 +18,6 @@ const char* get_default_value(const char* port_name, const Ports& ports,
     assert(recursive >= 0); // forbid recursing twice
 
     char default_annotation[20] = "default";
-//    if(idx > 0)
-//        snprintf(default_annotation + 7, 13, "[%" PRId32 "]", idx);
     const char* const dependent_annotation = "default depends";
     const char* return_value = nullptr;
 
@@ -99,12 +97,11 @@ const char* get_default_value(const char* port_name, const Ports& ports,
 }
 
 int get_default_value(const char* port_name, const char* port_args,
-                      const Ports& ports, void* runtime, const Port* port_hint,
-                      int32_t idx, std::size_t n, rtosc_arg_val_t* res,
+                      const Ports& ports, void* runtime, const Port* port_hint, std::size_t n, rtosc_arg_val_t* res,
                       char* strbuf, size_t strbufsize)
 {
     const char* pretty = get_default_value(port_name, ports, runtime, port_hint,
-                                           idx, 0);
+                                           0);
 
     int nargs;
     if(pretty)
