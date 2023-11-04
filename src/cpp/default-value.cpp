@@ -1,3 +1,27 @@
+/*
+ * Copyright (c) 2017-2024 Johannes Lorenz
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
 #include <cassert>
 #include <cstring>
 #include <rtosc/pretty-format.h>
@@ -9,7 +33,7 @@ namespace rtosc {
 
 const char* get_default_value(const char* port_name, const Ports& ports,
                               void* runtime, const Port* port_hint,
-                              int32_t idx, int recursive)
+                              int recursive)
 {
     constexpr std::size_t buffersize = 8192;
     char buffer[buffersize];
@@ -18,8 +42,6 @@ const char* get_default_value(const char* port_name, const Ports& ports,
     assert(recursive >= 0); // forbid recursing twice
 
     char default_annotation[20] = "default";
-//    if(idx > 0)
-//        snprintf(default_annotation + 7, 13, "[%" PRId32 "]", idx);
     const char* const dependent_annotation = "default depends";
     const char* return_value = nullptr;
 
@@ -99,12 +121,11 @@ const char* get_default_value(const char* port_name, const Ports& ports,
 }
 
 int get_default_value(const char* port_name, const char* port_args,
-                      const Ports& ports, void* runtime, const Port* port_hint,
-                      int32_t idx, std::size_t n, rtosc_arg_val_t* res,
+                      const Ports& ports, void* runtime, const Port* port_hint, std::size_t n, rtosc_arg_val_t* res,
                       char* strbuf, size_t strbufsize)
 {
     const char* pretty = get_default_value(port_name, ports, runtime, port_hint,
-                                           idx, 0);
+                                           0);
 
     int nargs;
     if(pretty)

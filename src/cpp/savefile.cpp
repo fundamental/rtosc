@@ -218,7 +218,6 @@ std::string get_changed_values(const Ports& ports, void* runtime,
                                               base,
                                               runtime,
                                               p,
-                                              -1,
                                               max_arg_vals,
                                               arg_vals_default,
                                               strbuf,
@@ -385,8 +384,7 @@ std::string get_changed_values(const Ports& ports, void* runtime,
                 rtosc_arg_val_itr_init(&ritr, arg_vals_runtime+1);
 
                 auto write_msg_adaptor = [&litr, &ritr,&rlhs,&rrhs,&write_msg](
-                    const Port* p,
-                    const char* port_buffer, const char* old_end,
+                    const Port*,const char*, const char*,
                     const Ports&, void*, void*)
                 {
                     const rtosc_arg_val_t
