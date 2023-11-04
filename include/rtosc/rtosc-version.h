@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Johannes Lorenz
+ * Copyright (c) 2017-2023 Johannes Lorenz
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -27,7 +27,7 @@
  * Definition of rtosc's version struct
  *
  * @note the implementation is in version.c.in
- * @test version.c
+ * @test version.cpp
  */
 
 #ifndef RTOSC_VERSION

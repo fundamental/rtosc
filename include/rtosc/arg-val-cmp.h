@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Johannes Lorenz
+ * Copyright (c) 2017-2023 Johannes Lorenz
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,7 +26,7 @@
  * @file arg-val-cmp.h
  * Two- and three-way comparison of argument values
  *
- * @test arg-val-cmp.c
+ * @test arg-val-cmp.cpp
  */
 
 #ifndef ARG_VAL_CMP

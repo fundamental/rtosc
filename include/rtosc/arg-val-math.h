@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Johannes Lorenz
+ * Copyright (c) 2017-2023 Johannes Lorenz
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -23,7 +23,7 @@
  */
 
 /**
- * @file arg-val-math.h
+ * @file arg-val-math.cpp
  *
  * Math functions for arg values, respecting their types.
  * All functions must support all types in "ichfdTF".
