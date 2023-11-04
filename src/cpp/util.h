@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Johannes Lorenz
+ * Copyright (c) 2017-2023 Johannes Lorenz
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,7 +26,7 @@
  * @file util.h
  * Utilities shared by rtosc functions
  *
- * @test util.c
+ * @test util.cpp
  */
 
 #ifndef UTIL_H
