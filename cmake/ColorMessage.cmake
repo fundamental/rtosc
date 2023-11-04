@@ -1,5 +1,5 @@
 #Very non-portable workaround to detect if the current cmake process is
-#outputting to a valid looking terminal (on LINUX only)
+#outputing to a valid looking terminal (on LINUX only)
 if(EXISTS /proc/self/fd/1)
     get_filename_component(STDOUT /proc/self/fd/1 REALPATH)
 else()
@@ -66,3 +66,16 @@ if(NOT DEFINED MESSAGE_REDEFINED)
     endfunction()
     set(MESSAGE_REDEFINED TRUE)
 endif()
+
+macro(package_status foundvar pkg state)#optional color
+    set (extra_macro_args ${ARGN})
+    list(LENGTH extra_macro_args num_extra_args)
+    if (${num_extra_args} GREATER 0)
+        list(GET extra_macro_args 0 color)
+    endif ()
+    if(${foundvar})
+        message(STATUS "${pkg} -- ${Green}${state}${ColorReset}")
+    else()
+        message(STATUS "${pkg} -- ${color}NOT ${state}${ColorReset}")
+    endif()
+endmacro()
