@@ -1106,7 +1106,7 @@ static void walk_ports_recurse0(const Port& p, char* name_buffer,
         if(*read_head == '/') { ++read_head; }
         if(ranges)
         {
-            int written = sprintf(write_head,"[0,%d]/", max-1);
+            int written = snprintf(write_head,32,"[0,%d]/", max-1);  // TODO: make sure 32 fits
             //Recurse
             walk_ports_recurse0(p, name_buffer, buffer_size, base, data, walker,
                                 runtime, old_end, write_head + written,
@@ -1114,7 +1114,7 @@ static void walk_ports_recurse0(const Port& p, char* name_buffer,
         }
         else for(unsigned i=0; i<max; ++i)
         {
-            int written = sprintf(write_head,"%d/",i);
+            int written = snprintf(write_head,16,"%d/",i);  // TODO: make sure 16 fits
             //Recurse
             walk_ports_recurse0(p, name_buffer, buffer_size, base, data, walker,
                                 runtime, old_end, write_head + written,
