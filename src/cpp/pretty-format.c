@@ -1,3 +1,27 @@
+/*
+ * Copyright (c) 2022-2024 Johannes Lorenz
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
 #include "util.h"
 #include <assert.h>
 #include <inttypes.h>
@@ -43,6 +67,46 @@ static int asnprintf(char* str, size_t size, const char* format, ...)
     assert((size_t)written < size);
     va_end(args);
     return written;
+}
+
+// please keep this function in sync with the same function in src/rtosc-time.c
+static size_t remove_trailing_zeroes(char* str)
+{
+    // [-]0xh.hhhh00000000p±d -> [-]0xh.hhhhp±d
+    // [-]0xh.00000000p±d -> [-]0xh±d
+    if (*str == '-') { ++str; }
+    assert(*str == '0'); { ++str; }
+    assert(*str == 'x'); { ++str; }
+    assert(isxdigit(*str)); { ++str; }
+    size_t removed = 0;
+    if(*str == '.')
+    {
+        char* point = str;
+        { ++str; }
+        char* last_non_0 = NULL;
+        for(; *str && isxdigit(*str); ++str)
+        {
+            if(*str != '0')
+                last_non_0 = str;
+        }
+        assert(*str == 'p');
+        if(last_non_0)
+        {
+            if(last_non_0 + 1 != str) {
+                removed = str - (last_non_0 + 1);
+                memmove(last_non_0 + 1, str, strlen(str)+1);
+            }
+        }
+        else
+        {
+            memmove(point, str, strlen(str)+1);
+            removed = str - point;
+        }
+    }
+    else {
+        assert(*str == 'p');
+    }
+    return removed;
 }
 
 //! return the offset of the next arg from cur, arrays seen as one arg and
@@ -445,9 +509,12 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                     memmove(buffer + lastwrt, sep, strlen(sep)+1);
                     wrt -= (sep - (buffer + lastwrt));
 
-                    if(opt->lossless)
+                    if(opt->lossless) {
+                        char* last_pos = buffer + wrt;
                         wrt += asnprintf(buffer + wrt, bs - wrt,
                                          " (...+%as)", flt);
+                        wrt -= remove_trailing_zeroes(last_pos+6);
+                    }
                 } // if secfracs
             } // else
             break;
@@ -473,8 +540,12 @@ size_t rtosc_print_arg_val(const rtosc_arg_val_t *arg,
                 asnprintf(fmtstr, 6, "%%#.%df", prec);
                 wrt = asnprintf(buffer, bs, fmtstr, val->f);
                 if(opt->lossless)
+                {
+                    char* last_pos = buffer + wrt;
                     wrt += asnprintf(buffer + wrt, bs - wrt,
                                      " (%a)", val->f);
+                    wrt -= remove_trailing_zeroes(last_pos+2);
+                }
             }
             else
             {
