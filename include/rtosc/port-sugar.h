@@ -50,8 +50,8 @@ struct rtosc_hack_decltype_t
 
 //Expand works around MSVC specific bugs
 #define EXPAND( x ) x
-#define IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,N, ...) N
-#define LAST_IMP(...) EXPAND(IMPL(__VA_ARGS__,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0))
+#define IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,N, ...) N
+#define LAST_IMP(...) EXPAND(IMPL(dummy,##__VA_ARGS__,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0))
 #define DOC_IMP24(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x) \
                 a b c d e f g h i j k l m n o p q r s t u v w rDoc(x)
 #define DOC_IMP23(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w) \
