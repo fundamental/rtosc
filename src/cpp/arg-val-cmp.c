@@ -263,9 +263,9 @@ int rtosc_arg_vals_cmp_single(const rtosc_arg_val_t* _lhs,
             // no recovery: the programmer did not pass the right args, and
             // we don't have a function to compare ranges here
             assert(false);
-            exit(1);
             break;
         default:
+            rval = -1;
             assert(false);
     }
     else
