@@ -14,7 +14,7 @@ jobs:
             enabled: 1,
             os: windows-latest,
             deps: "vcpkg install liblo",
-            config: "PKG_CONFIG_PATH=/vcpkg/packages/liblo_x64-windows/debug/lib/pkgconfig cmake -DWERROR=1 .",
+            config: "SET PKG_CONFIG_PATH=/vcpkg/packages/liblo_x64-windows/debug/lib/pkgconfig && cmake -DWERROR=1 .",
             build: "cmake --build .",
             test: "ctest --output-on-failure"
           }
