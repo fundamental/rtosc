@@ -13,7 +13,7 @@ jobs:
             name: "Windows MSVC",
             enabled: 1,
             os: windows-latest,
-            deps: "",
+            deps: "vcpkg install liblo",
             config: "cmake -DWERROR=1 .",
             build: "cmake --build .",
             test: "ctest --output-on-failure"
