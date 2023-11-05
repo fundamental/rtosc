@@ -86,7 +86,7 @@ uint64_t rtosc_float2secfracs(float secfracsf)
     remove_trailing_zeroes(secfracs_as_hex);
 
     assert(written >= 0); // no error
-    assert(written < sizeof(secfracs_as_hex)); // size suffices
+    assert(written < (int)sizeof(secfracs_as_hex)); // size suffices
     (void) written;
     int scanpos;
     if(secfracs_as_hex[3]=='.') // 0x?.???
