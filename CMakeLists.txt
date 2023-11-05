@@ -202,7 +202,7 @@ maketestcpp(path-search)
 
 maketestcpp(performance)
 if(LIBLO_FOUND)
-    target_include_directories(liblo PRIVATE ${LIBLO_INCLUDE_DIRS})
+    target_include_directories(performance PRIVATE ${LIBLO_INCLUDE_DIRS})
     target_link_libraries(performance      PRIVATE ${LIBLO_LDFLAGS})
     target_compile_definitions(performance PRIVATE HAVE_LIBLO)
 endif()
