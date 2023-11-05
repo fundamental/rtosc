@@ -7,6 +7,8 @@ set(VERSION_PATCH 1)
 
 #Find Packages
 
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
+
 find_package(Doxygen)
 set(OpenGL_GL_PREFERENCE "GLVND")
 find_package(FLTK)
@@ -25,6 +27,7 @@ else()
     set(GUI_FOUND FALSE)
 endif(FLTK_FOUND)
 
+find_package(PkgConfig)
 if(PKG_CONFIG_FOUND AND NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Windows"))
     pkg_check_modules(JACK jack)
     pkg_check_modules(LIBLO liblo>=0.28)
