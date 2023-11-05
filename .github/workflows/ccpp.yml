@@ -82,8 +82,6 @@ jobs:
           }
     steps:
       - uses: actions/checkout@v1
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
       - name: install_deps
         if: ${{ matrix.config.enabled == 1 }}
         run: ${{ matrix.config.deps }}

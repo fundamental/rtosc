@@ -7,8 +7,6 @@ set(VERSION_PATCH 1)
 
 #Find Packages
 
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
-
 find_package(Doxygen)
 set(OpenGL_GL_PREFERENCE "GLVND")
 find_package(FLTK)
@@ -28,12 +26,11 @@ else()
 endif(FLTK_FOUND)
 
 find_package(PkgConfig)
-if(PKG_CONFIG_FOUND AND NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Windows"))
-    pkg_check_modules(JACK jack)
+if(PKG_CONFIG_FOUND)
     pkg_check_modules(LIBLO liblo>=0.28)
-else()
-    include("cmake/FindLIBLO.cmake")
-    find_package(LIBLO)
+    if(NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Windows"))
+        pkg_check_modules(JACK jack)
+    endif()
 endif()
 
 find_package(Ruby 1.8)
@@ -205,6 +202,7 @@ maketestcpp(path-search)
 
 maketestcpp(performance)
 if(LIBLO_FOUND)
+    target_include_directories(liblo PRIVATE ${LIBLO_INCLUDE_DIRS})
     target_link_libraries(performance      PRIVATE ${LIBLO_LDFLAGS})
     target_compile_definitions(performance PRIVATE HAVE_LIBLO)
 endif()
