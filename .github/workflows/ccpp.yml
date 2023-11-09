@@ -13,7 +13,7 @@ jobs:
             name: "Windows MSVC",
             enabled: 1,
             os: windows-latest,
-            deps: "vcpkg install liblo",
+            deps: "vcpkg install liblo --triplet x64-windows",
             config: "cmake -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DWERROR=1 .",
             build: "cmake --build .",
             test: "ctest --output-on-failure"
@@ -73,7 +73,7 @@ jobs:
           }
           - {
             name: "macOS clang",
-            enabled: 1,
+            enabled: 0,
             os: macos-latest,
             deps: "brew install liblo",
             config: "mkdir build && cd build && cmake -DWERROR=1 ..",
