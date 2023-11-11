@@ -14,7 +14,7 @@ jobs:
             enabled: 1,
             os: windows-latest,
             deps: "vcpkg install liblo --triplet x86-windows --host-triplet x86-windows",
-            config: "cmake -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DWERROR=1 .",
+            config: "cmake -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DWERROR=1 -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON .",
             build: "cmake --build .",
             test: "ctest --output-on-failure"
           }
