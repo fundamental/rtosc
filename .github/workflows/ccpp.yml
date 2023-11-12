@@ -14,7 +14,10 @@ jobs:
             enabled: 1,
             os: windows-latest,
             deps: "",
-            config: "cmake -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DWERROR=1 .",
+            config: "cmake
+                    -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+                    -DWERROR=1
+                    .",
             build: "cmake --build .",
             test: "ctest --output-on-failure"
           }
