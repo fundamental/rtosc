@@ -26,7 +26,7 @@ else()
 endif(FLTK_FOUND)
 
 if(MSVC)
-    find_package(liblo)
+    find_package(LIBLO)
 else()
     find_package(PkgConfig)
     if(PKG_CONFIG_FOUND)
