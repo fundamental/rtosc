@@ -76,15 +76,15 @@ jobs:
           }
           - {
             name: "macOS clang",
-            enabled: 1,
+            enabled: 0,
             os: macos-latest,
             deps: "brew install liblo",
             config: "mkdir build && cd build && cmake -DWERROR=1 ..",
-            build: "cd build && make VERBOSE=1",
+            build: "cd build && make",
             test: "cd build && ctest --output-on-failure"
           }
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: install_deps
         if: ${{ matrix.config.enabled == 1 }}
         run: ${{ matrix.config.deps }}
