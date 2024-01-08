@@ -205,8 +205,10 @@ maketestcpp(headerlib)
 maketestcpp(test-walker)
 maketestcpp(walk-ports)
 maketestcpp(path-search)
+
+maketestcpp(performance)
 if(LIBLO_FOUND)
-    maketestcpp(performance)
+    target_compile_definitions(performance PRIVATE HAVE_LIBLO)
     target_link_libraries(performance PRIVATE liblo::liblo)
 endif()
 
