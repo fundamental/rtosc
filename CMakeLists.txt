@@ -208,8 +208,8 @@ maketestcpp(path-search)
 
 maketestcpp(performance)
 if(LIBLO_FOUND)
-    target_compile_definitions(performance PRIVATE HAVE_LIBLO)
     target_link_libraries(performance PRIVATE liblo::liblo)
+    target_compile_definitions(performance PRIVATE HAVE_LIBLO)
 endif()
 
 maketestcpp(undo-test)
