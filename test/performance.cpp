@@ -8,7 +8,7 @@
 #include <string>
 
 #ifdef HAVE_LIBLO
-#include <lo/lo_lowlevel.h>
+#include <lo/lo.h>
 #endif
 
 #include <rtosc/rtosc.h>
