@@ -123,11 +123,13 @@ class MidiMappernRT
 
         MidiBijection getBijection(std::string s);
 
-        void snoop(const char *msg);
+        void snoop_uToB(const char *msg);
+        void snoop_bToU(const char *msg);
 
         void apply_high(int v, int ID);
         void apply_low(int v, int ID);
         void apply_midi(int val, int ID);
+        void refresh_midi();
 
         void setBounds(const char *str, float low, float high);
 
