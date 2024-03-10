@@ -401,8 +401,9 @@ MidiBijection MidiMappernRT::getBijection(std::string s)
     return std::get<3>(inv_map[s]);
 }
 
-void MidiMappernRT::snoop(const char *msg)
+void MidiMappernRT::snoop_bToU(const char *msg)
 {
+
     if(inv_map.find(msg) != inv_map.end())
     {
         auto apple = inv_map[msg];
@@ -421,14 +422,16 @@ void MidiMappernRT::snoop(const char *msg)
             return;
 
         int new_midi = bi(value);
-        //printf("--------------------------------------------\n");
-        //printf("msg = '%s'\n", msg);
-        //printf("--------------------------------------------\n");
-        //printf("new midi value: %f->'%x'\n", value, new_midi);
         if(std::get<1>(apple) != -1)
             apply_high(new_midi,std::get<1>(apple));
         if(std::get<2>(apple) != -1)
             apply_low(new_midi,std::get<2>(apple));
+    }
+}
+void MidiMappernRT::snoop_uToB(const char *msg)
+{
+    if (std::string(msg).find("/load") == 0) {
+        refresh_midi();
     }
 };
 
@@ -439,6 +442,20 @@ void MidiMappernRT::apply_midi(int val, int ID)
     char buf[1024];
     rtosc_message(buf,1024,"/virtual_midi_cc","iii",0,val,ID);
     rt_cb(buf);
+}
+
+void MidiMappernRT::refresh_midi()
+{
+    for (const auto& entry : inv_map) {
+        const char* msg = entry.first.c_str();
+        printf("msg: %s\n", msg);
+
+        char buf[1024];
+        rtosc_message(buf,1024,msg,"");
+        rt_cb(buf);
+        
+    }
+
 }
 
 void MidiMappernRT::setBounds(const char *str, float low, float high)
