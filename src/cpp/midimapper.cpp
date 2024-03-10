@@ -428,12 +428,6 @@ void MidiMappernRT::snoop_bToU(const char *msg)
             apply_low(new_midi,std::get<2>(apple));
     }
 }
-void MidiMappernRT::snoop_uToB(const char *msg)
-{
-    if (std::string(msg).find("/load") == 0) {
-        refresh_midi();
-    }
-};
 
 void MidiMappernRT::apply_high(int v, int ID) { apply_midi(v>>7,ID); }
 void MidiMappernRT::apply_low(int v, int ID)  { apply_midi(0x7f&v,ID);}
@@ -444,12 +438,17 @@ void MidiMappernRT::apply_midi(int val, int ID)
     rt_cb(buf);
 }
 
+void MidiMappernRT::snoop_uToB(const char *msg)
+{
+    if (std::string(msg).find("/load") == 0) {
+        refresh_midi();
+    }
+};
+
 void MidiMappernRT::refresh_midi()
 {
     for (const auto& entry : inv_map) {
         const char* msg = entry.first.c_str();
-        printf("msg: %s\n", msg);
-
         char buf[1024];
         rtosc_message(buf,1024,msg,"");
         rt_cb(buf);
