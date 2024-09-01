@@ -19,7 +19,7 @@ jobs:
                     -DWERROR=1
                     -DCMAKE_BUILD_TYPE=Debug
                     .",
-            build: "cmake --build --config Debug -B build",
+            build: "cmake --build build --config Debug",
             test: "ctest --output-on-failure --test-dir build"
           }
           - {
@@ -85,8 +85,11 @@ jobs:
             test: "cd build && ctest --output-on-failure"
           }
     steps:
-      - uses: actions/checkout@v3
-      - name: install_deps
+      - name: check out
+      - uses: actions/checkout@v4
+        with: 
+          fetch-depth: 0
+      - name: install deps
         if: ${{ matrix.config.enabled == 1 }}
         run: ${{ matrix.config.deps }}
       - name: create build directory
