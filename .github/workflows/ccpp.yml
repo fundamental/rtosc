@@ -15,6 +15,7 @@ jobs:
             os: windows-latest,
             deps: "",
             config: "cmake
+                    -B build
                     -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
                     -DWERROR=1
                     -DCMAKE_BUILD_TYPE=Debug
