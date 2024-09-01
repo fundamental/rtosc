@@ -17,16 +17,17 @@ jobs:
             config: "cmake
                     -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
                     -DWERROR=1
+                    -DCMAKE_BUILD_TYPE=Debug
                     .",
-            build: "cmake --build .",
-            test: "ctest --output-on-failure"
+            build: "cmake --build --config Debug -B build",
+            test: "ctest --output-on-failure --test-dir build"
           }
           - {
             name: "Ubuntu gcc",
             enabled: 0,
             os: ubuntu-latest,
             deps: "sudo apt-get install liblo-dev",
-            config: "mkdir build && cd build && cmake -DWERROR=1 ..",
+            config: "cd build && cmake -DWERROR=1 ..",
             build: "cd build && make",
             test: "cd build && ctest --output-on-failure"
           }
@@ -35,7 +36,7 @@ jobs:
             enabled: 0,
             os: ubuntu-latest,
             deps: "sudo apt-get install liblo-dev",
-            config: "mkdir build && cd build &&
+            config: "cd build &&
                     cmake
                     -DWERROR=1
                     -DCMAKE_C_COMPILER=clang
@@ -51,7 +52,7 @@ jobs:
             enabled: 0,
             os: ubuntu-latest,
             deps: "sudo apt-get install liblo-dev mingw-w64",
-            config: "mkdir build && cd build &&
+            config: "cd build &&
                     cmake
                     -DWERROR=1
                     CC=i686-w64-mingw32-gcc-win32
@@ -65,7 +66,7 @@ jobs:
             enabled: 0,
             os: ubuntu-latest,
             deps: "sudo apt-get install liblo-dev mingw-w64",
-            config: "mkdir build && cd build &&
+            config: "cd build &&
                     cmake
                     -DWERROR=1
                     CC=x86_64-w64-mingw32-gcc-win32
@@ -79,7 +80,7 @@ jobs:
             enabled: 0,
             os: macos-latest,
             deps: "brew install liblo",
-            config: "mkdir build && cd build && cmake -DWERROR=1 ..",
+            config: "cd build && cmake -DWERROR=1 ..",
             build: "cd build && make",
             test: "cd build && ctest --output-on-failure"
           }
@@ -88,6 +89,9 @@ jobs:
       - name: install_deps
         if: ${{ matrix.config.enabled == 1 }}
         run: ${{ matrix.config.deps }}
+      - name: create build directory
+        if: ${{ matrix.config.enabled == 1 }}
+        run: mkdir build
       - name: configure
         if: ${{ matrix.config.enabled == 1 }}
         run: ${{ matrix.config.config }}
