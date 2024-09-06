@@ -34,7 +34,7 @@ jobs:
           }
           - {
             name: "Ubuntu clang+lld",
-            enabled: 0,
+            enabled: 1,
             os: ubuntu-latest,
             deps: "sudo apt-get install liblo-dev",
             config: "cd build &&
@@ -50,7 +50,7 @@ jobs:
           }
           - {
             name: "Ubuntu mingw32",
-            enabled: 0,
+            enabled: 1,
             os: ubuntu-latest,
             deps: "sudo apt-get install liblo-dev mingw-w64",
             config: "cd build &&
@@ -64,7 +64,7 @@ jobs:
           }
           - {
             name: "Ubuntu mingw64",
-            enabled: 0,
+            enabled: 1,
             os: ubuntu-latest,
             deps: "sudo apt-get install liblo-dev mingw-w64",
             config: "cd build &&
@@ -78,7 +78,7 @@ jobs:
           }
           - {
             name: "macOS clang",
-            enabled: 0,
+            enabled: 1,
             os: macos-latest,
             deps: "brew install liblo",
             config: "cd build && cmake -DWERROR=1 ..",
