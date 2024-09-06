@@ -25,7 +25,7 @@ jobs:
           }
           - {
             name: "Ubuntu gcc",
-            enabled: 0,
+            enabled: 1,
             os: ubuntu-latest,
             deps: "sudo apt-get install liblo-dev",
             config: "cd build && cmake -DWERROR=1 ..",
