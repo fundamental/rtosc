@@ -189,12 +189,12 @@ int main()
 
     int max = sizeof(events)/sizeof(events[0]);
     lo_messages.resize(max);
-    printf ("max: %d\n", max);
+    fprintf (stderr, "max: %d\n", max);
     for(int i = 0; i < max; ++i)
     {
         lo_messages[i].memory = events[i];
         lo_messages[i].exact_size = rtosc_message_length(events[i], 1024);
-	printf("%d: exact size: %d\n",i, (int)lo_messages[i].exact_size);
+	fprintf(stderr, "%d: exact size: %d\n",i, (int)lo_messages[i].exact_size);
     }
 
     /*
