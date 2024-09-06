@@ -189,6 +189,7 @@ int main()
 
     int max = sizeof(events)/sizeof(events[0]);
     lo_messages.resize(max);
+    printf ("max: %d\n", max);
     for(int i = 0; i < max; ++i)
     {
         lo_messages[i].memory = events[i];
