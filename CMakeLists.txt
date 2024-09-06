@@ -5,6 +5,8 @@ set(VERSION_MAJOR 0)
 set(VERSION_MINOR 3)
 set(VERSION_PATCH 1)
 
+SET(CMAKE_CXX_STANDARD 17)
+
 #Find Packages
 
 find_package(Doxygen)
