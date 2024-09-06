@@ -88,7 +88,7 @@ jobs:
     steps:
       - name: check out
         uses: actions/checkout@v4
-        with: 
+        with:
           fetch-depth: 0
       - name: install deps
         if: ${{ matrix.config.enabled == 1 }}
@@ -103,7 +103,7 @@ jobs:
         if: ${{ matrix.config.enabled == 1 }}
         run: ${{ matrix.config.build }}
         #      - name: Setup tmate session
-        #uses: mxschmitt/action-tmate@v3
+        # uses: mxschmitt/action-tmate@v3
       - name: make test
         if: ${{ matrix.config.enabled == 1 }}
         run: ${{ matrix.config.test }}
