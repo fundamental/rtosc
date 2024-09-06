@@ -194,7 +194,13 @@ maketest(test-arg-iter)
 if(LIBLO_FOUND)
     maketest(liblo)
     target_include_directories(liblo PRIVATE ${LIBLO_INCLUDE_DIRS})
-    target_link_libraries(liblo PRIVATE ${RTOSC_LIBLO_LIBRARIES})
+    target_link_libraries(liblo      PRIVATE ${LIBLO_LIBRARIES})
+#    target_include_directories(liblo PRIVATE ${LIBLO_INCLUDE_DIRS})
+#    target_link_libraries(liblo PRIVATE ${RTOSC_LIBLO_LIBRARIES})
+
+
+
+
 endif()
 
 maketestcpp(version)
