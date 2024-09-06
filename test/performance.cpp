@@ -193,7 +193,7 @@ int main()
     {
         lo_messages[i].memory = events[i];
         lo_messages[i].exact_size = rtosc_message_length(events[i], 1024);
-	printf("%d: exact size: %lu\n",i, lo_messages[i].exact_size);
+	printf("%d: exact size: %d\n",i, (int)lo_messages[i].exact_size);
     }
 
     /*
