@@ -158,9 +158,9 @@ int main()
     d.loc_size = 1024;
     d.obj = d.loc = loc_buffer;
     d.matches = 0;
-    
-    assert(!memcmp(events[0], "PFMDetune\0\0\0i,\0\0", 16));
-    
+
+    assert(!memcmp(events[0], "PFMDetune\0\0\0,i\0\0\0\0\0\x17", 20));
+
     /*
      * run RTOSC
      */
