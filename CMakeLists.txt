@@ -25,7 +25,7 @@ else()
     set(GUI_FOUND FALSE)
 endif(FLTK_FOUND)
 
-if(MSVC OR APPLE)
+if(MSVC)
     find_package(liblo)
     if(liblo_FOUND)
         set(LIBLO_FOUND TRUE)
