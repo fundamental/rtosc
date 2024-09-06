@@ -99,11 +99,11 @@ jobs:
       - name: configure
         if: ${{ matrix.config.enabled == 1 }}
         run: ${{ matrix.config.config }}
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - name: make
         if: ${{ matrix.config.enabled == 1 }}
         run: ${{ matrix.config.build }}
-        #      - name: Setup tmate session
-        # uses: mxschmitt/action-tmate@v3
       - name: make test
         if: ${{ matrix.config.enabled == 1 }}
         run: ${{ matrix.config.test }}
