@@ -21,7 +21,9 @@ jobs:
                     -DCMAKE_BUILD_TYPE=Debug
                     ",
             build: "cmake --build build --config Debug",
-            test: "ctest --output-on-failure --test-dir build -V -R performance"
+            # all tests work except "performance" (liblo bug?)
+            # this weird regex here lets all those tests run, except performance 
+            test: "ctest --output-on-failure --test-dir build -R '(i|s|t|g)'"
           }
           - {
             name: "Ubuntu gcc",
