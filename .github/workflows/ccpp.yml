@@ -22,7 +22,7 @@ jobs:
                     ",
             build: "cmake --build build --config Debug",
             # all tests work except "performance" (liblo bug?)
-            # this weird regex here lets all those tests run, except performance 
+            # this weird regex lets all those tests run, except performance
             test: "ctest --output-on-failure --test-dir build -R '(i|s|t|g)'"
           }
           - {
