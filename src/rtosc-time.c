@@ -80,14 +80,12 @@ static size_t remove_trailing_zeroes(char* str)
         if(last_non_0)
         {
             if(last_non_0 + 1 != str) {
-                printf("A: %s %s\n",str,(last_non_0 + 1));
                 removed = str - (last_non_0 + 1);
                 memmove(last_non_0 + 1, str, strlen(str)+1);
             }
         }
         else
         {
-            printf("B: %s %s\n",str,point);
             memmove(point, str, strlen(str)+1);
             removed = str - point;
         }
