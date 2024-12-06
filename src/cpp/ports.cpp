@@ -1085,6 +1085,9 @@ static void walk_ports_recurse0(const Port& p, char* name_buffer,
                                 bool ranges)
 {
     ssize_t write_space = buffer_size - (ssize_t)(write_head - name_buffer);
+#ifdef NDEBUG
+    (void)write_space;
+#endif
     const char* hash_ptr = strchr(read_head + 1,'#');
     ssize_t to_copy = hash_ptr ? hash_ptr - read_head : strlen(read_head);
 

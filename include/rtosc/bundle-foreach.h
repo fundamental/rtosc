@@ -78,6 +78,9 @@ void bundle_foreach(const struct Port& p, const char* name, char* const old_end,
                     const bool ranges = false)
 {
     ssize_t space_left = buffer_size - (ssize_t)(old_end - name_buffer);
+#ifdef NDEBUG
+    (void)space_left;
+#endif
     assert(space_left > 0);
     assert(space_left <= (ssize_t)buffer_size);
 
