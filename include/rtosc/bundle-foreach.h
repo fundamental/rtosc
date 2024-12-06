@@ -31,6 +31,11 @@
 #ifndef BUNDLE_FOREACH
 #define BUNDLE_FOREACH
 
+#if defined(_MSC_VER)
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
+
 #include <cassert>
 #include <cctype>
 #include <cstdlib>
