@@ -79,15 +79,15 @@ void bundle_foreach(const struct Port& p, const char* name, char* const old_end,
 {
     ssize_t space_left = buffer_size - (ssize_t)(old_end - name_buffer);
     assert(space_left > 0);
-    assert(space_left < (ssize_t)buffer_size);
+    assert(space_left <= (ssize_t)buffer_size);
 
-    char       *pos  = old_end;
+    char *pos = old_end;
     while(*name != '#') { assert(space_left); *pos++ = *name++; --space_left; }
     const unsigned max = (!expand_bundles || ranges) ? 1 : atoi(name+1);
     while(isdigit(*++name)) ;
 
     char* pos2 = pos;
-    
+
     const char* name_precheck = name;
     while(*name_precheck && *name_precheck != ':')
         name_precheck++;
@@ -109,10 +109,7 @@ void bundle_foreach(const struct Port& p, const char* name, char* const old_end,
         ftor(&p, name_buffer, old_end, base, data, runtime);
     }
 
-    if(cut_afterwards)
-        *old_end = 0;
-    else
-        *pos2 = 0;
+    *(cut_afterwards ? old_end : pos2) = 0;
 }
 
 // use this function if you don't want to do anything in bundle_foreach

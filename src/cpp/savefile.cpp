@@ -262,9 +262,9 @@ std::string get_changed_values(const Ports& ports, void* runtime,
                 nargs_runtime += nargs_runtime_cur;
             };
 
-            auto refix_old_end = [&base](const Port* _p, char* _old_end)
+            auto refix_old_end = [&base, &port_buffer](const Port* _p, char* _old_end)
             { // TODO: remove base capture
-                bundle_foreach(*_p, _p->name, _old_end, NULL, 0,
+                bundle_foreach(*_p, _p->name, _old_end, port_buffer, buffersize,
                                base, NULL, NULL, bundle_foreach_do_nothing,
                                false, false);
             };
