@@ -77,9 +77,9 @@ void bundle_foreach(const struct Port& p, const char* name, char* const old_end,
                     const bool cut_afterwards = true,
                     const bool ranges = false)
 {
-    size_t space_left = buffer_size - (size_t)(old_end - name_buffer);
+    ssize_t space_left = buffer_size - (ssize_t)(old_end - name_buffer);
     assert(space_left > 0);
-    assert(space_left < buffer_size);
+    assert(space_left < (ssize_t)buffer_size);
 
     char       *pos  = old_end;
     while(*name != '#') { assert(space_left); *pos++ = *name++; --space_left; }
@@ -91,7 +91,7 @@ void bundle_foreach(const struct Port& p, const char* name, char* const old_end,
     const char* name_precheck = name;
     while(*name_precheck && *name_precheck != ':')
         name_precheck++;
-    assert(space_left > 16u + (size_t)(name_precheck - name) + 1u);
+    assert(space_left > 16 + (ssize_t)(name_precheck - name) + 1);
 
     for(unsigned i=0; i<max; ++i)
     {

@@ -1084,19 +1084,19 @@ static void walk_ports_recurse0(const Port& p, char* name_buffer,
                                 bool expand_bundles, const char* read_head,
                                 bool ranges)
 {
-    std::size_t write_space = buffer_size - (std::size_t)(write_head - name_buffer);
+    ssize_t write_space = buffer_size - (ssize_t)(write_head - name_buffer);
     const char* hash_ptr = strchr(read_head + 1,'#');
-    std::size_t to_copy = hash_ptr ? hash_ptr - read_head : strlen(read_head);
+    ssize_t to_copy = hash_ptr ? hash_ptr - read_head : strlen(read_head);
 
     // Check write space is sufficient
     // The formula is valid for the whole function
-    assert(write_space >= to_copy + 32u);
+    assert(write_space >= to_copy + 32);
     //Append the path, until possible '#'
     //yes, there are subports with ':', e.g. ".../::i"
     while(to_copy-->0 && *read_head != ':')
     {
         *write_head++ = *read_head++;
-	--write_space;
+        --write_space;
     }
 
     if(hash_ptr)
