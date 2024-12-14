@@ -17,7 +17,7 @@ jobs:
             config: "cmake
                     -B build
                     -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
-                    -DWERROR=1
+                    -DRTOSC_WERROR=1
                     -DCMAKE_BUILD_TYPE=Debug
                     ",
             build: "cmake --build build --config Debug",
@@ -30,7 +30,7 @@ jobs:
             enabled: 1,
             os: ubuntu-latest,
             deps: "sudo apt-get install liblo-dev",
-            config: "cd build && cmake -DWERROR=1 ..",
+            config: "cd build && cmake -DRTOSC_WERROR=1 ..",
             build: "cd build && make",
             test: "cd build && ctest --output-on-failure"
           }
@@ -41,7 +41,7 @@ jobs:
             deps: "sudo apt-get install liblo-dev",
             config: "cd build &&
                     cmake
-                    -DWERROR=1
+                    -DRTOSC_WERROR=1
                     -DCMAKE_C_COMPILER=clang
                     -DCMAKE_CXX_COMPILER=clang++
                     -DCMAKE_SHARED_LINKER_FLAGS='-fuse-ld=lld'
@@ -55,7 +55,7 @@ jobs:
             enabled: 1,
             os: macos-latest,
             deps: "brew install liblo",
-            config: "cd build && cmake -DWERROR=1 ..",
+            config: "cd build && cmake -DRTOSC_WERROR=1 ..",
             build: "cd build && make",
             test: "cd build && ctest --output-on-failure"
           }

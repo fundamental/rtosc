@@ -174,10 +174,10 @@ class Fl_Osc_View: public Fl_Double_Window
         rtosc::walk_ports(p, buffer, sizeof(buffer), table,
                 [](const rtosc::Port *p,
                     const char *name,
-                    const char *_,
-                    const rtosc::Ports &__,
+                    const char *,
+                    const rtosc::Ports &,
                     void*t,
-                    void*runtime) {
+                    void*) {
                 PortTable *table = (PortTable*)t;
 
                 port_view tmp = {name, *p, -1, -1};
@@ -212,7 +212,7 @@ class Fl_Osc_View: public Fl_Double_Window
     Fl_Osc_Interface *osc;
 };
 
-static void Delete_CB(Fl_Widget *w, void *v_)
+static void Delete_CB(Fl_Widget *, void *v_)
 {
     Fl_Osc_View &v = *(Fl_Osc_View*)v_;
     int row_top, col_left, row_bot, col_right;

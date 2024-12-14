@@ -87,7 +87,7 @@ struct Fl_Center_Knob : public Fl_Osc_Dial
 template<typename T>
 struct Fl_Square : public Fl_Osc_Group
 {
-    Fl_Square<T>(int x, int y, int w, int h, int _pad, const Port *port)
+    Fl_Square(int x, int y, int w, int h, int _pad, const Port *port)
         :Fl_Osc_Group(x,y,w,h,NULL), pad(_pad)
     {
         const int l = min(max(w-2*pad,0),max(h-2*pad,0));
