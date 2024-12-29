@@ -119,6 +119,8 @@ target_compile_features(rtosc-cpp PUBLIC cxx_std_11)
 target_include_directories(rtosc  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_options(rtosc      PRIVATE
         "$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-std=c99>")
+set_target_properties(rtosc PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_target_properties(rtosc-cpp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 if(RTOSC_IWYU_PATH AND RTOSC_INCLUDE_WHAT_YOU_USE)
     set(RTOSC_IWYU_PATH_AND_OPTIONS
