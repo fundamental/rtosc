@@ -95,11 +95,11 @@ endif(MSVC)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/version.c.in
     ${CMAKE_CURRENT_BINARY_DIR}/cpp/version.c)
 
-add_library(rtosc SHARED STATIC
+add_library(rtosc
     src/rtosc.c
     src/dispatch.c
     src/rtosc-time.c)
-add_library(rtosc-cpp SHARED STATIC
+add_library(rtosc-cpp
     ${CMAKE_CURRENT_BINARY_DIR}/cpp/version.c
     src/cpp/ports.cpp src/cpp/ports-runtime.cpp
     src/cpp/default-value.cpp src/cpp/savefile.cpp src/cpp/port-checker.cpp
