@@ -485,9 +485,9 @@ template<class T> constexpr T spice(T*t) {return *t;}
         if(!strcmp("", args)) {\
             data.reply(loc, obj->name ? "T" : "F"); \
         } else { \
-            if(obj->name != rtosc_argument(msg, 0).T) { \
+            if(obj->name != (bool)rtosc_argument(msg, 0).T) { \
                 data.broadcast(loc, args);\
-                obj->name = rtosc_argument(msg, 0).T; \
+                obj->name = (bool)rtosc_argument(msg, 0).T; \
                 rChangeCb; \
             } \
         } rBOIL_END
