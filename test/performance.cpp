@@ -134,26 +134,26 @@ int main()
     /*
      * create all the messages
      */
-    rtosc_message(events[0],  1024, "PFMDetune", "i", 23);
-    rtosc_message(events[1],  1024, "oscil/blam", "c", 23);
-    rtosc_message(events[2],  1024, "PFilterEnabled", "T");
-    rtosc_message(events[3],  1024, "PVolume", "c", 23);
-    rtosc_message(events[4],  1024, "Enabled", "T");
-    rtosc_message(events[5],  1024, "Unison_size", "c", 1);
-    rtosc_message(events[6],  1024, "Unison_frequency_spread", "c", 2);
-    rtosc_message(events[7],  1024, "Unison_stereo_spread", "c", 3);
-    rtosc_message(events[8],  1024, "Unison_vibratto", "c", 4);
-    rtosc_message(events[9],  1024, "Unison_vibratto_speed", "c", 5);
-    rtosc_message(events[10], 1024, "Unison_invert_phase", "");
-    rtosc_message(events[11], 1024, "FilterLfo/another/few/layers", "");
-    rtosc_message(events[12], 1024, "FreqEnvelope/blam", "");
-    rtosc_message(events[13], 1024, "PINVALID_RANDOM_STRING", "ics", 23, 23, "23");
-    rtosc_message(events[14], 1024, "PFMVelocityScaleFunction", "i", 23);
-    rtosc_message(events[15], 1024, "PFMDetune", "i", 230);
-    rtosc_message(events[16], 1024, "Pfixedfreq", "F");
-    rtosc_message(events[17], 1024, "detunevalue", "");
-    rtosc_message(events[18], 1024, "PfixedfreqET", "c", 10);
-    rtosc_message(events[19], 1024, "PfixedfreqET", "");
+    rtosc_message(events[0],  1024, "/PFMDetune", "i", 23);
+    rtosc_message(events[1],  1024, "/oscil/blam", "c", 23);
+    rtosc_message(events[2],  1024, "/PFilterEnabled", "T");
+    rtosc_message(events[3],  1024, "/PVolume", "c", 23);
+    rtosc_message(events[4],  1024, "/Enabled", "T");
+    rtosc_message(events[5],  1024, "/Unison_size", "c", 1);
+    rtosc_message(events[6],  1024, "/Unison_frequency_spread", "c", 2);
+    rtosc_message(events[7],  1024, "/Unison_stereo_spread", "c", 3);
+    rtosc_message(events[8],  1024, "/Unison_vibratto", "c", 4);
+    rtosc_message(events[9],  1024, "/Unison_vibratto_speed", "c", 5);
+    rtosc_message(events[10], 1024, "/Unison_invert_phase", "");
+    rtosc_message(events[11], 1024, "/FilterLfo/another/few/layers", "");
+    rtosc_message(events[12], 1024, "/FreqEnvelope/blam", "");
+    rtosc_message(events[13], 1024, "/PINVALID_RANDOM_STRING", "ics", 23, 23, "23");
+    rtosc_message(events[14], 1024, "/PFMVelocityScaleFunction", "i", 23);
+    rtosc_message(events[15], 1024, "/PFMDetune", "i", 230);
+    rtosc_message(events[16], 1024, "/Pfixedfreq", "F");
+    rtosc_message(events[17], 1024, "/detunevalue", "");
+    rtosc_message(events[18], 1024, "/PfixedfreqET", "c", 10);
+    rtosc_message(events[19], 1024, "/PfixedfreqET", "");
     RtData d;
     d.loc_size = 1024;
     d.obj = d.loc = loc_buffer;
@@ -166,10 +166,10 @@ int main()
     clock_t t_on = clock(); // timer before calling func
     for(int j=0; j<200000; ++j) {
         for(int i=0; i<20; ++i){
-            port_table.dispatch(events[i], d);
+            port_table.dispatch(events[i]+1, d);
         }
     }
-    //printf("Matches: %d\n", d.matches);
+    printf("Matches: %d vs expected 3600000\n", d.matches);
     assert(d.matches == 3600000);
     int t_off = clock(); // timer when func returns
     print_results("RTOSC", t_on, t_off, repeats);
@@ -210,6 +210,7 @@ int main()
         liblo_port_info.begin();
     for(const Port& port : port_table)
     {
+        pinf->name = "/";
         for(const char* p = port.name; *p && *p != ':'; ++p)
             pinf->name.push_back(*p);
 
@@ -234,14 +235,15 @@ int main()
 
     // liblo does not support trees, so messages like 'oscil/blam' won't
     // dispatch at ports like 'oscil/'. we need to help them a bit...
-    for(const liblo_message_prepared& lmp : lo_messages)
-    if(strchr(lmp.memory, '/'))
-    {
-        liblo_port_info_t pinf;
-        pinf.name = lmp.memory;
-        pinf.typespecs.push_back("");
-        pinf.accept_all = true;
-        liblo_port_info.push_back(pinf);
+    for(const liblo_message_prepared& lmp : lo_messages) {
+        if(strchr(lmp.memory+1, '/'))
+        {
+            liblo_port_info_t pinf;
+            pinf.name = lmp.memory;
+            pinf.typespecs.push_back("");
+            pinf.accept_all = true;
+            liblo_port_info.push_back(pinf);
+        }
     }
 
     auto add_methods = [&](const std::vector<liblo_port_info_t>& port_info,

@@ -18,12 +18,10 @@ jobs:
                     -B build
                     -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
                     -DRTOSC_WERROR=1
-                    -DCMAKE_BUILD_TYPE=Debug
+                    -DCMAKE_BUILD_TYPE=Release
                     ",
-            build: "cmake --build build --config Debug",
-            # all tests work except "performance" (liblo bug?)
-            # this weird regex lets all those tests run, except performance
-            test: "ctest --output-on-failure --test-dir build -R '(i|s|t|g)'"
+            build: "cmake --build build --config Release",
+            test: "ctest --output-on-failure --test-dir build"
           }
           - {
             name: "Ubuntu gcc",
