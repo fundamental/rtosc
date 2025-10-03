@@ -170,7 +170,10 @@ int main()
         }
     }
     printf("Matches: %d vs expected 3600000\n", d.matches);
-    assert(d.matches == 3600000);
+    //assert(d.matches == 3600000);
+    int is_ok = (d.matches == 3600000);
+    if (!is_ok)
+        return EXIT_FAILURE;
     int t_off = clock(); // timer when func returns
     print_results("RTOSC", t_on, t_off, repeats);
 
@@ -294,5 +297,5 @@ int main()
     print_results("LIBLO", t_on, t_off, repeats);
 #endif
 
-    return EXIT_SUCCESS;
+    return !is_ok;
 }

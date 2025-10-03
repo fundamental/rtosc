@@ -18,9 +18,9 @@ jobs:
                     -B build
                     -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
                     -DRTOSC_WERROR=1
-                    -DCMAKE_BUILD_TYPE=Release
+                    -DCMAKE_BUILD_TYPE=Debug
                     ",
-            build: "cmake --build build --config Release",
+            build: "cmake --build build --config Debug",
             test: "ctest --output-on-failure --test-dir build"
           }
           - {
