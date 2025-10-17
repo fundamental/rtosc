@@ -435,7 +435,7 @@ size_t rtosc_amessage(char              *buffer,
 
 static rtosc_arg_t extract_arg(const uint8_t *arg_pos, char type)
 {
-    rtosc_arg_t result = {0};
+    rtosc_arg_t result = {};
     //trivial case
     if(!has_reserved(type)) {
         switch(type)
