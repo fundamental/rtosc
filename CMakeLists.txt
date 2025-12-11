@@ -59,7 +59,7 @@ option(RTOSC_WERROR "Compile with warnings being treated as errors" OFF)
 set(BUILD_RTOSC_EXAMPLES FALSE CACHE BOOL
     "Build RTOSC Example Programs")
 
-if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+if(CMAKE_SYSTEM_NAME MATCHES "Linux" OR CMAKE_SYSTEM_NAME MATCHES "Android")
     include(GNUInstallDirs)
 endif()
 
@@ -286,7 +286,7 @@ if(DOXYGEN_FOUND)
 endif()
 
 #Installation
-if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT DEFINED RTOSC_NO_INSTALL)
+if((CMAKE_SYSTEM_NAME MATCHES "Linux" OR CMAKE_SYSTEM_NAME MATCHES "Android") AND NOT DEFINED RTOSC_NO_INSTALL)
     if(PKG_CONFIG_FOUND)
         configure_file(librtosc.pc.cmake
             ${CMAKE_CURRENT_BINARY_DIR}/librtosc.pc @ONLY)
