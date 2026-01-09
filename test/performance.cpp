@@ -113,10 +113,12 @@ Ports port_table = {
 char events[20][1024];
 char loc_buffer[1024];
 
+#ifdef HAVE_LIBLO
 static void liblo_error_cb(int i, const char *m, const char *loc)
 {
     fprintf(stderr, "liblo :-( %d-%s@%s\n",i,m,loc);
 }
+#endif
 
 void print_results(const char* libname,
                    clock_t t_on, clock_t t_off, int repeats)

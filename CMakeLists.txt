@@ -168,10 +168,71 @@ endif(BUILD_RTOSC_EXAMPLES)
 
 
 # Testing Code
+
+
+function(rtosc_add_test testname testbinary)
+    # Remaining arguments are test args
+    set(test_args ${ARGN})
+
+    # Default: native execution
+    set(cmd ${testbinary})
+    set(env)
+
+    # Condition 1: -DMINGW_PREFIX was passed
+    # Condition 2: environment variable forces wine
+    if(DEFINED MINGW_PREFIX OR DEFINED ENV{ZYN_USE_WINE})
+
+        # Allow override via environment (useful in CI)
+        if(DEFINED ENV{RUNNER_TEMP})
+            set(_runner_temp "$ENV{RUNNER_TEMP}")
+        else()
+            set(_runner_temp "")
+        endif()
+
+        # Compose WINEPATH
+        set(_winepath
+            "/usr/x86_64-w64-mingw32/bin/;"
+            "/usr/x86_64-w64-mingw32/lib/;"
+            "/usr/lib/gcc/x86_64-w64-mingw32/13-win32"
+        )
+
+        if(_runner_temp)
+            list(APPEND _winepath
+                "${_runner_temp}/prefix/lib"
+                "${_runner_temp}/prefix/bin"
+            )
+        endif()
+
+        # Join with semicolons (WINEPATH wants ;, but ENVIRONMENT PROPERTY also wants it)
+        list(JOIN _winepath "\\\\;" WINEPATH_VALUE)
+
+        # Wine command
+        set(cmd wine ${testbinary})
+
+        # Environment for CTest
+        set(env "WINEPATH=${WINEPATH_VALUE}")
+
+    endif()
+
+    # Register test
+    add_test(
+        NAME ${testname}
+        COMMAND ${cmd} ${test_args}
+    )
+
+    # Apply environment only if needed
+    if(env)
+        set_tests_properties(${testname}
+            PROPERTIES ENVIRONMENT "${env}"
+        )
+        message(STATUS "${env}")
+    endif()
+endfunction()
+
 enable_testing()
 macro(maketest fname)
     add_executable(${fname} test/${fname}.c)
-    add_test(${fname} ${fname})
+    rtosc_add_test(${fname} ${fname})
     target_link_libraries(${fname} PRIVATE rtosc)
     target_compile_options(${fname} PRIVATE
         "$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-std=c99>")
@@ -179,7 +240,7 @@ macro(maketest fname)
 endmacro(maketest)
 macro(maketestcpp fname)
     add_executable(${fname} test/${fname}.cpp)
-    add_test(${fname} ${fname})
+    rtosc_add_test(${fname} ${fname})
     target_link_libraries(${fname} PRIVATE rtosc-cpp rtosc)
     #add_test(memcheck_${fname} valgrind --leak-check=full --show-reachable=yes --error-exitcode=1 ./${fname})
 endmacro(maketestcpp)
@@ -267,7 +328,7 @@ if(LIBLO_FOUND AND RUBY_FOUND)
     target_link_directories(port-checker-testapp PRIVATE ${LIBLO_LIBRARY_DIRS})
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/test-port-checker.rb
                    ${CMAKE_CURRENT_BINARY_DIR}/test-port-checker.rb COPYONLY)
-    add_test(test-port-checker test-port-checker.rb)
+    rtosc_add_test(test-port-checker test-port-checker.rb)
 endif()
 
 # Documentation
