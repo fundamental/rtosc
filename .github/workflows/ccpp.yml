@@ -83,13 +83,13 @@ jobs:
         with:
           fetch-depth: 0
       - name: update system
-        if: ${{ matrix.config.enabled == 1 }}
+        if: ${{ matrix.config.enabled == 1 && matrix.config.update != '' }}
         run: ${{ matrix.config.update }}
       - name: install deps (1)
-        if: ${{ matrix.config.enabled == 1 }}
+        if: ${{ matrix.config.enabled == 1 && matrix.config.deps1 != '' }}
         run: ${{ matrix.config.deps1 }}
       - name: install deps (2)
-        if: ${{ matrix.config.enabled == 1 }}
+        if: ${{ matrix.config.enabled == 1 && matrix.config.deps2 != '' }}
         run: ${{ matrix.config.deps2 }}
       - name: create build directory
         if: ${{ matrix.config.enabled == 1 }}
