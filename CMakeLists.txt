@@ -195,10 +195,11 @@ function(rtosc_add_test testname testbinary)
         execute_process(
             COMMAND x86_64-w64-mingw32-gcc -print-libgcc-file-name
             OUTPUT_VARIABLE _mingw_libgcc_file
+            RESULT_VARIABLE _mingw_gcc_result
             OUTPUT_STRIP_TRAILING_WHITESPACE
             ERROR_QUIET
         )
-        if(_mingw_libgcc_file)
+        if(_mingw_gcc_result EQUAL 0 AND _mingw_libgcc_file)
             get_filename_component(_mingw_gcc_lib_dir "${_mingw_libgcc_file}" DIRECTORY)
         else()
             set(_mingw_gcc_lib_dir "")
