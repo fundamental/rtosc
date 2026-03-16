@@ -331,7 +331,7 @@ if(LIBLO_FOUND)
     set(RTOSC_TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test CACHE INTERNAL "")
     set(RTOSC_TEST_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE INTERNAL "")
 endif()
-if(LIBLO_FOUND AND RUBY_FOUND)
+if(LIBLO_FOUND AND RUBY_FOUND AND NOT MINGW_PREFIX)
     add_executable(port-checker test/port-checker-main.cpp)
     target_include_directories(port-checker PRIVATE ${LIBLO_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
     target_link_libraries(port-checker PRIVATE lo-server rtosc-cpp rtosc ${RTOSC_LIBLO_LIBRARIES})
@@ -346,7 +346,8 @@ if(LIBLO_FOUND AND RUBY_FOUND)
     target_link_directories(port-checker-testapp PRIVATE ${LIBLO_LIBRARY_DIRS})
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/test-port-checker.rb
                    ${CMAKE_CURRENT_BINARY_DIR}/test-port-checker.rb COPYONLY)
-    rtosc_add_test(test-port-checker test-port-checker.rb)
+    add_test(NAME test-port-checker
+             COMMAND ${RUBY_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/test-port-checker.rb)
 endif()
 
 # Documentation
