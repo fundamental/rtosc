@@ -189,12 +189,30 @@ function(rtosc_add_test testname testbinary)
             set(_runner_temp "")
         endif()
 
+        # Dynamically find the GCC private lib directory for the MinGW cross-compiler.
+        # This avoids hard-coding the GCC version (e.g. "13-win32") which changes
+        # across runner image updates and different toolchain installations.
+        execute_process(
+            COMMAND x86_64-w64-mingw32-gcc -print-libgcc-file-name
+            OUTPUT_VARIABLE _mingw_libgcc_file
+            RESULT_VARIABLE _mingw_gcc_result
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+        if(_mingw_gcc_result EQUAL 0 AND _mingw_libgcc_file)
+            get_filename_component(_mingw_gcc_lib_dir "${_mingw_libgcc_file}" DIRECTORY)
+        else()
+            set(_mingw_gcc_lib_dir "")
+        endif()
+
         # Compose WINEPATH
         set(_winepath
             "/usr/x86_64-w64-mingw32/bin/;"
             "/usr/x86_64-w64-mingw32/lib/;"
-            "/usr/lib/gcc/x86_64-w64-mingw32/13-win32"
         )
+        if(_mingw_gcc_lib_dir)
+            list(APPEND _winepath "${_mingw_gcc_lib_dir}")
+        endif()
 
         if(_runner_temp)
             list(APPEND _winepath
