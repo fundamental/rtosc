@@ -168,10 +168,67 @@ endif(BUILD_RTOSC_EXAMPLES)
 
 
 # Testing Code
+
+
+function(rtosc_add_test testname testbinary)
+
+    set(cmd ${testbinary})
+    set(env)
+
+    if(DEFINED MINGW_PREFIX OR DEFINED ENV{ZYN_USE_WINE})
+
+        # Dynamically find the GCC private lib directory
+        execute_process(
+            COMMAND x86_64-w64-mingw32-gcc -print-libgcc-file-name
+            OUTPUT_VARIABLE _mingw_libgcc_file
+            RESULT_VARIABLE _mingw_gcc_result
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+        if(_mingw_gcc_result EQUAL 0 AND _mingw_libgcc_file)
+            get_filename_component(_mingw_gcc_lib_dir "${_mingw_libgcc_file}" DIRECTORY)
+        else()
+            set(_mingw_gcc_lib_dir "")
+        endif()
+
+        # Build _winepath
+        set(_winepath
+            "/usr/x86_64-w64-mingw32/bin/;"
+            "/usr/x86_64-w64-mingw32/lib/;"
+        )
+        if(_mingw_gcc_lib_dir)
+            list(APPEND _winepath "${_mingw_gcc_lib_dir}")
+        endif()
+        if(DEFINED ENV{RUNNER_TEMP})
+            list(APPEND _winepath
+                "$ENV{RUNNER_TEMP}/prefix/lib"
+                "$ENV{RUNNER_TEMP}/prefix/bin"
+            )
+        endif()
+
+        # Adapt env and cmd
+        list(JOIN _winepath "\\\\;" WINEPATH_VALUE)  # WINEPATH wants ;, but ENVIRONMENT PROPERTY also wants it
+        set(cmd wine ${testbinary})
+        set(env "WINEPATH=${WINEPATH_VALUE}")
+
+    endif()
+
+    # Add test with environment set
+    add_test(
+        NAME ${testname}
+        COMMAND ${cmd} ${ARGN}
+    )
+    if(env)
+        set_tests_properties(${testname} PROPERTIES ENVIRONMENT "${env}")
+        message(STATUS "${env}")
+    endif()
+
+endfunction()
+
 enable_testing()
 macro(maketest fname)
     add_executable(${fname} test/${fname}.c)
-    add_test(${fname} ${fname})
+    rtosc_add_test(${fname} ${fname})
     target_link_libraries(${fname} PRIVATE rtosc)
     target_compile_options(${fname} PRIVATE
         "$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-std=c99>")
@@ -179,7 +236,7 @@ macro(maketest fname)
 endmacro(maketest)
 macro(maketestcpp fname)
     add_executable(${fname} test/${fname}.cpp)
-    add_test(${fname} ${fname})
+    rtosc_add_test(${fname} ${fname})
     target_link_libraries(${fname} PRIVATE rtosc-cpp rtosc)
     #add_test(memcheck_${fname} valgrind --leak-check=full --show-reachable=yes --error-exitcode=1 ./${fname})
 endmacro(maketestcpp)
@@ -252,7 +309,7 @@ if(LIBLO_FOUND)
     set(RTOSC_TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test CACHE INTERNAL "")
     set(RTOSC_TEST_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE INTERNAL "")
 endif()
-if(LIBLO_FOUND AND RUBY_FOUND)
+if(LIBLO_FOUND AND RUBY_FOUND AND NOT MINGW_PREFIX)
     add_executable(port-checker test/port-checker-main.cpp)
     target_include_directories(port-checker PRIVATE ${LIBLO_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
     target_link_libraries(port-checker PRIVATE lo-server rtosc-cpp rtosc ${RTOSC_LIBLO_LIBRARIES})
@@ -267,7 +324,8 @@ if(LIBLO_FOUND AND RUBY_FOUND)
     target_link_directories(port-checker-testapp PRIVATE ${LIBLO_LIBRARY_DIRS})
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/test-port-checker.rb
                    ${CMAKE_CURRENT_BINARY_DIR}/test-port-checker.rb COPYONLY)
-    add_test(test-port-checker test-port-checker.rb)
+    add_test(NAME test-port-checker
+             COMMAND ${RUBY_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/test-port-checker.rb)
 endif()
 
 # Documentation

@@ -1,0 +1,65 @@
+#!/bin/bash
+
+die()
+{
+    echo "$@" >&2
+    exit 1
+}
+
+trap_func()
+{
+    trap - ERR  # don't run the trap again
+    die "Error in line $1 (return code $2)"
+}
+
+check_prerequisites()
+{
+    for program in make wget tar autoconf automake x86_64-w64-mingw32-{gcc,ar}
+    do
+        command -v "$program" >/dev/null || die "Error: Must have \"$program\" installed"
+    done
+}
+
+main()
+{
+    set -eE
+    trap 'trap_func $LINENO $?' ERR
+
+    check_prerequisites
+
+    local tmp_dir
+    if [ "$1" ]
+    then
+        [ -d "$1" ] || die "Error: Directory \"$1\" does not exist"
+        tmp_dir=$1
+    else
+        tmp_dir=$(mktemp -d "/tmp/build-mingw-deps.XXXXXXXXXX")
+    fi
+
+    local urls=(
+        https://github.com/radarsat1/liblo/archive/refs/tags/0.34.tar.gz                  # GPL-2.1-only
+        )
+    local archives=(liblo-0.34)
+
+    # shellcheck disable=SC2043  # loop intended to run once (can be extended for future deps)
+    for i in 0
+    do
+        local tarball=$tmp_dir/${archives[$i]}.tar.gz
+        [ -f "$tarball" ] || wget "${urls[$i]}" -O "$tarball"
+        tar -C "$tmp_dir/" -xf "$tarball"
+        # rm "$tarball"
+    done
+
+    [ -d "$tmp_dir/prefix" ] || mkdir "$tmp_dir/prefix"
+
+    (cd "$tmp_dir/liblo-0.34"
+        ./autogen.sh --host=x86_64-w64-mingw32 \
+            --prefix="$tmp_dir/prefix" \
+            --disable-shared \
+            --enable-static \
+            --disable-doc
+        make
+        make install)
+}
+
+main "$@"
