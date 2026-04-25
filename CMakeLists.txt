@@ -171,27 +171,13 @@ endif(BUILD_RTOSC_EXAMPLES)
 
 
 function(rtosc_add_test testname testbinary)
-    # Remaining arguments are test args
-    set(test_args ${ARGN})
 
-    # Default: native execution
     set(cmd ${testbinary})
     set(env)
 
-    # Condition 1: -DMINGW_PREFIX was passed
-    # Condition 2: environment variable forces wine
     if(DEFINED MINGW_PREFIX OR DEFINED ENV{ZYN_USE_WINE})
 
-        # Allow override via environment (useful in CI)
-        if(DEFINED ENV{RUNNER_TEMP})
-            set(_runner_temp "$ENV{RUNNER_TEMP}")
-        else()
-            set(_runner_temp "")
-        endif()
-
-        # Dynamically find the GCC private lib directory for the MinGW cross-compiler.
-        # This avoids hard-coding the GCC version (e.g. "13-win32") which changes
-        # across runner image updates and different toolchain installations.
+        # Dynamically find the GCC private lib directory
         execute_process(
             COMMAND x86_64-w64-mingw32-gcc -print-libgcc-file-name
             OUTPUT_VARIABLE _mingw_libgcc_file
@@ -205,7 +191,7 @@ function(rtosc_add_test testname testbinary)
             set(_mingw_gcc_lib_dir "")
         endif()
 
-        # Compose WINEPATH
+        # Build _winepath
         set(_winepath
             "/usr/x86_64-w64-mingw32/bin/;"
             "/usr/x86_64-w64-mingw32/lib/;"
@@ -213,38 +199,30 @@ function(rtosc_add_test testname testbinary)
         if(_mingw_gcc_lib_dir)
             list(APPEND _winepath "${_mingw_gcc_lib_dir}")
         endif()
-
-        if(_runner_temp)
+        if(DEFINED ENV{RUNNER_TEMP})
             list(APPEND _winepath
-                "${_runner_temp}/prefix/lib"
-                "${_runner_temp}/prefix/bin"
+                "$ENV{RUNNER_TEMP}/prefix/lib"
+                "$ENV{RUNNER_TEMP}/prefix/bin"
             )
         endif()
 
-        # Join with semicolons (WINEPATH wants ;, but ENVIRONMENT PROPERTY also wants it)
-        list(JOIN _winepath "\\\\;" WINEPATH_VALUE)
-
-        # Wine command
+        # Adapt env and cmd
+        list(JOIN _winepath "\\\\;" WINEPATH_VALUE)  # WINEPATH wants ;, but ENVIRONMENT PROPERTY also wants it
         set(cmd wine ${testbinary})
-
-        # Environment for CTest
         set(env "WINEPATH=${WINEPATH_VALUE}")
 
     endif()
 
-    # Register test
+    # Add test with environment set
     add_test(
         NAME ${testname}
-        COMMAND ${cmd} ${test_args}
+        COMMAND ${cmd} ${ARGN}
     )
-
-    # Apply environment only if needed
     if(env)
-        set_tests_properties(${testname}
-            PROPERTIES ENVIRONMENT "${env}"
-        )
+        set_tests_properties(${testname} PROPERTIES ENVIRONMENT "${env}")
         message(STATUS "${env}")
     endif()
+
 endfunction()
 
 enable_testing()
